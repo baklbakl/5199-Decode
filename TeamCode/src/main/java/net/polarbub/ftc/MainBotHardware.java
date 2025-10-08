@@ -26,10 +26,9 @@ public class MainBotHardware {
 
     public final Encoder parallelEncoder0, parallelEncoder1, perpendicularEncoder;
 
-    public final DcMotorEx pivotDrive;
-    public final DcMotorEx slideDrive;
-    public final Servo intakeServo;
-    public final Servo intakeServo2;
+    public final DcMotorEx intakeMotorDrive;
+    public final DcMotorEx outtakeMotorDrive;
+
 
     public final RevColorSensorV3 colorSensor;
 
@@ -82,17 +81,13 @@ public class MainBotHardware {
                 leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
                 rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
-                pivotDrive = createDcMotor(MainBotConfig.pivotDriveID);
-                slideDrive = createDcMotor(MainBotConfig.slideDriveID);
+                intakeMotorDrive = createDcMotor(MainBotConfig.pivotDriveID);
+                outtakeMotorDrive = createDcMotor(MainBotConfig.slideDriveID);
 //                pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //                slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //                runMotorToPos(pivotDrive, ArmConfig.pegPivotCounts, MainBotConfig.pivotPower);
 //                runMotorToPos(slideDrive, 0, MainBotConfig.slidePower);
 
-                intakeServo = createServo(MainBotConfig.intakeServoID);
-                intakeServo.setPosition(ArmConfig.restingServoPos);
-                intakeServo2 = createServo(MainBotConfig.intakeServo2ID);
-                intakeServo2.setPosition(1 - ArmConfig.restingServoPos);
 
 //                intakeServo.getController()
 
@@ -130,12 +125,10 @@ public class MainBotHardware {
                 parallelEncoder1 = null;
                 perpendicularEncoder = null;
 
-                pivotDrive = null;
-                slideDrive = null;
+                intakeMotorDrive = null;
+                outtakeMotorDrive = null;
 
                 blinkin = null;
-                intakeServo = null;
-                intakeServo2 = null;
 
                 leftDistance = null;
                 rightFrontDistance = null;
