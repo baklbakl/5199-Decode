@@ -1,7 +1,9 @@
 # Duct-Tape-and-a-Prayer repo
 polarbub=Bryn  
 BotDevPanda (Mr. Panda)=Kavish  
-aruneoz=Haasini
+aruneoz=Haasini  
+Annakhg=Anna  
+CJ = cj-saez
 
 ### Old History
 We are now on the `fixed_history` branch because it has the git history of the [FTC SDK](https://github.com/FIRST-Tech-Challenge/FtcRobotController), so it is much easier to update the SDK. All the old commits can still be found in the `Main` branch
