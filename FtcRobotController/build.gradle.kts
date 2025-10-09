@@ -1,42 +1,47 @@
 import java.text.SimpleDateFormat
 import java.util.*
-
-//
-// build.gradle in FtcRobotController
-//
+import net.polarbub.PropertiesHelper.*;
 
 plugins {
     id("com.android.library")
+    id("androidDefaultSetup")
+    id("FTCLibFlavor")
 }
 
 android {
     namespace = "com.qualcomm.ftcrobotcontroller"
-    buildFeatures.buildConfig = true
-    lint.targetSdk = (properties["androidsdk.compileVersion"] as String?)?.toInt()
 
     defaultConfig {
-        minSdk = (properties["androidsdk.minVersion"] as String?)?.toInt()
-        compileSdk = (properties["androidsdk.compileVersion"] as String?)?.toInt()
         buildConfigField("String", "APP_BUILD_TIME", "\"" + SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ", Locale.ROOT).format(Date()) + "\"")
-    }
-
-    compileOptions {
-        sourceCompatibility(JavaVersion.VERSION_1_8)
-        targetCompatibility(JavaVersion.VERSION_1_8)
     }
 }
 
 dependencies {
-    implementation("org.firstinspires.ftc:Inspection:" + properties["ftclibsVersion"])
-    implementation("org.firstinspires.ftc:Blocks:" + properties["ftclibsVersion"])
-    implementation("org.firstinspires.ftc:RobotServer:" + properties["ftclibsVersion"])
-    implementation("org.firstinspires.ftc:OnBotJava:" + properties["ftclibsVersion"])
+    val extractedLibsImplementation = configurations["extractedLibsImplementation"]
+    val extractedLibsApi = configurations["extractedLibsApi"]
+    extractedLibsImplementation(project(":Inspection"))
+    extractedLibsImplementation(project(":RobotServer"))
+    extractedLibsImplementation(project(":Blocks"))
+    extractedLibsImplementation(project(":OnBotJava"))
 
-    api("org.firstinspires.ftc:RobotCore:" + properties["ftclibsVersion"])
-    api("org.firstinspires.ftc:Hardware:" + properties["ftclibsVersion"])
-    api("org.firstinspires.ftc:FtcCommon:" + properties["ftclibsVersion"])
-    api("org.firstinspires.ftc:Vision:" + properties["ftclibsVersion"])
+    extractedLibsApi(project(":RobotCore"))
+    extractedLibsApi(project(":Hardware"))
+    extractedLibsApi(project(":FtcCommon"))
+    extractedLibsApi(project(":Vision"))
 
-    implementation("androidx.appcompat:appcompat:1.2.0")
-//    implementation("androidx.preference:preference:1.2.1")
+    val aarLibsImplementation = configurations["aarLibsImplementation"]
+    val aarLibsApi = configurations["aarLibsApi"]
+    val aarLibVersion = getStringProperty(project, "SDK_MAJOR_VERSION") + "." + getStringProperty(project, "SDK_MINOR_VERSION") + "." + getStringProperty(project, "SDK_POINT_VERSION")
+
+    aarLibsImplementation("org.firstinspires.ftc:Inspection:$aarLibVersion")
+    aarLibsImplementation("org.firstinspires.ftc:Blocks:$aarLibVersion")
+    aarLibsImplementation("org.firstinspires.ftc:RobotServer:$aarLibVersion")
+    aarLibsImplementation("org.firstinspires.ftc:OnBotJava:$aarLibVersion")
+
+    aarLibsApi("org.firstinspires.ftc:RobotCore:$aarLibVersion")
+    aarLibsApi("org.firstinspires.ftc:Hardware:$aarLibVersion")
+    aarLibsApi("org.firstinspires.ftc:FtcCommon:$aarLibVersion")
+    aarLibsApi("org.firstinspires.ftc:Vision:$aarLibVersion")
+
+    implementation("androidx.appcompat:appcompat:1.7.1")
 }

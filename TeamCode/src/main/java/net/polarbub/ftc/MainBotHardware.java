@@ -52,6 +52,8 @@ public class MainBotHardware {
     public MainBotHardware(HardwareMap hardwareMap, boolean initializeHardware, boolean enableI2C) {
         this.hardwareMap = hardwareMap;
 
+//        LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, )
+
         //FIX: Remove the hardware map and try to initialize all the hardware ourselves
         for (LynxModule module : hardwareMap.getAll(LynxModule.class)) {
             module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);

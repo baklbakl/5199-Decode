@@ -1,6 +1,9 @@
 plugins {
     id("java")
     kotlin("jvm")
+    id("java8plugin")
+    id("repositories")
+//    id("stubPlugin")
 }
 
 val mainClassPath: String = "net.polarbub.ftc.MeepMeepTesting"
