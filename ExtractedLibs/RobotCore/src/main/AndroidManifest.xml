@@ -105,14 +105,14 @@
             android:name="autoStartService.org.firstinspires.ftc.robotcore.internal.files.MediaTransferProtocolMonitorService"
             android:value="BOTH|1000" />
 
-        <!-- Service that provides build services for OnBotJava -->
-        <service
-            android:name="org.firstinspires.ftc.onbotjava.OnBotJavaService"
-            android:enabled="true" />
+<!--        &lt;!&ndash; Service that provides build services for OnBotJava &ndash;&gt;-->
+<!--        <service-->
+<!--            android:name="org.firstinspires.ftc.onbotjava.OnBotJavaService"-->
+<!--            android:enabled="true" />-->
 
-        <meta-data
-            android:name="autoStartService.org.firstinspires.ftc.onbotjava.OnBotJavaService"
-            android:value="RC|2000" />
+<!--        <meta-data-->
+<!--            android:name="autoStartService.org.firstinspires.ftc.onbotjava.OnBotJavaService"-->
+<!--            android:value="RC|2000" />-->
 
         <receiver
             android:name="org.firstinspires.ftc.robotserver.internal.webserver.controlhubupdater.ChUpdaterCommManager$ChUpdaterBroadcastReceiver"

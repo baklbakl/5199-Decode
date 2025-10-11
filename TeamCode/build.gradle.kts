@@ -16,6 +16,11 @@ android {
 
     packaging {
         jniLibs.useLegacyPackaging = true
+//        jniLibs.pickFirsts.add("**/*.so")
+
+//        jniLibs {
+//            excludes.add("**/libopencv_java4.so")
+//        }
     }
 
     signingConfigs {
@@ -64,16 +69,6 @@ android {
         release {
             signingConfig = signingConfigs["release"]
         }
-
-//        debug {
-//            isDefault = true
-//            isDebuggable = true
-//            isJniDebuggable = true
-//        }
-    }
-
-    packaging {
-        jniLibs.pickFirsts.add("**/*.so")
     }
 
     sourceSets.getByName("main") {

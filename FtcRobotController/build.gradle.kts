@@ -21,8 +21,8 @@ dependencies {
     val extractedLibsApi = configurations["extractedLibsApi"]
     extractedLibsImplementation(project(":Inspection"))
     extractedLibsImplementation(project(":RobotServer"))
-    extractedLibsImplementation(project(":Blocks"))
-    extractedLibsImplementation(project(":OnBotJava"))
+//    extractedLibsImplementation(project(":Blocks"))
+//    extractedLibsImplementation(project(":OnBotJava"))
 
     extractedLibsApi(project(":RobotCore"))
     extractedLibsApi(project(":Hardware"))
