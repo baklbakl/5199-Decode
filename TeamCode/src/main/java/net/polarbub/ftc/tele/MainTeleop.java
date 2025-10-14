@@ -121,23 +121,7 @@ public class MainTeleop extends FastIterativeOpMode {
         OUT,
     }
 
-    private void startHoming(HomingDirection homingDirection) {
-        double negate = 0;
-        if(homingDirection == HomingDirection.IN) {
-            setMode(Mode.HOMING);
-            hardware.pivotDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-            hardware.pivotDrive.setPower(ArmConfig.pivotHomingPower);
-            negate = 1;
-        } else if(homingDirection == HomingDirection.OUT) {
-            hardware.pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            MainBotHardware.runMotorToPos(hardware.pivotDrive, ArmConfig.basketPivotCounts, ArmConfig.pivotPower);
-            setMode(Mode.HOMING_OUT);
-            negate = -1.5;
-        }
 
-        hardware.slideDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.slideDrive.setPower(ArmConfig.slideHomingPower * negate);
-    }
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -287,7 +271,7 @@ public class MainTeleop extends FastIterativeOpMode {
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_stick_button"), Boolean::equals, (Boolean left_stick_button) -> {
                 if(left_stick_button) {
                     if(mode == Mode.NORMAL || mode == Mode.HOMING_OUT) {
-                        startHoming(HomingDirection.IN);
+                     
                     } else if(mode == Mode.HOMING) {
                         setMode(Mode.NORMAL);
                         hardware.pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -536,7 +520,7 @@ public class MainTeleop extends FastIterativeOpMode {
                 variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("right_stick_button"), Boolean::equals, (Boolean right_stick_button) -> {
                     if(right_stick_button) {
                         if(mode == Mode.NORMAL || mode == Mode.HOMING) {
-                            startHoming(HomingDirection.OUT);
+
                         }  else if(mode == Mode.HOMING_OUT) {
                             setMode(Mode.NORMAL);
                             hardware.slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -621,7 +605,7 @@ public class MainTeleop extends FastIterativeOpMode {
                 }
             }));
         }
-        startHoming(HomingDirection.IN);
+
         runtime.reset();
     }
 
