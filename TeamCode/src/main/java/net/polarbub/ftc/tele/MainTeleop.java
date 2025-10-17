@@ -42,11 +42,7 @@ public class MainTeleop extends FastIterativeOpMode {
 
     public static long colorSensorCheckInterval = 100;
     public static long incorrectColorFlashTime = 500;
-    public static int sampleDetectedAlpha = 50;
-    public static float redMinSaturation = 330;
-    public static float redMaxSaturation = 10;
-    public static float blueMinSaturation = 210;
-    public static float blueMaxSaturation = 260;
+
 
     //
     // Options
@@ -79,7 +75,6 @@ public class MainTeleop extends FastIterativeOpMode {
     // Option Driver Options
     //
     public Boolean isPartyMode = false;
-    public Boolean isRunVision = false;
     public Alliance alliance = Alliance.lastAlliance;
 
     //
@@ -116,10 +111,6 @@ public class MainTeleop extends FastIterativeOpMode {
         hardware.blinkin.setPattern(mode.toColor());
     }
 
-    private enum HomingDirection {
-        IN,
-        OUT,
-    }
 
 
 
@@ -146,39 +137,15 @@ public class MainTeleop extends FastIterativeOpMode {
 
         hardware.blinkin.setPattern(offColor);
 
-        if(!isPartyMode && isRunVision) {
 
-            camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"));
-            pipeline = new FindNumSamples();
-
-            camera.setPipeline(pipeline);
-            camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
-                @Override
-                public void onOpened() {
-                    camera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
-                }
-
-                @Override
-                public void onError(int errorCode) {
-
-                }
-            });
-        }
 
         //Control Scheme
-        //Left stick        - movement
-        //Left stick button - enter homing mode
-        //Right stick       - rotate
-        //Dpad up           - move pivot up
-        //Dpad down         - move pivot down
-        //Y                 - move slides out
-        //A                 - mode slides in
-        //Left shoulder     - Intake in
-        //Right shoulder    - Intake out
-        //X                 - Enter / exit specimen mode
-        //Dpad right + B    - Enter / exit hang mode
-        //Left trigger      - Hang retract slides
-        //Right trigger     - hand extend slides
+     // Left shoulder - intake
+        // Rigt shoulder - outake
+        // triangle/y - release servo to shoot artifact
+        // left stick - moving
+        // right stick - moving (turn)
+        // LEDs - distance to April Tag (based on alliance)
 
         try {
             //Movement
@@ -268,19 +235,7 @@ public class MainTeleop extends FastIterativeOpMode {
                     }
             ));
 
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_stick_button"), Boolean::equals, (Boolean left_stick_button) -> {
-                if(left_stick_button) {
-                    if(mode == Mode.NORMAL || mode == Mode.HOMING_OUT) {
-                     
-                    } else if(mode == Mode.HOMING) {
-                        setMode(Mode.NORMAL);
-                        hardware.pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                        hardware.slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                        MainBotHardware.runMotorToPos(hardware.pivotDrive, ArmConfig.restingPivotCounts, ArmConfig.pivotPower);
-                        MainBotHardware.runMotorToPos(hardware.slideDrive, ArmConfig.restingSlideCounts, ArmConfig.slidePower);
-                    }
-                }
-            }));
+
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -328,48 +283,6 @@ public class MainTeleop extends FastIterativeOpMode {
             }));
         } else {
             try {
-                if(isRunVision) {
-                        camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"));
-                        pipeline = new FindNumSamples();
-
-                        camera.setPipeline(pipeline);
-                        camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
-                            @Override
-                            public void onOpened() {
-                                camera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
-                            }
-
-                            @Override
-                            public void onError(int errorCode) {
-
-                            }
-                        });
-
-                    // Watch for Vision button only if the option is enabled
-                    variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("options"), Boolean::equals, (Boolean b) -> {
-                        if (b) {
-                           int numSamples = 0;
-
-                               if (alliance == Alliance.RED) {
-                                   numSamples = pipeline.getRedCount();
-                               } else if (alliance == Alliance.BLUE) {
-                                   numSamples = pipeline.getBlueCount();
-                               }
-
-
-
-                            if(numSamples < 2) {
-                               gamepad1.setLedColor(1, 0, 0, 2000);
-                           } else if(numSamples >= 2 && numSamples <= 3) {
-                               gamepad1.setLedColor(1, 1, 0, 2000);
-                           } else if(numSamples >= 4) {
-                               gamepad1.setLedColor(0, 1, 0, 2000);
-                           } else {
-                               gamepad1.setLedColor(1, 1, 1, 2000);
-                           }
-                        }
-                    }));
-                }
 
                 //Pivot presets
                 variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Gamepad.class.getField("dpad_down"), Boolean::equals, (Boolean dpad_up, Boolean dpad_down) -> {
