@@ -7,7 +7,6 @@ import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.MainBotHardware;
-import net.polarbub.ftc.auto.vision.opencv.FindNumSamples;
 import net.polarbub.ftc.lib.Alliance;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
 import net.polarbub.ftc.lib.TimedEvent;
@@ -26,10 +25,7 @@ import java.util.List;
 import static net.polarbub.ftc.MainBotConfig.ArmConfig;
 import static java.lang.Math.abs;
 
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.openftc.easyopencv.OpenCvCamera;
-import org.openftc.easyopencv.OpenCvCameraFactory;
-import org.openftc.easyopencv.OpenCvCameraRotation;
 
 
 @TeleOp(name = "Main", group = MainBotConfig.opmodeGroupName)
@@ -69,7 +65,6 @@ public class MainTeleop extends FastIterativeOpMode {
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private List<TimedEvent> timedEvents = new ArrayList<>();
     private OpenCvCamera camera;
-    private FindNumSamples pipeline;
 
     //
     // Option Driver Options
