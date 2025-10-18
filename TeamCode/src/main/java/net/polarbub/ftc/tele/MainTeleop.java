@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.MainBotHardware;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.auto.vision.opencv.FindNumSamples;
 import net.polarbub.ftc.lib.Alliance;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
@@ -68,7 +68,6 @@ public class MainTeleop extends FastIterativeOpMode {
     //
     private final ElapsedTime runtime = new ElapsedTime();
     private MainBotHardware hardware = null;
-    private List<LynxModule> allHubs;
     private OptionDriver optionDriver;
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private List<TimedEvent> timedEvents = new ArrayList<>();
@@ -130,7 +129,7 @@ public class MainTeleop extends FastIterativeOpMode {
             negate = 1;
         } else if(homingDirection == HomingDirection.OUT) {
             hardware.pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-            MainBotHardware.runMotorToPos(hardware.pivotDrive, ArmConfig.basketPivotCounts, ArmConfig.pivotPower);
+            hardware.pivotDrive.runMotorToPos(ArmConfig.basketPivotCounts, ArmConfig.pivotPower);
             setMode(Mode.HOMING_OUT);
             negate = -1.5;
         }
@@ -146,10 +145,7 @@ public class MainTeleop extends FastIterativeOpMode {
     public void init_internal() {
         hardware = new MainBotHardware(hardwareMap);
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-        allHubs = hardwareMap.getAll(LynxModule.class);
-        for (LynxModule module : allHubs) {
-            module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        }
+        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
         optionDriver = new OptionDriver();
         try {
@@ -292,8 +288,8 @@ public class MainTeleop extends FastIterativeOpMode {
                         setMode(Mode.NORMAL);
                         hardware.pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
                         hardware.slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                        MainBotHardware.runMotorToPos(hardware.pivotDrive, ArmConfig.restingPivotCounts, ArmConfig.pivotPower);
-                        MainBotHardware.runMotorToPos(hardware.slideDrive, ArmConfig.restingSlideCounts, ArmConfig.slidePower);
+                        hardware.pivotDrive.runMotorToPos(ArmConfig.restingPivotCounts, ArmConfig.pivotPower);
+                        hardware.slideDrive.runMotorToPos(ArmConfig.restingSlideCounts, ArmConfig.slidePower);
                     }
                 }
             }));
@@ -540,7 +536,7 @@ public class MainTeleop extends FastIterativeOpMode {
                         }  else if(mode == Mode.HOMING_OUT) {
                             setMode(Mode.NORMAL);
                             hardware.slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                            MainBotHardware.runMotorToPos(hardware.slideDrive, ArmConfig.restingSlideCounts, ArmConfig.slidePower);
+                            hardware.slideDrive.runMotorToPos(ArmConfig.restingSlideCounts, ArmConfig.slidePower);
                         }
                     }
                 }));
@@ -636,9 +632,7 @@ public class MainTeleop extends FastIterativeOpMode {
     private int loopTimesPos = 0;
 
     public void loop_internal() {
-        for (LynxModule module : allHubs) {
-            module.clearBulkCache();
-        }
+        hardware.modules.clearBulkCache();
 
         //Check for changes of watched variables and run the handler if they did
         for(VariableWatcher variableWatcher : variablesWatched) {

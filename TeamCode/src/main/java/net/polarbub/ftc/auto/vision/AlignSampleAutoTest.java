@@ -2,15 +2,10 @@ package net.polarbub.ftc.auto.vision;
 
 import static net.polarbub.ftc.auto.vision.AlignSample.CAMERA_OFFSET;
 
-import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import net.polarbub.ftc.MainBotHardware;
-import net.polarbub.ftc.auto.roadrunner.MecanumDrive;
-import net.polarbub.ftc.lib.FastIterativeOpMode;
+import net.polarbub.ftc.hardware.MainBotHardware;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.openftc.easyopencv.OpenCvCamera;

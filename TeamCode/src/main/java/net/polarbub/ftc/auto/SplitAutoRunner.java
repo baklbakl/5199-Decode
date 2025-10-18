@@ -9,9 +9,9 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
+import net.polarbub.ftc.hardware.DcMotorExEx;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.MainBotHardware;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.auto.options.*;
 import net.polarbub.ftc.auto.roadrunner.MecanumDrive;
 import net.polarbub.ftc.lib.Alliance;
@@ -44,7 +44,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     public Delay delay;
 
     private static class MotorData {
-        private final DcMotorEx motor;
+        private final DcMotorExEx motor;
         private final Field lastPos;
         private final SplitAutoRunner thiss;
         private final double power;
@@ -66,7 +66,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             }
         }
 
-        private MotorData(SplitAutoRunner thiss, DcMotorEx motor, double power, double homingPower, Field lastPos) {
+        private MotorData(SplitAutoRunner thiss, DcMotorExEx motor, double power, double homingPower, Field lastPos) {
             this.motor = motor;
             this.lastPos = lastPos;
             this.lastPos.setAccessible(true);
@@ -107,7 +107,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
     private void runMotorToPos(MotorData drive, int pos) {
         if(drive.getLastPos() != pos) {
-            MainBotHardware.runMotorToPos(drive.motor, pos, drive.power);
+            drive.motor.runMotorToPos(pos, drive.power);
             drive.setLastPos(pos);
         }
     }
@@ -238,9 +238,9 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
     @Override
     protected void loop_internal() {
-        telemetry.addData("x", mecanumDrive.pose.position.x);
-        telemetry.addData("y", mecanumDrive.pose.position.y);
-        telemetry.addData("heading (deg)", Math.toDegrees(mecanumDrive.pose.heading.toDouble()));
+        telemetry.addData("x", mecanumDrive.localizer.getPose().position.x);
+        telemetry.addData("y", mecanumDrive.localizer.getPose().position.y);
+        telemetry.addData("heading (deg)", Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
         telemetry.update();
     }
 

@@ -82,11 +82,11 @@ dependencies {
     implementation(project(":FtcRobotController"))
     implementation(project(":Common"))
 
-    implementation("com.acmerobotics.roadrunner:ftc:0.1.14") {
+    implementation("com.acmerobotics.roadrunner:ftc:0.1.25") {
         exclude("org.firstinspires.ftc", "*")
     }
 
-    implementation("com.acmerobotics.dashboard:dashboard:0.4.17") {
+    implementation("com.acmerobotics.dashboard:dashboard:0.5.0") {
         exclude("org.firstinspires.ftc", "*")
     }
 }
