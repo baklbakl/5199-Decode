@@ -5,11 +5,14 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorImplEx;
+import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.MainBotConfig;
+import net.polarbub.ftc.hardware.LynxModuleInitializer;
 import net.polarbub.ftc.lib.optiondriver.BooleanOption;
 import net.polarbub.ftc.lib.optiondriver.EnumOption;
+import net.polarbub.ftc.lib.optiondriver.IntOption;
 import net.polarbub.ftc.lib.optiondriver.OptionDriver;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
 import org.firstinspires.ftc.robotcore.internal.usb.LynxModuleSerialNumber;
@@ -21,7 +24,6 @@ import java.util.List;
 public class RunMotor extends FastIterativeOpMode {
     private DcMotorEx drive = null;
     private ElapsedTime runtime = new ElapsedTime();
-    List<LynxModule> allHubs;
 
     public enum HUB {
         CONTROL,
@@ -40,32 +42,14 @@ public class RunMotor extends FastIterativeOpMode {
     }
 
     public HUB hub = HUB.CONTROL;
-    public boolean addTwo;
-    public boolean addOne;
+    public int motor = 0;
 
     private OptionDriver optionDriver;
-    private LynxDcMotorController controlController;
-    private LynxDcMotorController expansionController;
+    private LynxModuleInitializer hardware = null;
 
     protected void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-
-        allHubs = hardwareMap.getAll(LynxModule.class);
-
-        for (LynxModule module : allHubs) {
-            module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-            try {
-                if(module.isParent()) {
-                    controlController = new LynxDcMotorController(hardwareMap.appContext, module);
-                } else {
-                    expansionController = new LynxDcMotorController(hardwareMap.appContext, module);
-                }
-            } catch (RobotCoreException | InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-
+        hardware = new LynxModuleInitializer(hardwareMap);
     }
 
     /*
@@ -81,16 +65,13 @@ public class RunMotor extends FastIterativeOpMode {
     protected void start_internal() {
         optionDriver = new OptionDriver();
         try {
-            if(controlController != null && expansionController != null) {
+            if(hardware.childModule != null) {
                 optionDriver.add(new EnumOption<>("Hub", "dpad_up", gamepad1, this.getClass().getField("hub"), this, HUB.class));
             }
-            optionDriver.add(new BooleanOption("+2", "dpad_left", gamepad1, this.getClass().getField("addTwo"), this));
-            optionDriver.add(new BooleanOption("+1", "dpad_right", gamepad1, this.getClass().getField("addOne"), this));
+            optionDriver.add(new IntOption("Motor", "dpad_down", gamepad1, this.getClass().getField("motor"), this, 0, LynxConstants.NUMBER_OF_MOTORS - 1));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
-
-
 
         runtime.reset();
     }
@@ -100,28 +81,19 @@ public class RunMotor extends FastIterativeOpMode {
      */
 
     protected void loop_internal() {
-        for (LynxModule module : allHubs) {
-            module.clearBulkCache();
-        }
+        hardware.clearBulkCache();
 
         String out = optionDriver.tick();
         if(out != null) {
             telemetry.addLine(out);
             telemetry.update();
 
-            int motor = 0;
-//            if(hub == HUB.EXPANSION) motor += 4;
-            if(addTwo) motor += 2;
-            if(addOne) motor += 1;
-
             if(hub == HUB.CONTROL) {
-                drive = new DcMotorImplEx(controlController, motor);
+                drive = hardware.parentModule.createDcMotor(motor);
             } else if(hub == HUB.EXPANSION) {
-                drive = new DcMotorImplEx(expansionController, motor);
+                drive = hardware.childModule.createDcMotor(motor);
             }
             drive.setPower(0);
-
-//            drive = (DcMotorEx) hardwareMap.get(DcMotor.class, "M" + motor);
         }
 
         drive.setPower(gamepad1.left_trigger - gamepad1.right_trigger);

@@ -4,23 +4,15 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.reflection.ReflectionConfig;
 import com.acmerobotics.roadrunner.MotorFeedforward;
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.ftc.AngularRampLogger;
-import com.acmerobotics.roadrunner.ftc.DeadWheelDirectionDebugger;
-import com.acmerobotics.roadrunner.ftc.DriveType;
-import com.acmerobotics.roadrunner.ftc.DriveView;
-import com.acmerobotics.roadrunner.ftc.DriveViewFactory;
-import com.acmerobotics.roadrunner.ftc.Encoder;
-import com.acmerobotics.roadrunner.ftc.ForwardPushTest;
-import com.acmerobotics.roadrunner.ftc.ForwardRampLogger;
-import com.acmerobotics.roadrunner.ftc.LateralPushTest;
-import com.acmerobotics.roadrunner.ftc.LateralRampLogger;
-import com.acmerobotics.roadrunner.ftc.MecanumMotorDirectionDebugger;
+import com.acmerobotics.roadrunner.ftc.*;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeRegistrar;
 
 import net.polarbub.ftc.auto.tuning.ManualStrafeFeedforwardTuner;
+import net.polarbub.ftc.hardware.LynxModuleInitializer;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import org.firstinspires.ftc.robotcore.internal.opmode.OpModeMeta;
 import net.polarbub.ftc.auto.roadrunner.MecanumDrive;
 import net.polarbub.ftc.auto.roadrunner.ThreeDeadWheelLocalizer;
@@ -51,18 +43,60 @@ public final class TuningOpModes {
         if (DISABLED) return;
 
         DriveViewFactory dvf = hardwareMap -> {
-            MecanumDrive md = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
+            MainBotHardware hardware = new MainBotHardware(hardwareMap);
+            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0));
 
-            List<Encoder> leftEncs = new ArrayList<>(), rightEncs = new ArrayList<>();
-            List<Encoder> parEncs = new ArrayList<>(), perpEncs = new ArrayList<>();
-            if (md.localizer instanceof ThreeDeadWheelLocalizer) {
-                ThreeDeadWheelLocalizer dl = (ThreeDeadWheelLocalizer) md.localizer;
-                parEncs.add(dl.par0);
-                parEncs.add(dl.par1);
-                perpEncs.add(dl.perp);
-            } else {
+//            List<Encoder> leftEncs = new ArrayList<>(), rightEncs = new ArrayList<>();
+            List<EncoderGroup> encoderGroups = new ArrayList<>();
+            List<EncoderRef> parEncs = new ArrayList<>(), perpEncs = new ArrayList<>();
+            if (!(md.localizer instanceof ThreeDeadWheelLocalizer)) {
                 throw new RuntimeException("unknown localizer: " + md.localizer.getClass().getName());
             }
+
+            ThreeDeadWheelLocalizer dl = (ThreeDeadWheelLocalizer) md.localizer;
+
+            // parEncs.add(dl.par0);
+            // parEncs.add(dl.par1);
+            // perpEncs.add(dl.perp);
+
+            //NEW!
+
+            encoderGroups.add(new LynxQuadratureEncoderGroup(
+                    Arrays.asList(hardware.modules.parentModule.module, hardware.modules.childModule.module),
+                    Arrays.asList(dl.par0, dl.par1, dl.perp)
+            ));
+            parEncs.add(new EncoderRef(0, 0));
+            parEncs.add(new EncoderRef(0, 1));
+            perpEncs.add(new EncoderRef(0, 2));
+
+
+            // return new DriveView(
+            //         DriveType.MECANUM,
+            //         MecanumDrive.PARAMS.inPerTick,
+            //         MecanumDrive.PARAMS.maxWheelVel,
+            //         MecanumDrive.PARAMS.minProfileAccel,
+            //         MecanumDrive.PARAMS.maxProfileAccel,
+            //         hardwareMap.getAll(LynxModule.class),
+            //         Arrays.asList(
+            //                 md.leftFront,
+            //                 md.leftBack
+            //         ),
+            //         Arrays.asList(
+            //                 md.rightFront,
+            //                 md.rightBack
+            //         ),
+            //         leftEncs,
+            //         rightEncs,
+            //         parEncs,
+            //         perpEncs,
+            //         md.lazyImu,
+            //         md.voltageSensor,
+            //         () -> new MotorFeedforward(MecanumDrive.PARAMS.kS,
+            //                 MecanumDrive.PARAMS.kV / MecanumDrive.PARAMS.inPerTick,
+            //                 (MecanumDrive.PARAMS.kASpeedUp + MecanumDrive.PARAMS.kASlowDown) / 2 / MecanumDrive.PARAMS.inPerTick)
+            // );
+
+            //NEW!
 
             return new DriveView(
                     DriveType.MECANUM,
@@ -70,7 +104,7 @@ public final class TuningOpModes {
                     MecanumDrive.PARAMS.maxWheelVel,
                     MecanumDrive.PARAMS.minProfileAccel,
                     MecanumDrive.PARAMS.maxProfileAccel,
-                    hardwareMap.getAll(LynxModule.class),
+                    encoderGroups,
                     Arrays.asList(
                             md.leftFront,
                             md.leftBack
@@ -79,15 +113,17 @@ public final class TuningOpModes {
                             md.rightFront,
                             md.rightBack
                     ),
-                    leftEncs,
-                    rightEncs,
+                    /*leftEncs*/ null,
+                    /*rightEncs*/ null,
                     parEncs,
                     perpEncs,
                     md.lazyImu,
                     md.voltageSensor,
+                    //It would be nice if this were a AsyncFeedForward, but we would have to modify RR which isn't too fun to do
                     () -> new MotorFeedforward(MecanumDrive.PARAMS.kS,
                             MecanumDrive.PARAMS.kV / MecanumDrive.PARAMS.inPerTick,
-                            (MecanumDrive.PARAMS.kASpeedUp + MecanumDrive.PARAMS.kASlowDown) / 2 / MecanumDrive.PARAMS.inPerTick)
+                            (MecanumDrive.PARAMS.kASpeedUp + MecanumDrive.PARAMS.kASlowDown) / 2 / MecanumDrive.PARAMS.inPerTick),
+                    0
             );
         };
 

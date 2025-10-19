@@ -123,7 +123,6 @@ import org.firstinspires.ftc.robotcore.internal.system.ServiceController;
 import org.firstinspires.ftc.robotcore.internal.ui.ThemedActivity;
 import org.firstinspires.ftc.robotcore.internal.ui.UILocation;
 import org.firstinspires.ftc.robotcore.internal.webserver.RobotControllerWebInfo;
-import org.firstinspires.ftc.robotcore.internal.webserver.websockets.WebSocketNamespaceHandler;
 import org.firstinspires.ftc.robotserver.internal.programmingmode.ProgrammingMode;
 import org.firstinspires.ftc.robotserver.internal.programmingmode.ProgrammingModeManager;
 import org.firstinspires.inspection.RcInspectionActivity;
@@ -131,13 +130,11 @@ import org.threeten.bp.YearMonth;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.FileNotFoundException;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import java.lang.reflect.InvocationTargetException;
 
 @SuppressWarnings("WeakerAccess")
 public class FtcRobotControllerActivity extends Activity
@@ -309,7 +306,7 @@ public class FtcRobotControllerActivity extends Activity
         setContentView(R.layout.activity_ftc_controller);
 
         preferencesHelper = new PreferencesHelper(TAG, context);
-        preferencesHelper.writeBooleanPrefIfDifferent(context.getString(com.qualcomm.ftccommon.R.string.pref_rc_connected), true);
+        preferencesHelper.writeBooleanPrefIfDifferent(context.getString(R.string.pref_rc_connected), true);
         preferencesHelper.getSharedPreferences().registerOnSharedPreferenceChangeListener(sharedPreferencesListener);
 
         // Check if this RC app is from a later FTC season than what was installed previously
@@ -318,10 +315,10 @@ public class FtcRobotControllerActivity extends Activity
         if (ftcSeasonYearOfCurrentlyInstalledRc > ftcSeasonYearOfPreviouslyInstalledRc) {
             preferencesHelper.writeIntPrefIfDifferent(getString(R.string.pref_ftc_season_year_of_current_rc), ftcSeasonYearOfCurrentlyInstalledRc);
             // Since it's a new FTC season, we should reset certain settings back to their default values.
-            preferencesHelper.writeBooleanPrefIfDifferent(getString(com.qualcomm.ftccommon.R.string.pref_warn_about_2_4_ghz_band), true);
-            preferencesHelper.writeBooleanPrefIfDifferent(getString(com.qualcomm.ftccommon.R.string.pref_warn_about_obsolete_software), true);
-            preferencesHelper.writeBooleanPrefIfDifferent(getString(com.qualcomm.ftccommon.R.string.pref_warn_about_mismatched_app_versions), true);
-            preferencesHelper.writeBooleanPrefIfDifferent(getString(com.qualcomm.ftccommon.R.string.pref_warn_about_incorrect_clocks), true);
+            preferencesHelper.writeBooleanPrefIfDifferent(getString(R.string.pref_warn_about_2_4_ghz_band), true);
+            preferencesHelper.writeBooleanPrefIfDifferent(getString(R.string.pref_warn_about_obsolete_software), true);
+            preferencesHelper.writeBooleanPrefIfDifferent(getString(R.string.pref_warn_about_mismatched_app_versions), true);
+            preferencesHelper.writeBooleanPrefIfDifferent(getString(R.string.pref_warn_about_incorrect_clocks), true);
         }
 
         entireScreenLayout = (LinearLayout) findViewById(R.id.entire_screen);
@@ -438,7 +435,7 @@ public class FtcRobotControllerActivity extends Activity
         RobotLog.logDeviceInfo();
         AndroidBoard.getInstance().logAndroidBoardInfo();
 
-        if (preferencesHelper.readBoolean(getString(com.qualcomm.ftccommon.R.string.pref_wifi_automute), false)) {
+        if (preferencesHelper.readBoolean(getString(R.string.pref_wifi_automute), false)) {
             initWifiMute(true);
         }
 
@@ -543,11 +540,11 @@ public class FtcRobotControllerActivity extends Activity
         if (Device.isRevControlHub() == true) {
             networkType = NetworkType.RCWIRELESSAP;
         } else {
-            networkType = NetworkType.fromString(preferencesHelper.readString(context.getString(com.qualcomm.ftccommon.R.string.pref_pairing_kind), NetworkType.globalDefaultAsString()));
+            networkType = NetworkType.fromString(preferencesHelper.readString(context.getString(R.string.pref_pairing_kind), NetworkType.globalDefaultAsString()));
         }
 
         // update the app_settings
-        preferencesHelper.writeStringPrefIfDifferent(context.getString(com.qualcomm.ftccommon.R.string.pref_pairing_kind), networkType.toString());
+        preferencesHelper.writeStringPrefIfDifferent(context.getString(R.string.pref_pairing_kind), networkType.toString());
     }
 
     @Override
@@ -742,7 +739,7 @@ public class FtcRobotControllerActivity extends Activity
             requestRobotSetup(LynxConstants.isRevControlHub()
                     ? new Runnable() {
                 @Override public void run() {
-                    showRestartRobotCompleteToast(com.qualcomm.ftccommon.R.string.toastRobotSetupComplete);
+                    showRestartRobotCompleteToast(R.string.toastRobotSetupComplete);
                 }
             }
                     : null);
@@ -797,7 +794,7 @@ public class FtcRobotControllerActivity extends Activity
 
         requestRobotSetup(new Runnable() {
             @Override public void run() {
-                showRestartRobotCompleteToast(com.qualcomm.ftccommon.R.string.toastRestartRobotComplete);
+                showRestartRobotCompleteToast(R.string.toastRestartRobotComplete);
             }
         });
     }
@@ -809,7 +806,7 @@ public class FtcRobotControllerActivity extends Activity
     private void checkPreferredChannel() {
         // For P2P network, check to see what preferred channel is.
         if (networkType ==  NetworkType.WIFIDIRECT) {
-            int prefChannel = preferencesHelper.readInt(getString(com.qualcomm.ftccommon.R.string.pref_wifip2p_channel), -1);
+            int prefChannel = preferencesHelper.readInt(getString(R.string.pref_wifip2p_channel), -1);
             if (prefChannel == -1) {
                 prefChannel = 0;
                 RobotLog.vv(TAG, "pref_wifip2p_channel: No preferred channel defined. Will use a default value of %d", prefChannel);
@@ -840,10 +837,10 @@ public class FtcRobotControllerActivity extends Activity
 
     protected class SharedPreferencesListener implements SharedPreferences.OnSharedPreferenceChangeListener {
         @Override public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
-            if (key.equals(context.getString(com.qualcomm.ftccommon.R.string.pref_app_theme))) {
-                ThemedActivity.restartForAppThemeChange(getTag(), getString(com.qualcomm.ftccommon.R.string.appThemeChangeRestartNotifyRC));
-            } else if (key.equals(context.getString(com.qualcomm.ftccommon.R.string.pref_wifi_automute))) {
-                if (preferencesHelper.readBoolean(context.getString(com.qualcomm.ftccommon.R.string.pref_wifi_automute), false)) {
+            if (key.equals(context.getString(R.string.pref_app_theme))) {
+                ThemedActivity.restartForAppThemeChange(getTag(), getString(R.string.appThemeChangeRestartNotifyRC));
+            } else if (key.equals(context.getString(R.string.pref_wifi_automute))) {
+                if (preferencesHelper.readBoolean(context.getString(R.string.pref_wifi_automute), false)) {
                     initWifiMute(true);
                 } else {
                     initWifiMute(false);

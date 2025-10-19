@@ -1,20 +1,10 @@
 package net.polarbub.ftc.auto.roadrunner;
 
-import android.util.Log;
-import com.acmerobotics.roadrunner.DualNum;
-import com.acmerobotics.roadrunner.Time;
-import com.acmerobotics.roadrunner.Twist2dDual;
-import com.acmerobotics.roadrunner.Vector2d;
-import com.acmerobotics.roadrunner.Vector2dDual;
+import com.acmerobotics.roadrunner.*;
 import com.acmerobotics.roadrunner.ftc.*;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.HardwareMap;
 
-import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.MainBotHardware;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.auto.roadrunner.messages.ThreeDeadWheelInputsMessage;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 public final class ThreeDeadWheelLocalizer implements Localizer {
     public static class Params {
@@ -31,10 +21,11 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
 
     private int lastPar0Pos, lastPar1Pos, lastPerpPos;
     private boolean initialized;
+    private Pose2d pose;
 
     private final LazyImu imu;
 
-    public ThreeDeadWheelLocalizer(MainBotHardware hardware, double inPerTick, LazyImu imu) {
+    public ThreeDeadWheelLocalizer(MainBotHardware hardware, double inPerTick, Pose2d initialPose, LazyImu imu) {
 //        par0 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, MainBotConfig.paraEncoder0ID)));
 //        par1 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class,MainBotConfig.paraEncoder1ID)));
 //        perp = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, MainBotConfig.perpEncoderID)));
@@ -47,13 +38,26 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
         this.imu = imu;
 
         FlightRecorder.write("THREE_DEAD_WHEEL_PARAMS", PARAMS);
+
+        pose = initialPose;
+    }
+
+    @Override
+    public void setPose(Pose2d pose) {
+        this.pose = pose;
+    }
+
+    @Override
+    public Pose2d getPose() {
+        return pose;
     }
 
 //    private int startPar0 = 0;
 //    private int startPar1 = 0;
 //    private double startIMU = 0;
 
-    public Twist2dDual<Time> update() {
+    @Override
+    public PoseVelocity2d update() {
         PositionVelocityPair par0PosVel = par0.getPositionAndVelocity();
         PositionVelocityPair par1PosVel = par1.getPositionAndVelocity();
         PositionVelocityPair perpPosVel = perp.getPositionAndVelocity();
@@ -74,10 +78,7 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
             lastPar1Pos = par1PosVel.position;
             lastPerpPos = perpPosVel.position;
 
-            return new Twist2dDual<>(
-                    Vector2dDual.constant(new Vector2d(0.0, 0.0), 2),
-                    DualNum.constant(0.0, 2)
-            );
+            return new PoseVelocity2d(new Vector2d(0.0, 0.0), 0.0);
         }
 
         int par0PosDelta = par0PosVel.position - lastPar0Pos;
@@ -114,6 +115,7 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
         lastPar1Pos = par1PosVel.position;
         lastPerpPos = perpPosVel.position;
 
-        return twist;
+        pose = pose.plus(twist.value());
+        return twist.velocity().value();
     }
 }

@@ -8,8 +8,10 @@ import com.acmerobotics.roadrunner.Vector2d
 import com.acmerobotics.roadrunner.constantProfile
 import com.acmerobotics.roadrunner.ftc.DriveView
 import com.acmerobotics.roadrunner.ftc.DriveViewFactory
+import com.acmerobotics.roadrunner.ftc.RollingThreeMedian
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
 import com.qualcomm.robotcore.hardware.HardwareMap
+import com.qualcomm.robotcore.util.ElapsedTime
 import java.util.function.Supplier
 
 //FIX: Deduplicate strafe and forward feedforward tuners
@@ -46,6 +48,10 @@ class ManualStrafeFeedforwardTuner(private val dvf: DriveViewFactory, private va
         var startTs = System.nanoTime() / 1e9
 //        val encoder = Encoder
 
+        val lastPositions = MutableList(view.perpEncs.size) { 0 }
+        val lastTimes = view.perpEncs.map { ElapsedTime() }
+        val velEstimates = view.perpEncs.map { RollingThreeMedian() }
+
         while (!isStopRequested) {
             telemetry.addData("mode", mode)
 
@@ -55,11 +61,26 @@ class ManualStrafeFeedforwardTuner(private val dvf: DriveViewFactory, private va
                         mode = Mode.DRIVER_MODE
                     }
 
-                    for (i in view.perpEncs.indices) {
-                        val v = view.perpEncs[i].getPositionAndVelocity().velocity
-                        telemetry.addData("v$i", view.inPerTick * v)
+                    for (g in view.encoderGroups) {
+                        g.bulkRead()
                     }
 
+                    for (i in view.perpEncs.indices) {
+                        val ref = view.perpEncs[i]
+
+                        val pv = view.encoder(ref).getPositionAndVelocity()
+                        val v = if (pv.velocity == null) {
+                            val lastPos = lastPositions[i]
+                            lastPositions[i] = pv.position
+                            val currVelocity = velEstimates[i].update((pv.position - lastPos) / lastTimes[i].seconds())
+                            lastTimes[i].reset()
+                            currVelocity
+                        } else {
+                            pv.velocity!!.toDouble()
+                        }
+
+                        telemetry.addData("v$i", view.inPerTick * v)
+                    }
                     val ts = System.nanoTime() / 1e9
                     val t = ts - startTs
                     if (t > profile.duration) {
@@ -131,6 +152,10 @@ class ManualFeedforwardTuner(val dvf: DriveViewFactory, val feedForwardFactory :
         var movingForwards = true
         var startTs = System.nanoTime() / 1e9
 
+        val lastPositions = MutableList(view.forwardEncs.size) { 0 }
+        val lastTimes = view.forwardEncs.map { ElapsedTime() }
+        val velEstimates = view.forwardEncs.map { RollingThreeMedian() }
+
         while (!isStopRequested) {
             telemetry.addData("mode", mode)
 
@@ -140,10 +165,27 @@ class ManualFeedforwardTuner(val dvf: DriveViewFactory, val feedForwardFactory :
                         mode = Mode.DRIVER_MODE
                     }
 
-                    for (i in view.forwardEncsWrapped.indices) {
-                        val v = view.forwardEncsWrapped[i].getPositionAndVelocity().velocity
+                    for (g in view.encoderGroups) {
+                        g.bulkRead()
+                    }
+
+                    for (i in view.forwardEncs.indices) {
+                        val ref = view.forwardEncs[i]
+
+                        val pv = view.encoder(ref).getPositionAndVelocity()
+                        val v = if (pv.velocity == null) {
+                            val lastPos = lastPositions[i]
+                            lastPositions[i] = pv.position
+                            val currVelocity = velEstimates[i].update((pv.position - lastPos) / lastTimes[i].seconds())
+                            lastTimes[i].reset()
+                            currVelocity
+                        } else {
+                            pv.velocity!!.toDouble()
+                        }
+
                         telemetry.addData("v$i", view.inPerTick * v)
                     }
+
 
                     val ts = System.nanoTime() / 1e9
                     val t = ts - startTs

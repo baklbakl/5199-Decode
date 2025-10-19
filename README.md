@@ -6,27 +6,28 @@ Annakhg=Anna
 cj-saez=CJ
 
 
-### Old History
-We are now on the `fixed_history` branch because it has the git history of the [FTC SDK](https://github.com/FIRST-Tech-Challenge/FtcRobotController), so it is much easier to update the SDK. All the old commits can still be found in the `Main` branch
-
 ### Folder Layout
 `TeamCode` is our code  
-`FtcRobotController` is the stub that combines all the 'closed source' FTC libraries into a robot controller app   
-The FTC libraries aren't hosted by FIRST on GitHub, but they are on Maven Central as a sources jar. They have been unpacked in an easy to observe way [here](https://github.com/OpenFTC/Extracted-RC)
+`FtcRobotController` is the stub that combines all the 'closed source' FTC libraries and a bit of glue code into the robot controller app 
+`ExtractedLibs` contains an extracted version of the 'closed source' FTC libraries. This allows them to be easily inspected
+and modified, but modifications are not allowed to be used in comp. See `ExtractedLibs/README.md` for more info   
+`buildSrc` contains plugins that have common build logic for multiple subprojects
 
 ### Hardware
 The FTC Control system is based around two Android devices and a motor controller. One of the Android devices is for the driver called the Driver Station (DS) and one for the robot called the Robot Controller (RC).
 There are very strict rules for electronics for FTC. The only part of the system that is allowed to have its code changed is the RC App.
 For example teams can't take a device based on a Raspberry Pi and put their own custom code or even install their own packages. 
 Initially the Android devices were actually phones, but the list of allowable devices was very limited as they all had to have the same chipset to make it so all teams had the same amount of processing power.
-Eventually REV Robotics, the manufacturer of the motor controller made their own versions of both of the devices with better performance and convenience than the phones, even though phones are still allowed most teams use the REV devices.
+Eventually REV Robotics, the manufacturer of the motor controller made their own versions of both of the devices with better performance and convenience than the phones. Even though phones are still allowed most teams use the REV devices.
+To connect between the two devices WIFI is used.
 
-To control the robot itself a RC is used. The two main components of an RC are the Motor Controller, called by REV an Expansion hub, and the Android Device.
-The RC can either consist of a Phone and an Expansion hub or a Control Hub which integrates both together. Either setup may have a extra Expansion Hub added to be able to interface more actuators and sensors.
-The Control Hub is an Android TV devices not an Android Phone. The Expansion Hub is communicated with over RS485. When using a phone a FTDI chip is used to convert the Phone's USB to RS485, but when using a Control Hub the converter is more directly. 
+To control the robot itself a RC is used. The two main components of an RC are the Motor Controller, called by REV an Hardware Interface Board (HIB), and the Android Device.
+The RC can either consist of a Phone and an Expansion hub or a Control Hub which integrates both together. Either setup may have a extra Expansion Hub added to be able to control more actuators and sensors.
+The Control Hub is an Android TV devices not an Android Phone. The Expansion Hub is communicated with over RS485. When using a phone a FTDI chip is used to convert the Phone's USB to RS485, but when using a Control Hub there is USB or converter needed and the connection is more direct and faster. 
 The direct connection results in a performance increase because the main bottleneck in the RC is communication between the Android Device and the Expansion Hub. It can take 1 ms to set a motor power! 
-The second Expansion Hub is connected to the RS485 bus via the header on the first one. Many phones only support 2.4 GHz, but the Control Hub supports 5 GHz as well.
-2.4 GHz is prone to interference problems due to its lack of channels so 5 GHz is preferred
+The second Expansion Hub is connected to the RS485 bus via the header on the first one. 
+Many phones only support 2.4 GHz WIFI, but the Control Hub supports 5 GHz as well.
+2.4 GHz is prone to interference problems due to its lack of channels so 5 GHz is preferred.
 
 The DS runs an app that connects via WiFi to the RC. The DS app allows for the OpMode to be selected, started, and stopped and for controller inputs to be sent to the RC. 
 Controllers must be wired to prevent interference on 2.4 GHz and are connected to phones with USB-OTG dongles. These dongles make the phones unable to be charged while in use and also are fragile due to the USB Micro-B connector.
@@ -45,19 +46,32 @@ Control Hub WiFi Password `verygoodpassword`
 The phone doesn't have a password as it uses WiFi Direct mode
 
 ### How the build system differs from the FTC SDK
-The stock FTC SDK uses version 7.2.0 of the Android Gradle Plugin (AGP). The mandates the use of Gradle 7.
-This codebase has been updated to AGP version 8.6.1 as that is the latest that IntelliJ supports at the time of writing. 
-This allows for latest release of Gradle, Gradle 8, to be used and for the compileSDK to be a modern SDK version.
-The minSDK has been updated to SDK 25 as the Control Hub runs Android 7.1. SDK 25 is the newest one that works on Android 7.1.
+#### App size reductions
+32-bit libraries have been removed because it reduces the size of the app. This causes issues with the phones as they are 32-bit and can't use the 64-bit ones that the Control Hub can. See `ExtractedLibs/README.md` for more details on space savings that can be gained from using the extracted libs. <!--ADD: how to make a 32 bit build-->
+
+#### AGP and minSDK
+The stock FTC SDK uses version 8.7.0 of the Android Gradle Plugin (AGP). This codebase has been updated to AGP version 8.12.x to keep up with the latest patches and bug fixes. The minSDK has been updated to SDK 25 as the Control Hub runs Android 7.1. SDK 25 is the newest one that works on Android 7.1.  
+
+#### Buildscripts
+We have replaced the Groovy buildscripts with easier to maintain Kotlin ones. (Note the extension is `.gradle.kts` not `.gradle`). As well, we have taken the FTC libraries in tree (See `ExtractedLibs/README.md`) which adds a lot of duplicated build logic. Much of the duplicated logic is extracted out into plugins in the `buildSrc` directory.
+
+#### How to update the FTC libraries
+To update the AAR libraries
+  1) Edit `gradle.properties` and update `SDK_MAJOR_VERSION`, `SDK_MINOR_VERSION`, and `SDK_POINT_VERSION` to the current version.
+  2) Copy and paste `FTCRobotController/src/main/res/`, `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcOpModeRegister` and `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/PermissionValidatorWrapper` from the [FIRST GitHub repo](https://github.com/FIRST-Tech-Challenge/FtcRobotController) to here
+  3) In the repo check to see if there were any changes to `FTCRobotController/src/main/AndroidManifest.xml` or `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity` and apply them here. If there are any conflicts try to figure out if our version has the changed code and if so how our version differs from stock. `ExtractedLibs/README.md` details the changes made and why. They can't be copied and pasted because there are changes in them from stock that would be lost by copying and pasting. 
+4) You're done!
+
+See `ExtractedLibs/README.md` for how to update the Extracted Libs
 
 ### Hardware map
-A critical part of controlling a robot is controlling the actuators. To get the actuator objects a Hardware Map is used.
-This is set up on the RC and maps a string name to the physical ports on the robot. Some teams will name their actuators based on what they do, but this causes issues when the port that an actuator is plugged into changes.
-The hardware map then has to be changed which can be finicky. To solve this issue our hardware map names motors M0-M7, servos S0-11, etc. and we have config class that has all of the HardwareMap name to use mappings.
-[//]: # (ADD: How we do the hardwaremap now)
+A critical part of controlling a robot is controlling the actuators. Typically, to get the actuator objects a Hardware Map is used.
+This is set up on the RC and maps a string name to the physical ports on the robot. Teams will normally name their actuators based on what they do. Using a hardware map causes issues if we change our RC device out because then we have to reenter the map in which can take quite some time. This happens quite often as we have two demo bots plus a main bot. 
+
+In the past we solved this by naming each of the entries in the hardware map a letter based on their type (M for motors, S for servos, etc.) and then a number, but now we bypass the hardware map by manually searching for hubs on startup and then instantiating all the control classes we need ourselves in MainBotHardware.
 
 ### Roadrunner
-Roadrunner is the motion pathing library that we use.
+Roadrunner is the motion pathing library that we use. The tuning process is largely automatic, but it can be inaccurate, so Bryn has devised a process to manually tune it which he is yet to write down ...  
 #### Documentation
 https://rr.brott.dev/docs/v1-0/guides/centerstage-auto/
 https://cookbook.dairy.foundation/roadrunner_10/complete_trajectorybuilder_reference.html

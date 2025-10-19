@@ -1,20 +1,13 @@
 package net.polarbub.ftc.tele;
 
-import android.util.Pair;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.ColorSensor;
-import com.qualcomm.robotcore.hardware.OpticalDistanceSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.MainBotHardware;
+import net.polarbub.ftc.hardware.LynxModuleInitializer;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
-import net.polarbub.ftc.lib.RegisterConfigClasses;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-
-
-import java.util.List;
 
 @TeleOp(name = "Test", group = MainBotConfig.opmodeGroupName)
 public class Test extends FastIterativeOpMode {
@@ -26,9 +19,9 @@ public class Test extends FastIterativeOpMode {
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
 //        allHubs = hardwareMap.getAll(LynxModule.class);
-        hardware = new MainBotHardware(hardwareMap);
-        hardware.getControlHub().setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        hardware.getExpansionHub().setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        hardware = new MainBotHardware(hardwareMap, false);
+        hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
     
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -54,9 +47,8 @@ public class Test extends FastIterativeOpMode {
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
     public void loop_internal() {
-        hardware.getControlHub().clearBulkCache();
-        hardware.getExpansionHub().clearBulkCache();
-
+        hardware.modules.parentModule.module.clearBulkCache();
+        hardware.modules.childModule.module.clearBulkCache();
 
         if(hardware.colorSensor.getDistance(DistanceUnit.INCH) < thresh) {
             hardware.intakeServo.setPosition(MainBotConfig.ArmConfig.restingServoPos);
