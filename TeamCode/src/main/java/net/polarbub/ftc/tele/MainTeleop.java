@@ -1,11 +1,11 @@
 package net.polarbub.ftc.tele;
 
-import android.util.Log;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
+import net.polarbub.ftc.auto.vision.opencv.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.Alliance;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
@@ -18,14 +18,19 @@ import net.polarbub.ftc.lib.variablewatcher.SingleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.TripleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import org.openftc.apriltag.AprilTagDetection;
+
+
 
 import java.util.ArrayList;
 import java.util.List;
 
-import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 import static java.lang.Math.abs;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+import org.openftc.easyopencv.OpenCvCameraRotation;
 
 
 @TeleOp(name = "Main", group = MainBotConfig.opmodeGroupName)
@@ -60,49 +65,18 @@ public class MainTeleop extends FastIterativeOpMode {
     private OptionDriver optionDriver;
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private List<TimedEvent> timedEvents = new ArrayList<>();
+
+    private AprilTagDetectionPipeline pipeline;
     private OpenCvCamera launchCamera;
 
     //
     // Option Driver Options
     //
-    public Boolean isPartyMode = false;
+    private Boolean isPartyMode = false;
+    private Boolean isRunVision = false;
+    private int aprilTagID;
+
     public Alliance alliance = Alliance.lastAlliance;
-
-    //
-    // Code
-    //
-
-    private enum Mode {
-        HOMING,
-        HOMING_OUT,
-        NORMAL,
-        SPECIMEN,
-        HANG;
-
-        public RevBlinkinLedDriver.BlinkinPattern toColor() {
-            switch (this) {
-                case HOMING:
-                    return RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
-                case HOMING_OUT:
-                    return RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
-                case NORMAL:
-                    return RevBlinkinLedDriver.BlinkinPattern.GREEN;
-                case SPECIMEN:
-                    return RevBlinkinLedDriver.BlinkinPattern.BLUE;
-                case HANG:
-                    return RevBlinkinLedDriver.BlinkinPattern.RED;
-            }
-            throw new RuntimeException("Mode toColor() not complete");
-        }
-    }
-    private Mode mode = Mode.NORMAL;
-
-    private void setMode(Mode mode) {
-        this.mode = mode;
-        hardware.blinkin.setPattern(mode.toColor());
-    }
-
-
 
 
     /*
@@ -126,6 +100,12 @@ public class MainTeleop extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
+        if(alliance == Alliance.BLUE) {
+            aprilTagID = 20;
+        } else {
+            aprilTagID = 24;
+        }
+
         hardware.blinkin.setPattern(offColor);
 
 
@@ -142,64 +122,6 @@ public class MainTeleop extends FastIterativeOpMode {
             //Movement
             variablesWatched.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
                     (Float left_stick_x_f, Float left_stick_y_f, Float turning_f) -> {
-                        /*Double left_stick_x = Double.valueOf(left_stick_x_f) + 0.0;
-                        Double left_stick_y = -Double.valueOf(left_stick_y_f) + 0.0;
-                        double turning = Double.valueOf(turning_f) + 0.0;
-                        //Use trig to get the heading. Because we use trig forward is 90 degrees, right is 0, and left is 180. This is like the unit circle
-                        //See https://www.desmos.com/calculator/oobhklsqt7
-                        short heading = (short) round(atan(left_stick_y / left_stick_x) * 180.0 / PI);
-                        //Fix that tangent is only Q1 and Q4
-                        //In Q2 and Q3 180 degrees are added
-                        if (left_stick_x < 0) {
-                            heading += 180;
-                        }
-                        //In Q4 360 degrees are added
-                        if(left_stick_x >= 0 && left_stick_y < 0) {
-                            heading += 360;
-                        }
-
-                        //heading = (short) ((heading + 360) % 360);
-//                        System.out.println("Heading:" + heading + "\nX: " + left_stick_x + "\nY: " + left_stick_y + "\n");
-
-                        //No conversion to the turning joystick as it is already [-1,1] (Interval notation, thanks Medansky) and that works when you multiply it by the
-                        //wheel speed.
-                        //Get rid of the dead spot
-                        if (turning != 0) {
-                            turning *= inverseMotorStartPower;
-                            turning += motorStartPower;
-                        }
-                        turning /= 2;
-                        //System.out.println("Turning: " + turning);
-
-                        //This uses pythagorean theorem to determine how far the stick is from the center aka the requested speed.
-                        double speed = sqrt((left_stick_x * left_stick_x) + (left_stick_y * left_stick_y));
-                        //Get rid of the dead spot
-                        if (speed != 0) {
-                            speed *= inverseMotorStartPower;
-                            speed += motorStartPower;
-                        }
-                        //System.out.println("Speed: " + speed);
-
-                        //And cap the speed if we ever get over 1.
-                        if (speed > 1) speed = 1;
-
-                        //This does \frac{\left|\operatorname{mod}\left(h-45,360\right)-180\right|-90}{90} Paste it in Desmos
-                        //|mod(heading - 45, 360) - 180| - 90
-                        //-----------------------------
-                        //             90
-                        //It is a triangle wave to convert the heading [0,360) into the max wheel speed [-1,1].
-                        //There is only two speeds even though we have four wheels because wheels that are diagonal to each other spin the same speed
-                        double leftSpeed = (abs(((heading - 45 + 360) % 360) - 180) - 90) / 90.0;
-                        double rightSpeed = (abs(((heading - 135 + 360) % 360) - 180) - 90) / 90.0;
-                        rightSpeed *= speed;
-                        leftSpeed *= speed;
-//                        System.out.println("Heading: " + heading + "\nLeft speed:" + leftSpeed + "\nRight speed: " + rightSpeed);
-                        //Send calculated power to wheels
-                        mainBotHardware.leftFrontDrive.setPower(leftSpeed + turning > 1 ? 1 : leftSpeed + turning);
-                        mainBotHardware.leftRearDrive.setPower(rightSpeed + turning > 1 ? 1 : rightSpeed + turning);
-                        mainBotHardware.rightFrontDrive.setPower(rightSpeed - turning > 1 ? 1 : rightSpeed - turning);
-                        mainBotHardware.rightRearDrive.setPower(leftSpeed - turning > 1 ? 1 : leftSpeed - turning);*/
-
 
                         // Note: pushing stick forward gives negative value
                         double leftFrontPower  = -left_stick_y_f + left_stick_x_f + turning_f;
@@ -231,9 +153,8 @@ public class MainTeleop extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
-        // Tell the driver that initialization is complete.
-//        telemetry.addData("Status", "Initialized");
-//        telemetry.update();
+        telemetry.addData("Status", "Initialized");
+        telemetry.update();
     }
 
     /*
@@ -250,6 +171,24 @@ public class MainTeleop extends FastIterativeOpMode {
             } else if (alliance == Alliance.RED) {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
+        }
+
+        if(!isPartyMode && isRunVision) {
+            launchCamera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"));
+            pipeline = new AprilTagDetectionPipeline();
+
+            launchCamera.setPipeline(pipeline);
+            launchCamera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+                @Override
+                public void onOpened() {
+                    launchCamera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
+                }
+
+                @Override
+                public void onError(int errorCode) {
+
+                }
+            });
         }
 
         try {
@@ -292,18 +231,30 @@ public class MainTeleop extends FastIterativeOpMode {
                     }
 
                     if(left_bumper) {
+                        // TODO add to MainBotConfig
+                        hardware.intakeDrive.setPower(0.8);
 
                     }
                     if(right_bumper) {
-
+                        // TODO add to MainBotConfig
+                        hardware.intakeDrive.setPower(-0.8);
                     }
 
+                }));
+
+                variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("y"), (Boolean y) -> {
+                    if(y) {
+                        hardware.launchServo.setPosition(1);
+                        hardware.launchServo2.setPosition(1);
+
+                    }
                 }));
 
 
             } catch (NoSuchFieldException e) {
                 throw new RuntimeException(e);
             }
+
 
             timedEvents.add(new TimedEvent(colorSensorCheckInterval, () -> {
                 int redDetected = hardware.colorSensor.red();
@@ -317,7 +268,7 @@ public class MainTeleop extends FastIterativeOpMode {
                     haveIncorrectColor = true;
                 } else {
                     if (haveIncorrectColor && warningOn) {
-                        hardware.blinkin.setPattern(mode.toColor());
+//                        hardware.blinkin.setPattern(mode.toColor());
                         warningOn = false;
                     }
                     haveIncorrectColor = false;
@@ -327,7 +278,7 @@ public class MainTeleop extends FastIterativeOpMode {
             timedEvents.add(new TimedEvent(incorrectColorFlashTime, () -> {
                 if(haveIncorrectColor) {
                     if(warningOn) {
-                        hardware.blinkin.setPattern(mode.toColor());
+//                        hardware.blinkin.setPattern(mode.toColor());
                     } else {
                         hardware.blinkin.setPattern(wrongArtifact);
                     }
@@ -343,13 +294,41 @@ public class MainTeleop extends FastIterativeOpMode {
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
 
-//    private int /
 
     private long lastNanos = 0;
     private final long[] loopTimes = new long[5];
     private int loopTimesPos = 0;
 
     public void loop_internal() {
+
+        if(isRunVision) {
+            ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
+
+            telemetry.addData("Target ID", aprilTagID);
+            if (detections != null && !detections.isEmpty()) {
+                AprilTagDetection best = null;
+                for (AprilTagDetection d : detections) {
+                    if (d.id == aprilTagID) {
+                        best = d;
+                        break;
+                    }
+                }
+
+                telemetry.addData("Detections", detections.size());
+                if (best != null) {
+                    telemetry.addLine("Target Found!");
+                    telemetry.addData("ID", best.id);
+                    telemetry.addData("x (m)", "%.3f", best.pose.x);
+                    telemetry.addData("y (m)", "%.3f", best.pose.y);
+                    telemetry.addData("z (m)", "%.3f", best.pose.z);
+                } else {
+                    telemetry.addLine("Target not found in frame");
+                }
+            } else {
+                telemetry.addLine("No detections");
+            }
+        }
+
         for (LynxModule module : allHubs) {
             module.clearBulkCache();
         }
@@ -375,7 +354,7 @@ public class MainTeleop extends FastIterativeOpMode {
         averageNanos /= loopTimes.length;
         lastNanos = thisNanos;
 
-        telemetry.addLine("Mode: " + mode);
+        telemetry.addLine("Mode:");
         telemetry.addData("Status",
                 "Loop Speed: " + 1.0d/(averageNanos/1000000000.0d) + " Hz\n" +
                         "Loop Time: " + averageNanos / 1000000000.0d + "s\n"
