@@ -14,7 +14,7 @@ import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigu
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 
 import static java.lang.Double.NaN;
-import static net.polarbub.ftc.MainBotConfig.ArmConfig;
+import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 
 public class MainBotHardware {
 //    public boolean enableI2C = false;
@@ -26,10 +26,11 @@ public class MainBotHardware {
 
     public final Encoder parallelEncoder0, parallelEncoder1, perpendicularEncoder;
 
-    public final DcMotorEx pivotDrive;
-    public final DcMotorEx slideDrive;
-    public final Servo intakeServo;
-    public final Servo intakeServo2;
+    public final DcMotorEx intakeDrive;
+    public final DcMotorEx launchDrive;
+    public final DcMotorEx launchDrive2;
+    public final Servo launchServo;
+    public final Servo launchServo2;
 
     public final RevColorSensorV3 colorSensor;
 
@@ -84,17 +85,18 @@ public class MainBotHardware {
                 leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
                 rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
-                pivotDrive = createDcMotor(MainBotConfig.pivotDriveID);
-                slideDrive = createDcMotor(MainBotConfig.slideDriveID);
+                intakeDrive = createDcMotor(MainBotConfig.intakeDriveID);
+                launchDrive = createDcMotor(MainBotConfig.launchDriveID);
+                launchDrive2 = createDcMotor(MainBotConfig.launchDrive2ID);
 //                pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //                slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 //                runMotorToPos(pivotDrive, ArmConfig.pegPivotCounts, MainBotConfig.pivotPower);
 //                runMotorToPos(slideDrive, 0, MainBotConfig.slidePower);
 
-                intakeServo = createServo(MainBotConfig.intakeServoID);
-                intakeServo.setPosition(ArmConfig.restingServoPos);
-                intakeServo2 = createServo(MainBotConfig.intakeServo2ID);
-                intakeServo2.setPosition(1 - ArmConfig.restingServoPos);
+                launchServo = createServo(MainBotConfig.launchServoID);
+                launchServo.setPosition(MoveConfig.restingServoPos);
+                launchServo2 = createServo(MainBotConfig.launchServo2ID);
+                launchServo.setPosition(MoveConfig.restingServoPos);
 
 //                intakeServo.getController()
 
@@ -132,12 +134,13 @@ public class MainBotHardware {
                 parallelEncoder1 = null;
                 perpendicularEncoder = null;
 
-                pivotDrive = null;
-                slideDrive = null;
+                intakeDrive = null;
+                launchDrive = null;
+                launchDrive2 = null;
 
                 blinkin = null;
-                intakeServo = null;
-                intakeServo2 = null;
+                launchServo = null;
+                launchServo2 = null;
 
                 leftDistance = null;
                 rightFrontDistance = null;

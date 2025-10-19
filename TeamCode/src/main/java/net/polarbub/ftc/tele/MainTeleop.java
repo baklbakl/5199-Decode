@@ -22,7 +22,7 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import java.util.ArrayList;
 import java.util.List;
 
-import static net.polarbub.ftc.MainBotConfig.ArmConfig;
+import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 import static java.lang.Math.abs;
 
 import org.openftc.easyopencv.OpenCvCamera;
@@ -45,15 +45,11 @@ public class MainTeleop extends FastIterativeOpMode {
     //
 
     //[0,1] the point that the dead zone removal starts the motors
-    private static final double motorStartPower = 0.05;
     private static final RevBlinkinLedDriver.BlinkinPattern offColor = RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_RAINBOW_PALETTE;
-    private static final RevBlinkinLedDriver.BlinkinPattern wrongSample = RevBlinkinLedDriver.BlinkinPattern.RED;
+    private static final RevBlinkinLedDriver.BlinkinPattern wrongArtifact = RevBlinkinLedDriver.BlinkinPattern.RED;
 
 
-    //
-    // Final Variables
-    //
-    private static final double inverseMotorStartPower = 1-motorStartPower;
+
 
     //
     //Globals
@@ -64,7 +60,7 @@ public class MainTeleop extends FastIterativeOpMode {
     private OptionDriver optionDriver;
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private List<TimedEvent> timedEvents = new ArrayList<>();
-    private OpenCvCamera camera;
+    private OpenCvCamera launchCamera;
 
     //
     // Option Driver Options
@@ -135,8 +131,8 @@ public class MainTeleop extends FastIterativeOpMode {
 
 
         //Control Scheme
-     // Left shoulder - intake
-        // Rigt shoulder - outake
+     // Left shoulder - intake (black wheels)
+        // Rigt shoulder - outake (black wheels)
         // triangle/y - release servo to shoot artifact
         // left stick - moving
         // right stick - moving (turn)
@@ -279,187 +275,32 @@ public class MainTeleop extends FastIterativeOpMode {
         } else {
             try {
 
-                //Pivot presets
-                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Gamepad.class.getField("dpad_down"), Boolean::equals, (Boolean dpad_up, Boolean dpad_down) -> {
-                    if(dpad_up && dpad_down) {
-                        return;
-                    }
+                //Control Scheme
+                // Left shoulder - intake (black wheels)
+                // Rigt shoulder - outake (black wheels)
+                // triangle/y - release servo to shoot artifact
+                // left stick - moving
+                // right stick - moving (turn)
+                // LEDs - distance to April Tag (based on alliance)
 
-                    int pivotTarget = hardware.pivotDrive.getTargetPosition();
-                    int slideTarget = hardware.slideDrive.getTargetPosition();
 
-                    if(mode == Mode.NORMAL) {
-                        if(dpad_up) {
-                            if(pivotTarget == ArmConfig.restingPivotCounts) {
-                                if(slideTarget != ArmConfig.restingSlideCounts) {
-                                    throw new RuntimeException("Not allowed to have slides extended and pivot on peg");
-                                }
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-                            } else if(pivotTarget == ArmConfig.farIntakePivotCounts || pivotTarget == ArmConfig.closeIntakePivotCounts) {
-                                if(slideTarget == ArmConfig.restingSlideCounts) {
-                                    throw new RuntimeException("Not allowed to be in intake pivot position and slides retracted");
-                                }
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
 
-                            } else if(pivotTarget == ArmConfig.hoverPivotCounts && slideTarget == ArmConfig.restingSlideCounts) {
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.basketPivotCounts);
-                            }
 
-                        } else if(dpad_down) {
-                            if(pivotTarget == ArmConfig.basketPivotCounts && slideTarget == ArmConfig.restingSlideCounts) {
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-
-                            } else if(pivotTarget == ArmConfig.hoverPivotCounts) {
-                                if(slideTarget == ArmConfig.restingSlideCounts) {
-                                    hardware.pivotDrive.setTargetPosition(ArmConfig.restingPivotCounts);
-                                } else if (slideTarget == ArmConfig.farIntakeSlideCounts) {
-                                    hardware.pivotDrive.setTargetPosition(ArmConfig.farIntakePivotCounts);
-                                } else if (slideTarget == ArmConfig.closeIntakeSlideCounts) {
-                                    hardware.pivotDrive.setTargetPosition(ArmConfig.closeIntakePivotCounts);
-                                } else {
-                                    throw new RuntimeException("How did we get here?");
-                                }
-
-                            }
-                        }
-                    } else if(mode == Mode.SPECIMEN) {
-                        if(dpad_up && pivotTarget == ArmConfig.closeIntakePivotCounts) {
-                            hardware.pivotDrive.setTargetPosition(ArmConfig.specimenPivotCounts);
-                            hardware.slideDrive.setTargetPosition(ArmConfig.specimenApproachSlideCounts);
-                        } else if(dpad_down && pivotTarget == ArmConfig.specimenPivotCounts) {
-                            hardware.pivotDrive.setTargetPosition(ArmConfig.closeIntakePivotCounts);
-                            hardware.slideDrive.setTargetPosition(ArmConfig.closeIntakeSlideCounts);
-                        }
-                    }
-                }));
-
-                //Slide Presets
-                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("a"), Gamepad.class.getField("y"), Boolean::equals, (Boolean a, Boolean y) -> {
-
-                    if(a && y) {
-                        return;
-                    }
-
-                    int pivotTarget = hardware.pivotDrive.getTargetPosition();
-                    int slideTarget = hardware.slideDrive.getTargetPosition();
-
-                    if(mode == Mode.NORMAL) {
-                        if(y) {
-                            if(slideTarget == ArmConfig.restingSlideCounts && pivotTarget == ArmConfig.restingPivotCounts) {
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-                                hardware.slideDrive.setTargetPosition(ArmConfig.closeIntakeSlideCounts);
-
-                            } else if(slideTarget == ArmConfig.restingSlideCounts && pivotTarget == ArmConfig.hoverPivotCounts) {
-                                hardware.slideDrive.setTargetPosition(ArmConfig.closeIntakeSlideCounts);
-
-                            } else if(slideTarget == ArmConfig.closeIntakeSlideCounts) {
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-                                hardware.slideDrive.setTargetPosition(ArmConfig.farIntakeSlideCounts);
-
-                            } else if (slideTarget == ArmConfig.restingSlideCounts && pivotTarget == ArmConfig.basketPivotCounts) {
-                                hardware.slideDrive.setTargetPosition(ArmConfig.basketSlideCounts);
-                            }
-                        } else if(a) {
-                            if(slideTarget == ArmConfig.farIntakeSlideCounts || slideTarget == ArmConfig.closeIntakeSlideCounts) {
-                                hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-                            }
-
-                            if(slideTarget == ArmConfig.basketSlideCounts) {
-                                hardware.slideDrive.setTargetPosition(ArmConfig.restingSlideCounts);
-
-                            } else if(slideTarget == ArmConfig.farIntakeSlideCounts) {
-                                hardware.slideDrive.setTargetPosition(ArmConfig.closeIntakeSlideCounts);
-
-                            } else if(slideTarget == ArmConfig.closeIntakeSlideCounts) {
-                                hardware.slideDrive.setTargetPosition(ArmConfig.restingSlideCounts);
-                            }
-                        }
-                    } else if(mode == Mode.SPECIMEN && pivotTarget == ArmConfig.specimenPivotCounts) {
-                        if(a && slideTarget == ArmConfig.specimenApproachSlideCounts) {
-                            hardware.slideDrive.setTargetPosition(ArmConfig.specimenAttachSlideCounts);
-                        } else if(y && slideTarget == ArmConfig.specimenAttachSlideCounts) {
-                            hardware.slideDrive.setTargetPosition(ArmConfig.specimenApproachSlideCounts);
-                        }
-                    }
-                }));
-                variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("x"), Boolean::equals, (Boolean x) -> {
-                    if(x) {
-                        if (mode == Mode.NORMAL && Math.abs(hardware.slideDrive.getTargetPosition()) <= Math.abs(ArmConfig.closeIntakeSlideCounts) && Math.abs(hardware.pivotDrive.getTargetPosition()) >= Math.abs(ArmConfig.closeIntakePivotCounts)) {
-                            setMode(Mode.SPECIMEN);
-                            hardware.slideDrive.setTargetPosition(ArmConfig.closeIntakeSlideCounts);
-                            hardware.pivotDrive.setTargetPosition(ArmConfig.closeIntakePivotCounts);
-                        } else if (mode == Mode.SPECIMEN) {
-                            setMode(Mode.NORMAL);
-                            hardware.slideDrive.setTargetPosition(ArmConfig.restingSlideCounts);
-                            hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-                        }
-                    }
-                }));
-                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
-                    Log.i("MainTeleop", "pivotmode: " + hardware.pivotDrive.getMode());
-                    Log.i("MainTeleop", "pivottarget: " + hardware.pivotDrive.getTargetPosition());
-                    Log.i("MainTeleop", "slidemode: " + hardware.slideDrive.getMode());
-                    Log.i("MainTeleop", "slidetarget: " + hardware.slideDrive.getTargetPosition());
-                    if(mode == Mode.HANG) {
-                        double speed = 1000 * (left_trigger - right_trigger);
-                        if(abs(speed) < 0.001) speed += 1;
-                        hardware.slideDrive.setVelocity(speed * 2);
-                    }
-                }));
-                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("b"), Boolean::equals, (Boolean dpad_left, Boolean b) -> {
-                    if(dpad_left && b) {
-                        if(mode == Mode.NORMAL || mode == Mode.SPECIMEN) {
-                            setMode(Mode.HANG);
-                            hardware.pivotDrive.setTargetPosition(ArmConfig.hangPivotCounts);
-                            hardware.slideDrive.setPower(ArmConfig.slidePower);
-                            hardware.slideDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                            hardware.slideDrive.setVelocity(1);
-                        } else if(mode == Mode.HANG) {
-                            setMode(Mode.NORMAL);
-                            hardware.slideDrive.setPower(ArmConfig.slidePower);
-                            hardware.slideDrive.setVelocity(0);
-                            hardware.slideDrive.setTargetPosition(ArmConfig.restingSlideCounts);
-                            hardware.slideDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                            hardware.pivotDrive.setTargetPosition(ArmConfig.hoverPivotCounts);
-
-                        }
-                    }
-                }));
-                variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("right_stick_button"), Boolean::equals, (Boolean right_stick_button) -> {
-                    if(right_stick_button) {
-                        if(mode == Mode.NORMAL || mode == Mode.HOMING) {
-
-                        }  else if(mode == Mode.HOMING_OUT) {
-                            setMode(Mode.NORMAL);
-                            hardware.slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-                            MainBotHardware.runMotorToPos(hardware.slideDrive, ArmConfig.restingSlideCounts, ArmConfig.slidePower);
-                        }
-                    }
-                }));
-                //Run grabber
                 variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
-                    if(mode != Mode.NORMAL && mode != Mode.SPECIMEN) {
+                    if(left_bumper && right_bumper) {
                         return;
                     }
 
-                    if(right_bumper == left_bumper) {
-                        hardware.intakeServo.setPosition(ArmConfig.restingServoPos);
-                        hardware.intakeServo2.setPosition(1-ArmConfig.restingServoPos);
-                    } else if (right_bumper) {
-                        double servoPos;
-                        if(hardware.pivotDrive.getTargetPosition() == ArmConfig.basketPivotCounts && hardware.slideDrive.getTargetPosition() == ArmConfig.basketSlideCounts) {
-                            servoPos = ArmConfig.dropServoPos;
-                        } else {
-                            servoPos = ArmConfig.expelServoPos;
-                        }
-                        hardware.intakeServo.setPosition(servoPos);
-                        hardware.intakeServo2.setPosition(1 - servoPos);
-                    } else if (left_bumper) {
-                        hardware.intakeServo.setPosition(ArmConfig.grabServoPos);
-                        hardware.intakeServo2.setPosition(1-ArmConfig.grabServoPos);
+                    if(left_bumper) {
+
+                    }
+                    if(right_bumper) {
+
                     }
 
                 }));
+
+
             } catch (NoSuchFieldException e) {
                 throw new RuntimeException(e);
             }
@@ -475,31 +316,12 @@ public class MainTeleop extends FastIterativeOpMode {
                 ) {
                     haveIncorrectColor = true;
                 } else {
-                    if(haveIncorrectColor && warningOn) {
+                    if (haveIncorrectColor && warningOn) {
                         hardware.blinkin.setPattern(mode.toColor());
                         warningOn = false;
                     }
                     haveIncorrectColor = false;
                 }
-
-//                int currentColor = hardware.colorSensor.argb();
-//                float[] hsv = new float[3];
-//                Color.colorToHSV(hardware.colorSensor.argb(), hsv);
-//                float hue = hsv[0];
-//
-//                if(
-//                    Color.alpha(currentColor) > sampleDetectedAlpha &&
-//                    ((hue > blueMinSaturation && hue < blueMaxSaturation && alliance == Alliance.RED) ||
-//                    (hue > redMinSaturation && hue < redMaxSaturation && alliance == Alliance.BLUE))
-//                ) {
-//                    haveIncorrectColor = true;
-//                } else {
-//                    if(haveIncorrectColor && warningOn) {
-//                        hardware.blinkin.setPattern(mode.toColor());
-//                        warningOn = false;
-//                    }
-//                    haveIncorrectColor = false;
-//                }
             }));
 
             timedEvents.add(new TimedEvent(incorrectColorFlashTime, () -> {
@@ -507,7 +329,7 @@ public class MainTeleop extends FastIterativeOpMode {
                     if(warningOn) {
                         hardware.blinkin.setPattern(mode.toColor());
                     } else {
-                        hardware.blinkin.setPattern(wrongSample);
+                        hardware.blinkin.setPattern(wrongArtifact);
                     }
                     warningOn = !warningOn;
                 }
