@@ -131,7 +131,7 @@ public class MainTeleop extends FastIterativeOpMode {
 
 
         //Control Scheme
-     // Left shoulder - intake (black wheels)
+        // Left shoulder - intake (black wheels)
         // Rigt shoulder - outake (black wheels)
         // triangle/y - release servo to shoot artifact
         // left stick - moving
@@ -312,7 +312,7 @@ public class MainTeleop extends FastIterativeOpMode {
 
                 if (
                         ((redDetected > blueDetected && redDetected > greenDetected) && alliance == Alliance.BLUE) ||
-                        ((blueDetected > redDetected && blueDetected > greenDetected) && alliance == Alliance.RED)
+                                ((blueDetected > redDetected && blueDetected > greenDetected) && alliance == Alliance.RED)
                 ) {
                     haveIncorrectColor = true;
                 } else {
@@ -391,4 +391,3 @@ public class MainTeleop extends FastIterativeOpMode {
         hardware.blinkin.setPattern(offColor);
     }
 }
-
