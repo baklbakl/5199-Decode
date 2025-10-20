@@ -18,7 +18,6 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import java.util.ArrayList;
 import java.util.List;
 
-import static net.polarbub.ftc.MainBotConfig.ArmConfig;
 import static java.lang.Math.abs;
 
 @TeleOp(name = "DemoBot (Big)", group = MainBotConfig.demoGroupName)

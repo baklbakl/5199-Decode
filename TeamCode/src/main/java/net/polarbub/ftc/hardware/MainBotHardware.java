@@ -1,14 +1,21 @@
 package net.polarbub.ftc.hardware;
 
 import com.acmerobotics.roadrunner.ftc.Encoder;
+import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
+import com.acmerobotics.roadrunner.ftc.RawEncoder;
 import com.qualcomm.hardware.lynx.*;
+import com.qualcomm.hardware.motors.GoBILDA5202Series;
 import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
+import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.*;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import net.polarbub.ftc.MainBotConfig;
 
-import static net.polarbub.ftc.MainBotConfig.ArmConfig;
+import static java.lang.Double.NaN;
+import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 
 public class MainBotHardware {
     public final DcMotorExEx leftFrontDrive;
@@ -18,10 +25,11 @@ public class MainBotHardware {
 
     public final Encoder parallelEncoder0, parallelEncoder1, perpendicularEncoder;
 
-    public final DcMotorExEx pivotDrive;
-    public final DcMotorExEx slideDrive;
-    public final Servo intakeServo;
-    public final Servo intakeServo2;
+    public final DcMotorExEx intakeDrive;
+    public final DcMotorExEx launchDrive;
+    public final DcMotorExEx launchDrive2;
+    public final Servo launchServo;
+    public final Servo launchServo2;
 
     public final RevColorSensorV3 colorSensor;
 
@@ -32,6 +40,7 @@ public class MainBotHardware {
     public final RevBlinkinLedDriver blinkin;
 
     public final HardwareMap hardwareMap;
+
     public final LynxModuleInitializer modules;
 
     public MainBotHardware(HardwareMap hardwareMap, boolean enableI2C) {
@@ -53,19 +62,14 @@ public class MainBotHardware {
         leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
         rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
-        pivotDrive = child.createDcMotor(MainBotConfig.pivotDriveID);
-        slideDrive = child.createDcMotor(MainBotConfig.slideDriveID);
-//                pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//                slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-//                runMotorToPos(pivotDrive, ArmConfig.pegPivotCounts, MainBotConfig.pivotPower);
-//                runMotorToPos(slideDrive, 0, MainBotConfig.slidePower);
+        intakeDrive = child.createDcMotor(MainBotConfig.intakeDriveID);
+        launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
+        launchDrive2 = child.createDcMotor(MainBotConfig.launchDrive2ID);
 
-        intakeServo = modules.parentModule.createServo(MainBotConfig.intakeServoID);
-        intakeServo.setPosition(ArmConfig.restingServoPos);
-        intakeServo2 = modules.parentModule.createServo(MainBotConfig.intakeServo2ID);
-        intakeServo2.setPosition(1 - ArmConfig.restingServoPos);
-
-//                intakeServo.getController()
+        launchServo = parent.createServo(MainBotConfig.launchServoID);
+        launchServo.setPosition(MoveConfig.restingServoPos);
+        launchServo2 = parent.createServo(MainBotConfig.launchServo2ID);
+        launchServo.setPosition(MoveConfig.restingServoPos);
 
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));
@@ -87,7 +91,7 @@ public class MainBotHardware {
             leftDistance = null;
             rightFrontDistance = null;
             rightRearDistance = null;
-        } else {
+         } else {
             colorSensor = null;
             leftDistance = null;
             rightFrontDistance = null;

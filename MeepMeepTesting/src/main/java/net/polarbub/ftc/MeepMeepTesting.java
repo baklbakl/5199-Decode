@@ -57,6 +57,7 @@ public class MeepMeepTesting {
 
         TrajectoryActionBuilder builder = bot.getDrive().actionBuilder(new Pose2d(0,0,0)).fresh();
 
+
         TrajectoryActionBuilder newBuilder = new TrajectoryActionBuilder(
                 builder.getTurnActionFactory(),
                 builder.getTrajectoryActionFactory(),
@@ -65,6 +66,7 @@ public class MeepMeepTesting {
                 0.0,
                 builder.getBaseTurnConstraints(),
                 new MinVelConstraint(
+
                         List.of(
                                 new TranslationalVelConstraint(40.0),
                                 new CustomVelConstraint()

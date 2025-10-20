@@ -11,7 +11,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import static net.polarbub.ftc.MainBotConfig.ArmConfig;
+import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 
 public class SplitAuto {
     private static final double parkX = 35;
@@ -117,7 +117,7 @@ public class SplitAuto {
                 }
                 while(!stopThread) {
                     if(getColorDist.get() < MainBotConfig.distSensorThresh) {
-                        setServoPosition.accept(ArmConfig.restingServoPos);
+                        setServoPosition.accept(MoveConfig.restingServoPos);
                     }
                     try {
                         Thread.sleep(distSensorPollInterval);
@@ -145,22 +145,22 @@ public class SplitAuto {
         return pathBuilder
                 .stopAndAdd(() -> {
 //                    runMotorToPosBlocking.accept(Motor.PIVOT, ArmConfig.closeIntakePivotCounts);
-                    runMotorToPosBlockingEnd.accept(Motor.PIVOT, MainBotConfig.ArmConfig.basketPivotCounts, extraHighHoverPivotCounts);
-                    runMotorToPosBlockingEnd.accept(Motor.SLIDE, ArmConfig.basketSlideCounts, slidesDoneCounts);
+                    runMotorToPosBlockingEnd.accept(Motor.PIVOT, MainBotConfig.MoveConfig.basketPivotCounts, extraHighHoverPivotCounts);
+                    runMotorToPosBlockingEnd.accept(Motor.SLIDE, MoveConfig.basketSlideCounts, slidesDoneCounts);
 //                    runMotorToPosBlockingEnd.accept(Motor.SLIDE, ArmConfig.closeIntakeSlideCounts, 1500);
                 })
                 .setReversed(true)
                 .splineToConstantHeading(basketPos, Math.toRadians(45), new TranslationalVelConstraint(basketApproachSpeed))
                 .stopAndAdd(() -> {
-                    runMotorToPosBlocking.accept(Motor.PIVOT, MainBotConfig.ArmConfig.basketPivotCounts);
-                    runMotorToPosBlocking.accept(Motor.SLIDE, ArmConfig.basketSlideCounts);
-                    setServoPosition.accept(MainBotConfig.ArmConfig.dropServoPos);
+                    runMotorToPosBlocking.accept(Motor.PIVOT, MainBotConfig.MoveConfig.basketPivotCounts);
+                    runMotorToPosBlocking.accept(Motor.SLIDE, MoveConfig.basketSlideCounts);
+                    setServoPosition.accept(MainBotConfig.MoveConfig.dropServoPos);
                     try {
                         Thread.sleep(basketDropTime);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    setServoPosition.accept(MainBotConfig.ArmConfig.restingServoPos);
+                    setServoPosition.accept(MainBotConfig.MoveConfig.restingServoPos);
                 })
                 .setReversed(false)
                 .splineToConstantHeading(basketLineUpPos, Math.toRadians(45));
@@ -178,9 +178,9 @@ public class SplitAuto {
         double lineUpY = sampleIntakePos.y - basketLineUpDistance;
         return pathBuilder
                 .stopAndAdd(() -> {
-                    runMotorToPosBlockingEnd.accept(Motor.SLIDE, ArmConfig.closeIntakeSlideCounts, slidesDoneCounts);
-                    runMotorToPosBlockingEnd.accept(Motor.PIVOT, ArmConfig.closeIntakePivotCounts, highHoverPivotCounts);
-                    setServoPosition.accept(ArmConfig.grabServoPos);
+                    runMotorToPosBlockingEnd.accept(Motor.SLIDE, MoveConfig.closeIntakeSlideCounts, slidesDoneCounts);
+                    runMotorToPosBlockingEnd.accept(Motor.PIVOT, MoveConfig.closeIntakePivotCounts, highHoverPivotCounts);
+                    setServoPosition.accept(MoveConfig.grabServoPos);
                     startDistSensor();
 
 //                    runMotorToPos.accept(Motor.PIVOT, ArmConfig.closeIntakePivotCounts);
@@ -190,7 +190,7 @@ public class SplitAuto {
                 .splineTo(new Vector2d(realSampleIntakeX, sampleIntakePos.y), Math.toRadians(90), new TranslationalVelConstraint(sampleIntakeSpeed))
                 .stopAndAdd(() -> {
                     stopDistSensorBlocking();
-                    setServoPosition.accept(MainBotConfig.ArmConfig.restingServoPos);
+                    setServoPosition.accept(MainBotConfig.MoveConfig.restingServoPos);
                     runMotorToPos.accept(Motor.PIVOT, extraHighHoverPivotCounts);
                 })
                 .setReversed(true)
@@ -210,13 +210,13 @@ public class SplitAuto {
 
         pathBuilder = pathBuilder
                 .afterTime(comingFromObservation ? 0 : 0.3, () -> {
-                    runMotorToPos.accept(Motor.PIVOT, ArmConfig.hoverPivotCounts);
+                    runMotorToPos.accept(Motor.PIVOT, MoveConfig.hoverPivotCounts);
                 })
                 .splineToConstantHeading(lineUp, Math.toRadians(comingFromObservation ? 180 : 90))
                 .afterTime(0, () -> {
 //                    runMotorToPos.accept(Motor.SLIDE, ArmConfig.specimenApproachSlideCounts);
-                    runMotorToPos.accept(Motor.PIVOT, ArmConfig.specimenPivotCounts);
-                    runMotorToPos.accept(Motor.SLIDE, ArmConfig.specimenApproachSlideCounts);
+                    runMotorToPos.accept(Motor.PIVOT, MoveConfig.specimenPivotCounts);
+                    runMotorToPos.accept(Motor.SLIDE, MoveConfig.specimenApproachSlideCounts);
 //                    runSlideAndPivot(ArmConfig.specimenPivotCounts, ArmConfig.specimenApproachSlideCounts);
                 })
                 //Y was -35
@@ -224,17 +224,17 @@ public class SplitAuto {
                 .setReversed(true)
                 .splineToConstantHeading(new Vector2d(realX, chamberPos.y), Math.toRadians(90), new TranslationalVelConstraint(chamberApproachSpeed))
                 .stopAndAdd(() -> {
-                    runSlideAndPivot(ArmConfig.specimenPivotCounts, ArmConfig.specimenApproachSlideCounts);
+                    runSlideAndPivot(MoveConfig.specimenPivotCounts, MoveConfig.specimenApproachSlideCounts);
 
-                    runMotorToPosBlocking.accept(Motor.SLIDE, ArmConfig.specimenAttachSlideCounts);
-                    setServoPosition.accept(MainBotConfig.ArmConfig.grabServoPos);
+                    runMotorToPosBlocking.accept(Motor.SLIDE, MoveConfig.specimenAttachSlideCounts);
+                    setServoPosition.accept(MainBotConfig.MoveConfig.grabServoPos);
                     try {
                         Thread.sleep(chamberPullDownTime);
 
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    setServoPosition.accept(ArmConfig.expelServoPos);
+                    setServoPosition.accept(MoveConfig.expelServoPos);
                     try {
                         Thread.sleep(chamberExpelTime);
 
@@ -243,7 +243,7 @@ public class SplitAuto {
                     }
                 })
                 .afterTime(chamberMoveExpelTime, () -> {
-                    setServoPosition.accept(MainBotConfig.ArmConfig.restingServoPos);
+                    setServoPosition.accept(MainBotConfig.MoveConfig.restingServoPos);
                 })
                 .setReversed(false)
                 .splineToConstantHeading(lineUp, Math.toRadians(270));
@@ -256,7 +256,7 @@ public class SplitAuto {
 
         pathBuilder = pathBuilder
                 .stopAndAdd(() -> {
-                    runMotorToPosBlockingEnd.accept(Motor.PIVOT, ArmConfig.hoverPivotCounts, highHoverPivotCounts);
+                    runMotorToPosBlockingEnd.accept(Motor.PIVOT, MoveConfig.hoverPivotCounts, highHoverPivotCounts);
                 })
                 .setTangent(0);
 
@@ -281,7 +281,7 @@ public class SplitAuto {
                 .afterTime(0, () -> {
                     runMotorToPos.accept(Motor.SLIDE, pickupSlideCounts);
                     runMotorToPos.accept(Motor.PIVOT, pickupPivotCounts);
-                    setServoPosition.accept(MainBotConfig.ArmConfig.grabServoPos);
+                    setServoPosition.accept(MainBotConfig.MoveConfig.grabServoPos);
                     startDistSensor();
                 });
 
@@ -295,17 +295,17 @@ public class SplitAuto {
                 .splineToConstantHeading(specimenIntakePos, Math.toRadians(270), new TranslationalVelConstraint(specimenIntakeSpeed))
                 .stopAndAdd(() -> {
                     stopDistSensorBlocking();
-                    setServoPosition.accept(ArmConfig.expelServoPos);
+                    setServoPosition.accept(MoveConfig.expelServoPos);
                     try {
                         Thread.sleep(specimenExpelTime);
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                    setServoPosition.accept(ArmConfig.restingServoPos);
+                    setServoPosition.accept(MoveConfig.restingServoPos);
                 })
                 .setReversed(true)
                 .afterTime(specimenIntakeUpPivotDelay, () -> {
-                    runMotorToPos.accept(Motor.PIVOT, ArmConfig.hoverPivotCounts);
+                    runMotorToPos.accept(Motor.PIVOT, MoveConfig.hoverPivotCounts);
                 })
                 .splineToConstantHeading(lineUp, Math.toRadians(90))
                 .splineToConstantHeading(new Vector2d(specimenIntakePos.x+(lineUp.y - (chamberPos.y - chamberLineUpDistance)), chamberY-chamberLineUpDistance), Math.toRadians(180), new TranslationalVelConstraint(specimenApproachSpeed));
@@ -345,8 +345,8 @@ public class SplitAuto {
 
             pathBuilder = pathBuilder
                     .stopAndAdd(() -> {
-                        runMotorToPosBlockingEnd.accept(Motor.PIVOT, extraHighHoverPivotCounts, ArmConfig.closeIntakePivotCounts);
-                        runMotorToPos.accept(Motor.SLIDE, ArmConfig.closeIntakeSlideCounts);
+                        runMotorToPosBlockingEnd.accept(Motor.PIVOT, extraHighHoverPivotCounts, MoveConfig.closeIntakePivotCounts);
+                        runMotorToPos.accept(Motor.SLIDE, MoveConfig.closeIntakeSlideCounts);
                     })
                     .setTangent(135)
                     .splineToLinearHeading(new Pose2d(basketLineUpPos, Math.toRadians(45)), Math.toRadians(180));
@@ -366,15 +366,15 @@ public class SplitAuto {
 
                         pathBuilder = pathBuilder
                                 .stopAndAdd(() -> {
-                                    runSlideAndPivot(highHoverPivotCounts, ArmConfig.closeIntakeSlideCounts);
-                                    setServoPosition.accept(ArmConfig.grabServoPos);
-                                    runMotorToPos.accept(Motor.PIVOT, ArmConfig.closeIntakePivotCounts);
+                                    runSlideAndPivot(highHoverPivotCounts, MoveConfig.closeIntakeSlideCounts);
+                                    setServoPosition.accept(MoveConfig.grabServoPos);
+                                    runMotorToPos.accept(Motor.PIVOT, MoveConfig.closeIntakePivotCounts);
                                 })
                                 .setTangent(Math.toRadians(90))
                                 .splineToLinearHeading(new Pose2d(lineUp, wallSpikeIntakeAngle), wallSpikeIntakeAngle)
                                 .splineTo(wallSampleIntakePos, wallSpikeIntakeAngle, new TranslationalVelConstraint(wallSpikeApproachSpeed))
                                 .afterTime(wallSpikeIntakeTime, () -> {
-                                    setServoPosition.accept(ArmConfig.restingServoPos);
+                                    setServoPosition.accept(MoveConfig.restingServoPos);
                                     runMotorToPos.accept(Motor.PIVOT, highHoverPivotCounts);
                                 })
                                 .setReversed(true)
@@ -389,7 +389,7 @@ public class SplitAuto {
             if(park) {
                 pathBuilder = pathBuilder
                         .stopAndAdd(() -> {
-                            runMotorToPosBlockingEnd.accept(Motor.SLIDE, ArmConfig.restingSlideCounts, slidesDoneCounts);
+                            runMotorToPosBlockingEnd.accept(Motor.SLIDE, MoveConfig.restingSlideCounts, slidesDoneCounts);
                             runMotorToPosBlocking.accept(Motor.PIVOT, highHoverPivotCounts);
                             //highHoverPivotCounts
                         })
@@ -398,7 +398,7 @@ public class SplitAuto {
                         .splineTo(new Vector2d(-36, -24), Math.toRadians(90))
                         .splineToSplineHeading(new Pose2d(-19, 0, Math.toRadians(180)), Math.toRadians(0))
                         .stopAndAdd(() -> {
-                            runMotorToPosBlocking.accept(Motor.PIVOT, MainBotConfig.ArmConfig.hangPivotCounts);
+                            runMotorToPosBlocking.accept(Motor.PIVOT, MainBotConfig.MoveConfig.hangPivotCounts);
                         });
 
 //                        .splineToLinearHeading(new Pose2d(-36, -24, Math.toRadians(270)), Math.toRadians(90))
@@ -409,9 +409,9 @@ public class SplitAuto {
 
             } else {
                 pathBuilder = pathBuilder.stopAndAdd(() -> {
-                    runMotorToPosBlocking.accept(Motor.SLIDE, ArmConfig.closeIntakeSlideCounts);
-                    runMotorToPos.accept(Motor.SLIDE, ArmConfig.restingSlideCounts);
-                    runMotorToPosBlocking.accept(Motor.PIVOT, ArmConfig.hoverPivotCounts);
+                    runMotorToPosBlocking.accept(Motor.SLIDE, MoveConfig.closeIntakeSlideCounts);
+                    runMotorToPos.accept(Motor.SLIDE, MoveConfig.restingSlideCounts);
+                    runMotorToPosBlocking.accept(Motor.PIVOT, MoveConfig.hoverPivotCounts);
                 });
             }
 
@@ -439,12 +439,12 @@ public class SplitAuto {
             if(park) {
                 pathBuilder = pathBuilder
                         .afterTime(0, () -> {
-                            runSlideAndPivot(ArmConfig.restingPivotCounts, ArmConfig.restingSlideCounts);
+                            runSlideAndPivot(MoveConfig.restingPivotCounts, MoveConfig.restingSlideCounts);
                         })
                         .splineToLinearHeading(new Pose2d(parkX, parkY, Math.toRadians(270)), Math.toRadians(315));
             } else {
                 pathBuilder = pathBuilder.stopAndAdd(() -> {
-                    runSlideAndPivot(ArmConfig.restingPivotCounts, ArmConfig.restingSlideCounts);
+                    runSlideAndPivot(MoveConfig.restingPivotCounts, MoveConfig.restingSlideCounts);
                 });
             }
 
