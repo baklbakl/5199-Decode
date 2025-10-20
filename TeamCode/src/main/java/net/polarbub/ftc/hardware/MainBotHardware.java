@@ -66,10 +66,10 @@ public class MainBotHardware {
         launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
         launchDrive2 = child.createDcMotor(MainBotConfig.launchDrive2ID);
 
-        launchServo = parent.createServo(MainBotConfig.launchServoID);
-        launchServo.setPosition(MoveConfig.restingServoPos);
-        launchServo2 = parent.createServo(MainBotConfig.launchServo2ID);
-        launchServo.setPosition(MoveConfig.restingServoPos);
+        intakeServo = createServo(MainBotConfig.intakeDriveID);
+        intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+        intakeServo2 = createServo(MainBotConfig.intakeDriveID);
+        intakeServo2.setPosition(1 - MainBotConfig.MoveConfig.restingServoPos);
 
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));
