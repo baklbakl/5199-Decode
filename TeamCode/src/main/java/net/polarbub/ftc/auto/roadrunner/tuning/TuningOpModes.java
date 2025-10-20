@@ -55,12 +55,6 @@ public final class TuningOpModes {
 
             ThreeDeadWheelLocalizer dl = (ThreeDeadWheelLocalizer) md.localizer;
 
-            // parEncs.add(dl.par0);
-            // parEncs.add(dl.par1);
-            // perpEncs.add(dl.perp);
-
-            //NEW!
-
             encoderGroups.add(new LynxQuadratureEncoderGroup(
                     Arrays.asList(hardware.modules.parentModule.module, hardware.modules.childModule.module),
                     Arrays.asList(dl.par0, dl.par1, dl.perp)
@@ -68,35 +62,6 @@ public final class TuningOpModes {
             parEncs.add(new EncoderRef(0, 0));
             parEncs.add(new EncoderRef(0, 1));
             perpEncs.add(new EncoderRef(0, 2));
-
-
-            // return new DriveView(
-            //         DriveType.MECANUM,
-            //         MecanumDrive.PARAMS.inPerTick,
-            //         MecanumDrive.PARAMS.maxWheelVel,
-            //         MecanumDrive.PARAMS.minProfileAccel,
-            //         MecanumDrive.PARAMS.maxProfileAccel,
-            //         hardwareMap.getAll(LynxModule.class),
-            //         Arrays.asList(
-            //                 md.leftFront,
-            //                 md.leftBack
-            //         ),
-            //         Arrays.asList(
-            //                 md.rightFront,
-            //                 md.rightBack
-            //         ),
-            //         leftEncs,
-            //         rightEncs,
-            //         parEncs,
-            //         perpEncs,
-            //         md.lazyImu,
-            //         md.voltageSensor,
-            //         () -> new MotorFeedforward(MecanumDrive.PARAMS.kS,
-            //                 MecanumDrive.PARAMS.kV / MecanumDrive.PARAMS.inPerTick,
-            //                 (MecanumDrive.PARAMS.kASpeedUp + MecanumDrive.PARAMS.kASlowDown) / 2 / MecanumDrive.PARAMS.inPerTick)
-            // );
-
-            //NEW!
 
             return new DriveView(
                     DriveType.MECANUM,

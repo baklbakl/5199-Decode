@@ -43,6 +43,6 @@ java {
 //}
 
 dependencies {
-    implementation("com.acmerobotics.roadrunner:MeepMeep:0.1.6")
+    implementation("com.acmerobotics.roadrunner:MeepMeep:0.1.7")
     implementation(project(":Common"))
 }
