@@ -11,9 +11,9 @@ public class MainBotConfig {
     public static final int rightFrontDriveID = 1;
     public static final int leftRearDriveID = 2;
     public static final int rightRearDriveID = 3;
-    public static final int intakeDriveID = 4;
-    public static final int launchDriveID = 5;
-    public static final int launchDrive2ID = 6;
+    public static final int intakeDriveID = 0;
+    public static final int launchDriveID = 2;
+    public static final int launchDrive2ID = 3;
 
     public static final int paraEncoder0ID = 3;
     public static final int paraEncoder1ID = 0;

@@ -39,8 +39,8 @@ public class Test extends FastIterativeOpMode {
      */
     public void start_internal() {
         runtime.reset();
-        hardware.intakeServo.setPosition(MainBotConfig.ArmConfig.grabServoPos);
-        hardware.intakeServo2.setPosition(1-MainBotConfig.ArmConfig.grabServoPos);
+        hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.grabServoPos);
+        hardware.intakeServo2.setPosition(1-MainBotConfig.MoveConfig.grabServoPos);
     }
 
     /*
@@ -51,8 +51,8 @@ public class Test extends FastIterativeOpMode {
         hardware.modules.childModule.module.clearBulkCache();
 
         if(hardware.colorSensor.getDistance(DistanceUnit.INCH) < thresh) {
-            hardware.intakeServo.setPosition(MainBotConfig.ArmConfig.restingServoPos);
-            hardware.intakeServo2.setPosition(MainBotConfig.ArmConfig.restingServoPos);
+            hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+            hardware.intakeServo2.setPosition(MainBotConfig.MoveConfig.restingServoPos);
         };
     }
 

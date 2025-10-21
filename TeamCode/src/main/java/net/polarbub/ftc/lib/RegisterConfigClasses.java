@@ -12,7 +12,7 @@ import org.firstinspires.ftc.ftccommon.external.OnCreate;
 
 public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
-            MainBotConfig.ArmConfig.class,
+            MainBotConfig.MoveConfig.class,
             SplitAuto.class,
             SensorReader.class,
             MainTeleop.class,

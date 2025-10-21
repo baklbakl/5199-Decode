@@ -81,17 +81,17 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             if(motor == Motor.SLIDE) {
                 return new MotorData(
                         this,
-                        hardware.slideDrive,
-                        MainBotConfig.ArmConfig.slidePower,
-                        MainBotConfig.ArmConfig.slideHomingPower,
+                        hardware.intakeDrive,
+                        MainBotConfig.MoveConfig.slidePower,
+                        MainBotConfig.MoveConfig.slideHomingPower,
                         this.getClass().getDeclaredField("lastSlideCounts")
                 );
             } else if(motor == Motor.PIVOT) {
                 return new MotorData(
                         this,
-                        hardware.pivotDrive,
-                        MainBotConfig.ArmConfig.pivotPower,
-                        MainBotConfig.ArmConfig.pivotHomingPower,
+                        hardware.intakeDrive,
+                        MainBotConfig.MoveConfig.pivotPower,
+                        MainBotConfig.MoveConfig.pivotHomingPower,
                         this.getClass().getDeclaredField("lastPivotCounts")
                 );
             }
@@ -149,10 +149,10 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
         hardware = new MainBotHardware(hardwareMap);
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
-        hardware.slideDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.slideDrive.setPower(MainBotConfig.ArmConfig.slideHomingPower);
-        hardware.pivotDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.pivotDrive.setPower(MainBotConfig.ArmConfig.pivotHomingPower);
+        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
+        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotHomingPower);
 
         splitAuto = new SplitAuto(
                 (startPose) -> {
@@ -207,15 +207,15 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     protected void start_internal() {
         Alliance.lastAlliance = alliance;
 
-        hardware.slideDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        hardware.slideDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        hardware.slideDrive.setPower(MainBotConfig.ArmConfig.slidePower);
-        hardware.slideDrive.setTargetPosition(0);
+        hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slidePower);
+        hardware.intakeDrive.setTargetPosition(0);
 
-        hardware.pivotDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        hardware.pivotDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        hardware.pivotDrive.setPower(MainBotConfig.ArmConfig.pivotPower);
-        hardware.pivotDrive.setTargetPosition(MainBotConfig.ArmConfig.restingPivotCounts);
+        hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotPower);
+        hardware.intakeDrive.setTargetPosition(MainBotConfig.MoveConfig.restingPivotCounts);
 
         AtomicBoolean pathDone = new AtomicBoolean(false);
         Actions.runBlocking(

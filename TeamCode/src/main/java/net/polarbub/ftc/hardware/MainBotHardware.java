@@ -28,8 +28,8 @@ public class MainBotHardware {
     public final DcMotorExEx intakeDrive;
     public final DcMotorExEx launchDrive;
     public final DcMotorExEx launchDrive2;
-    public final Servo launchServo;
-    public final Servo launchServo2;
+    public final Servo intakeServo;
+    public final Servo intakeServo2;
 
     public final RevColorSensorV3 colorSensor;
 
@@ -59,17 +59,17 @@ public class MainBotHardware {
         // Note: The settings here assume direct drive on left and right wheels.  Gear Reduction or 90 Deg drives may require direction flips
         leftFrontDrive.setDirection(DcMotor.Direction.FORWARD);
         rightFrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftRearDrive.setDirection(DcMotor.Direction.REVERSE);
         rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
         intakeDrive = child.createDcMotor(MainBotConfig.intakeDriveID);
         launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
         launchDrive2 = child.createDcMotor(MainBotConfig.launchDrive2ID);
 
-        intakeServo = createServo(MainBotConfig.intakeDriveID);
+        intakeServo = parent.createServo(MainBotConfig.launchServoID);
         intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-        intakeServo2 = createServo(MainBotConfig.intakeDriveID);
-        intakeServo2.setPosition(1 - MainBotConfig.MoveConfig.restingServoPos);
+        intakeServo2 = parent.createServo(MainBotConfig.intakeDriveID);
+        intakeServo2.setPosition(MainBotConfig.MoveConfig.restingServoPos);
 
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));

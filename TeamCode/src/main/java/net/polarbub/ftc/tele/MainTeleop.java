@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.vision.opencv.AprilTagDetectionPipeline;
-import net.polarbub.ftc.MainBotHardware;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.Alliance;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
 import net.polarbub.ftc.lib.TimedEvent;
@@ -71,8 +71,9 @@ public class MainTeleop extends FastIterativeOpMode {
     //
     // Option Driver Options
     //
-    private Boolean isPartyMode = false;
+    public Boolean isPartyMode = false;
     private Boolean isRunVision = false;
+    private Boolean runIntake = false;
     private int aprilTagID;
 
     public Alliance alliance = Alliance.lastAlliance;
@@ -89,8 +90,8 @@ public class MainTeleop extends FastIterativeOpMode {
 
         optionDriver = new OptionDriver();
         try {
-            optionDriver.add(new BooleanOption("'Party Mode'", "a", gamepad1, this.getClass().getField("isPartyMode"), this));
-            optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
+           //  optionDriver.add(new BooleanOption("'Party Mode'", "a", gamepad1, this.getClass().getField("isPartyMode"), this));
+            // optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
@@ -222,28 +223,43 @@ public class MainTeleop extends FastIterativeOpMode {
 
 
                 variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
-                    if(left_bumper && right_bumper) {
+                    if(left_bumper == right_bumper) {
+                        hardware.intakeDrive.setPower(0);
                         return;
-                    }
-
-                    if(left_bumper) {
+                    } else if(left_bumper) {
                         // TODO add to MainBotConfig
-                        hardware.intakeDrive.setPower(0.8);
+                        hardware.intakeDrive.setPower(0.7);
 
                     }
-                    if(right_bumper) {
+                    else if(right_bumper) {
                         // TODO add to MainBotConfig
-                        hardware.intakeDrive.setPower(-0.8);
+                        hardware.intakeDrive.setPower(-0.7);
                     }
 
                 }));
 
                 variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("y"), (Boolean y) -> {
+
                     if(y) {
-                        hardware.launchServo.setPosition(1);
-                        hardware.launchServo2.setPosition(1);
+                        if(runIntake == true) {
+                            runIntake = false;
+                        } else {
+                            runIntake = true;
+                        }
 
                     }
+                }));
+
+                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Gamepad.class.getField("dpad_down"), Boolean::equals, (Boolean dpad_up, Boolean dpad_down) -> {
+                    if(dpad_up == dpad_down) {
+                        hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+
+                    } else if(dpad_up) {
+                        hardware.intakeServo.setPosition(0);
+                    } else if(dpad_down) {
+                        hardware.intakeServo.setPosition(1);
+                    }
+
                 }));
 
 
@@ -361,6 +377,9 @@ public class MainTeleop extends FastIterativeOpMode {
      * Code to run ONCE after the driver hits STOP
      */
     public void stop_internal() {
+
+
+
         hardware.blinkin.setPattern(offColor);
     }
 }
