@@ -1,5 +1,6 @@
 package net.polarbub.ftc.hardware;
 
+import android.content.Context;
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
 import com.acmerobotics.roadrunner.ftc.RawEncoder;
@@ -8,6 +9,7 @@ import com.qualcomm.ftccommon.FtcEventLoopBase;
 import com.qualcomm.ftccommon.FtcEventLoopHandler;
 import com.qualcomm.hardware.HardwareDeviceManager;
 import com.qualcomm.hardware.lynx.*;
+import com.qualcomm.hardware.lynx.commands.LynxInterface;
 import com.qualcomm.hardware.motors.GoBILDA5202Series;
 import com.qualcomm.robotcore.eventloop.EventLoopManager;
 import com.qualcomm.robotcore.exception.RobotCoreException;
@@ -16,11 +18,13 @@ import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.util.Device;
+import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.MainBotConfig;
 import org.firstinspires.ftc.ftccommon.external.OnCreateEventLoop;
 
 import java.lang.reflect.Field;
+import java.util.List;
 
 public class LynxModuleInitializer {
     private static FtcEventLoop eventLoop = null;
@@ -72,7 +76,12 @@ public class LynxModuleInitializer {
         this.hardwareMap = hardwareMap;
         // Empty the hardware map to close any of the other references to the LynxModules.
         for(String name : hardwareMap.getAllNames(HardwareDevice.class)) {
+            HardwareDevice device = hardwareMap.get(name);
+            if(device instanceof LynxModule) {
+                device.close();
+            }
             hardwareMap.remove(name, hardwareMap.get(name));
+
         }
 
         EventLoopManager loopManager = null;
@@ -111,10 +120,10 @@ public class LynxModuleInitializer {
             LynxUsbDevice usbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, lynxSerialNumber, loopManager, HardwareDeviceManager.createUsbManager());
 
             if(Device.isRevControlHub()) {
-                parentModule = new LynxModuleControllers(new LynxModule(usbDevice, LynxConstants.CH_EMBEDDED_MODULE_ADDRESS, true, true));
-                childModule = new LynxModuleControllers(new LynxModule(usbDevice, 1, true, true));
+                parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(LynxConstants.CH_EMBEDDED_MODULE_ADDRESS, true)).build()));
+                childModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, false)).build()));
             } else {
-                parentModule = new LynxModuleControllers(new LynxModule(usbDevice, 1, true, true));
+                parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, true)).build()));
                 childModule = null;
             }
         } catch (RobotCoreException | InterruptedException e) {
@@ -133,7 +142,7 @@ public class LynxModuleInitializer {
     }
 
     @OnCreateEventLoop
-    public static void collectEventLoop(FtcEventLoop loop) {
+    public static void collectEventLoop(Context context, FtcEventLoop loop) {
         eventLoop = loop;
     }
 }
