@@ -63,6 +63,7 @@ public class LynxModuleInitializer {
             return new ServoImplEx(servoController, id, ServoConfigurationType.getStandardServoType());
         }
 
+
         public AnalogInput createAnalogInput(int id) {
             return new AnalogInput(analogInputController, id);
         }

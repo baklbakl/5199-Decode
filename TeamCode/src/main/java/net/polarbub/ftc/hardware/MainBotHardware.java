@@ -17,6 +17,10 @@ import net.polarbub.ftc.MainBotConfig;
 import static java.lang.Double.NaN;
 import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.openftc.easyopencv.OpenCvCamera;
+import org.openftc.easyopencv.OpenCvCameraFactory;
+
 public class MainBotHardware {
     public final DcMotorExEx leftFrontDrive;
     public final DcMotorExEx rightFrontDrive;
@@ -28,8 +32,8 @@ public class MainBotHardware {
     public final DcMotorExEx intakeDrive;
     public final DcMotorExEx launchDrive;
     public final DcMotorExEx launchDrive2;
+
     public final Servo intakeServo;
-    public final Servo intakeServo2;
 
     public final RevColorSensorV3 colorSensor;
 
@@ -68,8 +72,7 @@ public class MainBotHardware {
 
         intakeServo = parent.createServo(MainBotConfig.launchServoID);
         intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-        intakeServo2 = parent.createServo(MainBotConfig.intakeDriveID);
-        intakeServo2.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+
 
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));

@@ -72,7 +72,7 @@ public class MainTeleop extends FastIterativeOpMode {
     // Option Driver Options
     //
     public Boolean isPartyMode = false;
-    private Boolean isRunVision = false;
+    private Boolean isRunVision = true;
     private Boolean runIntake = false;
     private int aprilTagID;
 
@@ -91,7 +91,7 @@ public class MainTeleop extends FastIterativeOpMode {
         optionDriver = new OptionDriver();
         try {
            //  optionDriver.add(new BooleanOption("'Party Mode'", "a", gamepad1, this.getClass().getField("isPartyMode"), this));
-            // optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
+           //  optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);

@@ -161,7 +161,6 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 },
                 (doubl) -> {
                     hardware.intakeServo.setPosition(doubl);
-                    hardware.intakeServo2.setPosition(1 - doubl);
                 },
                 this::runMotorToPos,
                 (motor, pos) -> {

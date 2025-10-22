@@ -40,7 +40,6 @@ public class Test extends FastIterativeOpMode {
     public void start_internal() {
         runtime.reset();
         hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.grabServoPos);
-        hardware.intakeServo2.setPosition(1-MainBotConfig.MoveConfig.grabServoPos);
     }
 
     /*
@@ -52,7 +51,6 @@ public class Test extends FastIterativeOpMode {
 
         if(hardware.colorSensor.getDistance(DistanceUnit.INCH) < thresh) {
             hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-            hardware.intakeServo2.setPosition(MainBotConfig.MoveConfig.restingServoPos);
         };
     }
 
