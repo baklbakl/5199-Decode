@@ -35,19 +35,13 @@ public class MainBotHardware {
 
     public final Servo intakeServo;
 
-    public final RevColorSensorV3 colorSensor;
-
-    public final Rev2mDistanceSensor leftDistance;
-    public final Rev2mDistanceSensor rightFrontDistance;
-    public final Rev2mDistanceSensor rightRearDistance;
-
     public final RevBlinkinLedDriver blinkin;
 
     public final HardwareMap hardwareMap;
 
     public final LynxModuleInitializer modules;
 
-    public MainBotHardware(HardwareMap hardwareMap, boolean enableI2C) {
+    public MainBotHardware(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         modules = new LynxModuleInitializer(hardwareMap);
         LynxModuleInitializer.LynxModuleControllers parent = modules.parentModule;
@@ -73,7 +67,6 @@ public class MainBotHardware {
         intakeServo = parent.createServo(MainBotConfig.launchServoID);
         intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
 
-
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));
         blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
@@ -85,24 +78,5 @@ public class MainBotHardware {
         perpendicularEncoder.setDirection(DcMotorSimple.Direction.FORWARD);
         parallelEncoder0.setDirection(DcMotorSimple.Direction.REVERSE);
         parallelEncoder1.setDirection(DcMotorSimple.Direction.FORWARD);
-
-        if(enableI2C) {
-            colorSensor = new RevColorSensorV3(new LynxI2cDeviceSynchV2(hardwareMap.appContext, parent.module, MainBotConfig.colorSensorID),true);
-//            leftDistance = hardwareMap.get(Rev2mDistanceSensor.class, "D" + MainBotConfig.leftFrontDistID);
-//            rightFrontDistance = hardwareMap.get(Rev2mDistanceSensor.class, "D" + MainBotConfig.rightFrontDistID);
-//            rightRearDistance = hardwareMap.get(Rev2mDistanceSensor.class, "D" + MainBotConfig.rightRearDistID);
-            leftDistance = null;
-            rightFrontDistance = null;
-            rightRearDistance = null;
-         } else {
-            colorSensor = null;
-            leftDistance = null;
-            rightFrontDistance = null;
-            rightRearDistance = null;
-        }
-    }
-
-    public MainBotHardware(HardwareMap hardwareMap) {
-        this(hardwareMap, true);
     }
 }

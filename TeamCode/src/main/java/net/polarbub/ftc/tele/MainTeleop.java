@@ -32,15 +32,12 @@ import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 
-
 @TeleOp(name = "Main", group = MainBotConfig.opmodeGroupName)
 //@Config
 public class MainTeleop extends FastIterativeOpMode {
     //
     // Dashboard options
     //
-    public static long partyPatternTime = 500;
-
     public static long colorSensorCheckInterval = 100;
     public static long incorrectColorFlashTime = 500;
 
@@ -48,13 +45,8 @@ public class MainTeleop extends FastIterativeOpMode {
     //
     // Options
     //
-
-    //[0,1] the point that the dead zone removal starts the motors
     private static final RevBlinkinLedDriver.BlinkinPattern offColor = RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_RAINBOW_PALETTE;
     private static final RevBlinkinLedDriver.BlinkinPattern wrongArtifact = RevBlinkinLedDriver.BlinkinPattern.RED;
-
-
-
 
     //
     //Globals
@@ -71,9 +63,8 @@ public class MainTeleop extends FastIterativeOpMode {
     //
     // Option Driver Options
     //
-    public Boolean isPartyMode = false;
-    private Boolean isRunVision = true;
-    private Boolean runIntake = false;
+    private Boolean isRunVision = false;
+    private Boolean runLauncher = false;
     private int aprilTagID;
 
     public Alliance alliance = Alliance.lastAlliance;
@@ -90,22 +81,13 @@ public class MainTeleop extends FastIterativeOpMode {
 
         optionDriver = new OptionDriver();
         try {
-           //  optionDriver.add(new BooleanOption("'Party Mode'", "a", gamepad1, this.getClass().getField("isPartyMode"), this));
-           //  optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
+            optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
 
-        if(alliance == Alliance.BLUE) {
-            aprilTagID = 20;
-        } else {
-            aprilTagID = 24;
-        }
-
         hardware.blinkin.setPattern(offColor);
-
-
 
         //Control Scheme
         // Left shoulder - intake (black wheels)
@@ -145,10 +127,94 @@ public class MainTeleop extends FastIterativeOpMode {
                     }
             ));
 
+            variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
+                if(left_bumper == right_bumper) {
+                    hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+                } else if(left_bumper) {
+                    hardware.intakeServo.setPosition(0);
+                }
+                else if(right_bumper) {
+                    hardware.intakeServo.setPosition(1);
+                }
+            }));
+
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("y"), (Boolean y) -> {
+                if(y) {
+                    runLauncher = !runLauncher;
+                    if(runLauncher) {
+                        hardware.launchDrive.setPower(0.7);
+                        hardware.launchDrive2.setPower(0.7);
+                    } else {
+                        hardware.launchDrive.setPower(0);
+                        hardware.launchDrive2.setPower(0);
+                    }
+                }
+            }));
+
+            variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Gamepad.class.getField("dpad_down"), Boolean::equals, (Boolean dpad_up, Boolean dpad_down) -> {
+                if(dpad_up == dpad_down) {
+                    hardware.intakeDrive.setPower(0);
+                } else if(dpad_up) {
+                    //FIX: add to MainBotConfig
+                    hardware.intakeDrive.setPower(1);
+                }
+                else if(dpad_down) {
+                    //FIX: add to MainBotConfig
+                    hardware.intakeDrive.setPower(-1);
+                }
+            }));
 
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
+
+        if(isRunVision) {
+            launchCamera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"));
+            pipeline = new AprilTagDetectionPipeline();
+
+            launchCamera.setPipeline(pipeline);
+            launchCamera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+                @Override
+                public void onOpened() {
+                    launchCamera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
+                }
+
+                @Override
+                public void onError(int errorCode) {
+
+                }
+            });
+        }
+
+//        timedEvents.add(new TimedEvent(colorSensorCheckInterval, () -> {
+//            int redDetected = hardware.colorSensor.red();
+//            int blueDetected = hardware.colorSensor.blue();
+//            int greenDetected = hardware.colorSensor.green();
+//
+//            if (
+//                    ((redDetected > blueDetected && redDetected > greenDetected) && alliance == Alliance.BLUE) ||
+//                            ((blueDetected > redDetected && blueDetected > greenDetected) && alliance == Alliance.RED)
+//            ) {
+//                haveIncorrectColor = true;
+//            } else {
+//                if (haveIncorrectColor && warningOn) {
+////                        hardware.blinkin.setPattern(mode.toColor());
+//                    warningOn = false;
+//                }
+//                haveIncorrectColor = false;
+//            }
+//        }));
+//
+//        timedEvents.add(new TimedEvent(incorrectColorFlashTime, () -> {
+//            if(haveIncorrectColor) {
+//                if(warningOn) {
+////                        hardware.blinkin.setPattern(mode.toColor());
+//                } else {
+//                    hardware.blinkin.setPattern(wrongArtifact);
+//                }
+//                warningOn = !warningOn;
+//            }
+//        }));
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -170,133 +236,23 @@ public class MainTeleop extends FastIterativeOpMode {
             }
         }
 
-        if(!isPartyMode && isRunVision) {
-            launchCamera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"));
-            pipeline = new AprilTagDetectionPipeline();
-
-            launchCamera.setPipeline(pipeline);
-            launchCamera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
-                @Override
-                public void onOpened() {
-                    launchCamera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
-                }
-
-                @Override
-                public void onError(int errorCode) {
-
-                }
-            });
-        }
-
         try {
             Thread.sleep(1);
         } catch (InterruptedException e) {
         }
     }
 
-    private RevBlinkinLedDriver.BlinkinPattern partyCurrentPattern = RevBlinkinLedDriver.BlinkinPattern.fromNumber(0);
-    private boolean warningOn;
-    private boolean haveIncorrectColor;
+//    private boolean warningOn;
+//    private boolean haveIncorrectColor;
 
     /*
      * Code to run ONCE when the driver hits PLAY
      */
     public void start_internal() {
-        if (isPartyMode) {
-            hardware.blinkin.setPattern(partyCurrentPattern);
-            timedEvents.add(new TimedEvent(partyPatternTime, () -> {
-                hardware.blinkin.setPattern(partyCurrentPattern);
-                partyCurrentPattern = partyCurrentPattern.next();
-            }));
+        if(alliance == Alliance.BLUE) {
+            aprilTagID = 20;
         } else {
-            try {
-
-                //Control Scheme
-                // Left shoulder - intake (black wheels)
-                // Rigt shoulder - outake (black wheels)
-                // triangle/y - release servo to shoot artifact
-                // left stick - moving
-                // right stick - moving (turn)
-                // LEDs - distance to April Tag (based on alliance)
-
-
-
-
-                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
-                    if(left_bumper == right_bumper) {
-                        hardware.intakeDrive.setPower(0);
-                        return;
-                    } else if(left_bumper) {
-                        // TODO add to MainBotConfig
-                        hardware.intakeDrive.setPower(0.7);
-
-                    }
-                    else if(right_bumper) {
-                        // TODO add to MainBotConfig
-                        hardware.intakeDrive.setPower(-0.7);
-                    }
-
-                }));
-
-                variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("y"), (Boolean y) -> {
-
-                    if(y) {
-                        if(runIntake == true) {
-                            runIntake = false;
-                        } else {
-                            runIntake = true;
-                        }
-
-                    }
-                }));
-
-                variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Gamepad.class.getField("dpad_down"), Boolean::equals, (Boolean dpad_up, Boolean dpad_down) -> {
-                    if(dpad_up == dpad_down) {
-                        hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-
-                    } else if(dpad_up) {
-                        hardware.intakeServo.setPosition(0);
-                    } else if(dpad_down) {
-                        hardware.intakeServo.setPosition(1);
-                    }
-
-                }));
-
-
-            } catch (NoSuchFieldException e) {
-                throw new RuntimeException(e);
-            }
-
-
-            timedEvents.add(new TimedEvent(colorSensorCheckInterval, () -> {
-                int redDetected = hardware.colorSensor.red();
-                int blueDetected = hardware.colorSensor.blue();
-                int greenDetected = hardware.colorSensor.green();
-
-                if (
-                        ((redDetected > blueDetected && redDetected > greenDetected) && alliance == Alliance.BLUE) ||
-                                ((blueDetected > redDetected && blueDetected > greenDetected) && alliance == Alliance.RED)
-                ) {
-                    haveIncorrectColor = true;
-                } else {
-                    if (haveIncorrectColor && warningOn) {
-//                        hardware.blinkin.setPattern(mode.toColor());
-                        warningOn = false;
-                    }
-                    haveIncorrectColor = false;
-                }
-            }));
-
-            timedEvents.add(new TimedEvent(incorrectColorFlashTime, () -> {
-                if(haveIncorrectColor) {
-                    if(warningOn) {
-//                        hardware.blinkin.setPattern(mode.toColor());
-                    } else {
-                        hardware.blinkin.setPattern(wrongArtifact);
-                    }
-                    warningOn = !warningOn;
-                }
-            }));
+            aprilTagID = 24;
         }
 
         runtime.reset();
@@ -306,13 +262,11 @@ public class MainTeleop extends FastIterativeOpMode {
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
 
-
     private long lastNanos = 0;
     private final long[] loopTimes = new long[5];
     private int loopTimesPos = 0;
 
     public void loop_internal() {
-
         if(isRunVision) {
             ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
 
@@ -377,9 +331,6 @@ public class MainTeleop extends FastIterativeOpMode {
      * Code to run ONCE after the driver hits STOP
      */
     public void stop_internal() {
-
-
-
         hardware.blinkin.setPattern(offColor);
     }
 }

@@ -1,26 +1,4 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
 <Robot type="FirstInspires-FTC">
-    <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
-        <LynxModule name="Expansion Hub 1" port="2">
-<!--            <goBILDA5201SeriesMotor name="M5" port="1" />-->
-<!--            <goBILDA5201SeriesMotor name="M6" port="2" />-->
-<!--            <goBILDA5201SeriesMotor name="M7" port="3" />-->
-        </LynxModule>
-        <LynxModule name="Control Hub" port="173">
-<!--            <goBILDA5201SeriesMotor name="M0" port="0" />-->
-<!--            <goBILDA5201SeriesMotor name="M1" port="1" />-->
-<!--            <goBILDA5201SeriesMotor name="M2" port="2" />-->
-<!--            <goBILDA5202SeriesMotor name="M3" port="3" />-->
-<!--            <Servo name="S0" port="0" />-->
-<!--            <RevBlinkinLedDriver name="S1" port="1" />-->
-<!--            <Servo name="S2" port="2" />-->
-            <LynxEmbeddedIMU name="imu" port="0" bus="0" />
-            <REV_VL53L0X_RANGE_SENSOR name="D0" port="0" bus="0" />
-            <REV_VL53L0X_RANGE_SENSOR name="D1" port="0" bus="1" />
-            <REV_VL53L0X_RANGE_SENSOR name="D2" port="0" bus="2" />
-
-            <!--            <RevColorSensorV3 name="C2" port="0" bus="0" />-->
-        </LynxModule>
-    </LynxUsbDevice>
     <Webcam name="WC1" serialNumber="2D4CC410" />
 </Robot>
