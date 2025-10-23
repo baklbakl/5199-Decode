@@ -19,7 +19,7 @@ public class Test extends FastIterativeOpMode {
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
 //        allHubs = hardwareMap.getAll(LynxModule.class);
-        hardware = new MainBotHardware(hardwareMap, false);
+        hardware = new MainBotHardware(hardwareMap);
         hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
     
@@ -48,10 +48,6 @@ public class Test extends FastIterativeOpMode {
     public void loop_internal() {
         hardware.modules.parentModule.module.clearBulkCache();
         hardware.modules.childModule.module.clearBulkCache();
-
-        if(hardware.colorSensor.getDistance(DistanceUnit.INCH) < thresh) {
-            hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-        };
     }
 
     /*

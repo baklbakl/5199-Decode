@@ -173,7 +173,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                     drive.motor.setPower(drive.homingPower);
                 },
                 () -> {
-                    return hardware.colorSensor.getDistance(DistanceUnit.INCH);
+                    return null;
                 }
         );
     }

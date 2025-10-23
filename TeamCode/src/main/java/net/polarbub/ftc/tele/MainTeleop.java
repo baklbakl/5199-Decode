@@ -60,13 +60,13 @@ public class MainTeleop extends FastIterativeOpMode {
     private AprilTagDetectionPipeline pipeline;
     private OpenCvCamera launchCamera;
 
-    //
-    // Option Driver Options
-    //
-    private Boolean isRunVision = false;
     private Boolean runLauncher = false;
     private int aprilTagID;
 
+    //
+    // Option Driver Options. MUST BE PUBLIC OR ELSE OPTION DRIVER CAN'T SEE IT.
+    //
+    public Boolean isRunVision = false;
     public Alliance alliance = Alliance.lastAlliance;
 
 
