@@ -92,7 +92,7 @@ public class MainTeleop extends FastIterativeOpMode {
         //Control Scheme
         // Left shoulder - intake (black wheels)
         // Rigt shoulder - outake (black wheels)
-        // triangle/y - release servo to shoot artifact
+        // triangle/y - toggle for launch motor
         // left stick - moving
         // right stick - moving (turn)
         // LEDs - distance to April Tag (based on alliance)
@@ -129,12 +129,12 @@ public class MainTeleop extends FastIterativeOpMode {
 
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
                 if(left_bumper == right_bumper) {
-                    hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+                    hardware.intakeDrive.setPower(0);
                 } else if(left_bumper) {
-                    hardware.intakeServo.setPosition(0);
+                    hardware.intakeDrive.setPower(-1);
                 }
                 else if(right_bumper) {
-                    hardware.intakeServo.setPosition(1);
+                    hardware.intakeDrive.setPower(1);
                 }
             }));
 
@@ -151,16 +151,18 @@ public class MainTeleop extends FastIterativeOpMode {
                 }
             }));
 
-            variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Gamepad.class.getField("dpad_down"), Boolean::equals, (Boolean dpad_up, Boolean dpad_down) -> {
-                if(dpad_up == dpad_down) {
-                    hardware.intakeDrive.setPower(0);
-                } else if(dpad_up) {
+            variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
+                float calculation = (left_trigger - right_trigger + 1)/2;
+
+                if(calculation == 0.5) {
+                    hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+                } else if(calculation == 0) {
                     //FIX: add to MainBotConfig
-                    hardware.intakeDrive.setPower(1);
+                    hardware.intakeServo.setPosition(1);
                 }
-                else if(dpad_down) {
+                else if(calculation == 1) {
                     //FIX: add to MainBotConfig
-                    hardware.intakeDrive.setPower(-1);
+                    hardware.intakeServo.setPosition(0);
                 }
             }));
 
@@ -187,7 +189,7 @@ public class MainTeleop extends FastIterativeOpMode {
         }
 
 //        timedEvents.add(new TimedEvent(colorSensorCheckInterval, () -> {
-//            int redDetected = hardware.colorSensor.red();
+//            int redDetected =  hardware.colorSensor.red();
 //            int blueDetected = hardware.colorSensor.blue();
 //            int greenDetected = hardware.colorSensor.green();
 //
