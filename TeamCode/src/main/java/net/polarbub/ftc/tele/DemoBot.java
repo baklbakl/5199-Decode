@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.util.Range;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.hardware.LynxModuleInitializer;
-import net.polarbub.ftc.hardware.MainBotHardware;
 
 @TeleOp(name="DemoBot (Small)", group = MainBotConfig.demoGroupName)
 public class DemoBot extends LinearOpMode {
@@ -16,7 +15,7 @@ public class DemoBot extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        LynxModuleInitializer hardware = new LynxModuleInitializer(hardwareMap);
+        LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
 
         DcMotor leftDrive = hardware.parentModule.createDcMotor(0);
         DcMotor rightDrive = hardware.parentModule.createDcMotor(3);

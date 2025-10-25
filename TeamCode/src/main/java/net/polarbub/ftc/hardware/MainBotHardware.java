@@ -4,6 +4,10 @@ import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.*;
 import net.polarbub.ftc.MainBotConfig;
+import net.polarbub.ftc.lib.RequireSingleInstance;
+import net.polarbub.ftc.lib.SingletonHelper;
+
+import java.lang.ref.WeakReference;
 
 public class MainBotHardware {
     public final DcMotorExEx leftFrontDrive;
@@ -26,9 +30,18 @@ public class MainBotHardware {
 
     public final LynxModuleInitializer modules;
 
-    public MainBotHardware(HardwareMap hardwareMap) {
+
+    public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
+        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+    }
+
+    private MainBotHardware(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        modules = new LynxModuleInitializer(hardwareMap);
+        modules = LynxModuleInitializer.getOrCreate(hardwareMap);
+        if(modules.childModule == null) {
+            throw new RuntimeException("No child module found. A child module is required for MainBotHardware");
+        }
+
         LynxModuleInitializer.LynxModuleControllers parent = modules.parentModule;
         LynxModuleInitializer.LynxModuleControllers child = modules.childModule;
 

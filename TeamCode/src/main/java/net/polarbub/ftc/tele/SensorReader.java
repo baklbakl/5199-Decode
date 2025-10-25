@@ -20,7 +20,7 @@ public class SensorReader extends FastIterativeOpMode {
     private LynxModuleInitializer hardware;
 
     protected void init_internal() {
-        hardware = new LynxModuleInitializer(hardwareMap);
+        hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
 
         for(int i = 0; i < LynxConstants.NUMBER_OF_MOTORS; i++) {
             motors.add(hardware.parentModule.createDcMotor(i));

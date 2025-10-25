@@ -43,7 +43,7 @@ public final class TuningOpModes {
         if (DISABLED) return;
 
         DriveViewFactory dvf = hardwareMap -> {
-            MainBotHardware hardware = new MainBotHardware(hardwareMap);
+            MainBotHardware hardware = MainBotHardware.getOrCreate(hardwareMap);
             MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0));
 
 //            List<Encoder> leftEncs = new ArrayList<>(), rightEncs = new ArrayList<>();

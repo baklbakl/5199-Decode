@@ -1,6 +1,5 @@
 package net.polarbub.ftc.hardware;
 
-import android.content.Context;
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
 import com.acmerobotics.roadrunner.ftc.RawEncoder;
@@ -9,7 +8,6 @@ import com.qualcomm.ftccommon.FtcEventLoopBase;
 import com.qualcomm.ftccommon.FtcEventLoopHandler;
 import com.qualcomm.hardware.HardwareDeviceManager;
 import com.qualcomm.hardware.lynx.*;
-import com.qualcomm.hardware.lynx.commands.LynxInterface;
 import com.qualcomm.hardware.motors.GoBILDA5202Series;
 import com.qualcomm.robotcore.eventloop.EventLoopManager;
 import com.qualcomm.robotcore.exception.RobotCoreException;
@@ -18,16 +16,21 @@ import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.util.Device;
-import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.MainBotConfig;
-import org.firstinspires.ftc.ftccommon.external.OnCreateEventLoop;
+import net.polarbub.ftc.lib.SingletonHelper;
+import net.polarbub.ftc.lib.TeamCodeWarningSource;
 
+import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
-import java.util.List;
+
+import static net.polarbub.ftc.lib.OnCreateHandlers.eventLoop;
 
 public class LynxModuleInitializer {
-    private static FtcEventLoop eventLoop = null;
+    public static LynxModuleInitializer getOrCreate(HardwareMap hardwareMap) {
+        return SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
+    }
+
     public final HardwareMap hardwareMap;
     public final LynxModuleControllers parentModule;
     public final LynxModuleControllers childModule;
@@ -73,16 +76,11 @@ public class LynxModuleInitializer {
         }
     }
 
-    public LynxModuleInitializer(HardwareMap hardwareMap) {
+    private LynxModuleInitializer(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        // Empty the hardware map to close any of the other references to the LynxModules.
+        // Empty the hardware map so no one tries to use it
         for(String name : hardwareMap.getAllNames(HardwareDevice.class)) {
-            HardwareDevice device = hardwareMap.get(name);
-            if(device instanceof LynxModule) {
-                device.close();
-            }
             hardwareMap.remove(name, hardwareMap.get(name));
-
         }
 
         EventLoopManager loopManager = null;
@@ -90,12 +88,12 @@ public class LynxModuleInitializer {
         try {
             Field loopHandlerField = FtcEventLoopBase.class.getDeclaredField("ftcEventLoopHandler");
             loopHandlerField.setAccessible(true);
-            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(eventLoop);
+            FtcEventLoop loop = eventLoop.get();
+            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(loop);
             loopManager = loopHandler.getEventLoopManager();
         } catch (NoSuchFieldException | IllegalAccessException e) {
             throw new RuntimeException("MainBotHardware HardwareMap oopsy", e);
         }
-
 
         try {
             SerialNumber lynxSerialNumber = null;
@@ -119,14 +117,43 @@ public class LynxModuleInitializer {
             }
 
             LynxUsbDevice usbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, lynxSerialNumber, loopManager, HardwareDeviceManager.createUsbManager());
-
+            int parentModuleAddress;
+            String errorString;
             if(Device.isRevControlHub()) {
-                parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(LynxConstants.CH_EMBEDDED_MODULE_ADDRESS, true)).build()));
-                childModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, false)).build()));
+                parentModuleAddress = LynxConstants.CH_EMBEDDED_MODULE_ADDRESS;
+                errorString = "Could not find built in parent Lynx Module inside Control Hub (something has gone seriously wrong). Address " + parentModuleAddress;
             } else {
-                parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, true)).build()));
-                childModule = null;
+                parentModuleAddress = MainBotConfig.expansionHubAddress;
+                errorString = "Could not find parent USB connected Expansion Hub with address " + parentModuleAddress + ". Check the connection and that the address is set correctly.";
             }
+            
+            try {
+                parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(parentModuleAddress, true)).build()));
+                parentModule.module.pingAndQueryKnownInterfacesAndEtc();
+            } catch (RobotCoreException e) {
+                throw new RuntimeException(errorString, e);
+            }
+
+            TeamCodeWarningSource.getInstance().clearGlobalWarning();
+
+            LynxModuleControllers localChildModule = null;
+            if(Device.isRevControlHub()) {
+                try {
+                    localChildModule = new LynxModuleControllers(
+                            usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, false)).build())
+                    );
+                    localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
+                } catch (RobotCoreException e) {
+                    localChildModule = null;
+                    TeamCodeWarningSource.getInstance().setGlobalWarning(
+                            "Could not find RS485 connected Expansion Hub with address "
+                            + MainBotConfig.expansionHubAddress
+                            + ". This may be expected if no Expansion Hub is present. Check that the hub is connected, " +
+                            "powered up, and that the address is correct."
+                    );
+                }
+            }
+            childModule = localChildModule;
         } catch (RobotCoreException | InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -140,10 +167,5 @@ public class LynxModuleInitializer {
     public void clearBulkCache() {
         parentModule.module.clearBulkCache();
         childModule.module.clearBulkCache();
-    }
-
-    @OnCreateEventLoop
-    public static void collectEventLoop(Context context, FtcEventLoop loop) {
-        eventLoop = loop;
     }
 }

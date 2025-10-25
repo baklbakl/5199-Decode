@@ -159,7 +159,7 @@ public final class MecanumDrive {
     }
 
     public MecanumDrive(HardwareMap hardwareMap, Pose2d pose) {
-        this(new MainBotHardware(hardwareMap), pose);
+        this(MainBotHardware.getOrCreate(hardwareMap), pose);
     }
 
     public void setDrivePowers(PoseVelocity2d powers) {

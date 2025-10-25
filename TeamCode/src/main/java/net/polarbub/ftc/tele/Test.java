@@ -17,9 +17,8 @@ public class Test extends FastIterativeOpMode {
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
 //        allHubs = hardwareMap.getAll(LynxModule.class);
-        hardware = new MainBotHardware(hardwareMap);
-        hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        hardware = MainBotHardware.getOrCreate(hardwareMap);
+        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
     
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");

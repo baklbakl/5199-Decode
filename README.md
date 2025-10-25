@@ -71,7 +71,25 @@ This is set up on the RC and maps a string name to the physical ports on the rob
 In the past we solved this by naming each of the entries in the hardware map a letter based on their type (M for motors, S for servos, etc.) and then a number, but now we bypass the hardware map by manually searching for hubs on startup and then instantiating all the control classes we need ourselves in MainBotHardware.
 
 ### Roadrunner
-Roadrunner is the motion pathing library that we use. The tuning process is largely automatic, but it can be inaccurate, so Bryn has devised a process to manually tune it which he is yet to write down ...  
+Roadrunner is the motion pathing library that we use. The tuning process is largely automatic, but it can be inaccurate, so Bryn has devised a process to manually tune it which he is yet to write down ...
+
+#### Things to add to documentation
+- Dual / Normal version of something
+- Pose vs Vector
+- How constraints work
+- Where encoders should be
+  - The parallel ones HAVE to stay on the ground at all times - wheelees, etc. are a big problem
+  - What ports they should be on
+- How to tune manually
+  - Finding encoder positions
+    - Track width
+  - Manual feedforward
+  - Async feedforward
+  - Feedback
+  - Acceleration Cap
+  - Velocity Cap
+  - Centripetal acceleration
+  - In / tick
 #### Documentation
 https://rr.brott.dev/docs/v1-0/guides/centerstage-auto/
 https://cookbook.dairy.foundation/roadrunner_10/complete_trajectorybuilder_reference.html

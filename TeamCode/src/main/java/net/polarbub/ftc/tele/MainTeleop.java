@@ -75,7 +75,7 @@ public class MainTeleop extends FastIterativeOpMode {
      */
 
     public void init_internal() {
-        hardware = new MainBotHardware(hardwareMap);
+        hardware = MainBotHardware.getOrCreate(hardwareMap);;
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 

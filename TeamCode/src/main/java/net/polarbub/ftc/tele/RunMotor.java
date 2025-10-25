@@ -1,24 +1,14 @@
 package net.polarbub.ftc.tele;
-import com.qualcomm.hardware.HardwareDeviceManager;
-import com.qualcomm.hardware.lynx.*;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorImplEx;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.ElapsedTime;
-import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.hardware.LynxModuleInitializer;
-import net.polarbub.ftc.lib.optiondriver.BooleanOption;
 import net.polarbub.ftc.lib.optiondriver.EnumOption;
 import net.polarbub.ftc.lib.optiondriver.IntOption;
 import net.polarbub.ftc.lib.optiondriver.OptionDriver;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
-import org.firstinspires.ftc.robotcore.internal.usb.LynxModuleSerialNumber;
-
-import java.util.ArrayList;
-import java.util.List;
 
 @TeleOp(name = "Run Motor", group = MainBotConfig.opmodeGroupName)
 public class RunMotor extends FastIterativeOpMode {
@@ -49,7 +39,7 @@ public class RunMotor extends FastIterativeOpMode {
 
     protected void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-        hardware = new LynxModuleInitializer(hardwareMap);
+        hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
     }
 
     /*

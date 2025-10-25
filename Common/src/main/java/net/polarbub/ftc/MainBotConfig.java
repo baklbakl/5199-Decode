@@ -62,4 +62,7 @@ public class MainBotConfig {
 
     public static final String opmodeGroupName = "1 - TeleOp";
     public static final String demoGroupName = "2 - DemoBots";
+
+    //The address of the expansion hub when attached via USB or RS485
+    public static final int expansionHubAddress = 1;
 }

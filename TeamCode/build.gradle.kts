@@ -16,11 +16,6 @@ android {
 
     packaging {
         jniLibs.useLegacyPackaging = true
-//        jniLibs.pickFirsts.add("**/*.so")
-
-//        jniLibs {
-//            excludes.add("**/libopencv_java4.so")
-//        }
     }
 
     signingConfigs {
@@ -54,6 +49,7 @@ android {
         //noinspection ExpiredTargetSdkVersion
         versionCode = getIntProperty(project, "SDK_VERSION_CODE");
         val pointVersion = getStringProperty(project, "SDK_POINT_VERSION")
+
         versionName = getStringProperty(project, "SDK_MAJOR_VERSION") + "." + getStringProperty(
             project,
             "SDK_MINOR_VERSION"

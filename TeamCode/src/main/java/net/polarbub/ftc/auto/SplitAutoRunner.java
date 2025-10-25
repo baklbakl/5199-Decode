@@ -146,7 +146,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
-        hardware = new MainBotHardware(hardwareMap);
+        hardware = MainBotHardware.getOrCreate(hardwareMap);
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
