@@ -18,6 +18,7 @@ import net.polarbub.ftc.lib.variablewatcher.SingleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.TripleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import net.polarbub.ftc.MainBotConfig.MoveConfig;
 import org.openftc.apriltag.AprilTagDetection;
 
 
@@ -142,8 +143,8 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(y) {
                     runLauncher = !runLauncher;
                     if(runLauncher) {
-                        hardware.launchDrive.setPower(0.7);
-                        hardware.launchDrive2.setPower(0.7);
+                        hardware.launchDrive.setPower(MoveConfig.launchDrivePower);
+                        hardware.launchDrive2.setPower(MoveConfig.launchDrivePower);
                     } else {
                         hardware.launchDrive.setPower(0);
                         hardware.launchDrive2.setPower(0);
@@ -155,7 +156,7 @@ public class MainTeleop extends FastIterativeOpMode {
                 float calculation = (left_trigger - right_trigger + 1)/2;
 
                 if(calculation == 0.5) {
-                    hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+                    hardware.intakeServo.setPosition(MoveConfig.restingServoPos);
                 } else if(calculation == 0) {
                     //FIX: add to MainBotConfig
                     hardware.intakeServo.setPosition(1);

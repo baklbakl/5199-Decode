@@ -82,16 +82,16 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 return new MotorData(
                         this,
                         hardware.intakeDrive,
-                        MainBotConfig.MoveConfig.slidePower,
-                        MainBotConfig.MoveConfig.slideHomingPower,
+                        0, // MainBotConfig.MoveConfig.slidePower,
+                        0, // MainBotConfig.MoveConfig.slideHomingPower,
                         this.getClass().getDeclaredField("lastSlideCounts")
                 );
             } else if(motor == Motor.PIVOT) {
                 return new MotorData(
                         this,
                         hardware.intakeDrive,
-                        MainBotConfig.MoveConfig.pivotPower,
-                        MainBotConfig.MoveConfig.pivotHomingPower,
+                       0, // MainBotConfig.MoveConfig.pivotPower,
+                       0,  //MainBotConfig.MoveConfig.pivotHomingPower,
                         this.getClass().getDeclaredField("lastPivotCounts")
                 );
             }
@@ -150,9 +150,9 @@ public class SplitAutoRunner extends FastIterativeOpMode {
         hardware = new MainBotHardware(hardwareMap);
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotHomingPower);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotHomingPower);
 
         splitAuto = new SplitAuto(
                 (startPose) -> {
@@ -191,7 +191,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            path = splitAuto.fillBuilder(delay, startPos, score, spike, park, useDistSensor).build();
+            path = splitAuto.fillBuilder(delay, startPos).build();
 
             telemetry.addLine(out);
             telemetry.addLine("\nDone building paths");
@@ -208,13 +208,13 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
         hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slidePower);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slidePower);
         hardware.intakeDrive.setTargetPosition(0);
 
         hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotPower);
-        hardware.intakeDrive.setTargetPosition(MainBotConfig.MoveConfig.restingPivotCounts);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotPower);
+//        hardware.intakeDrive.setTargetPosition(MainBotConfig.MoveConfig.restingPivotCounts);
 
         AtomicBoolean pathDone = new AtomicBoolean(false);
         Actions.runBlocking(
