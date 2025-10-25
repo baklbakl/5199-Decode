@@ -96,11 +96,7 @@ public class MeepMeepTesting {
                         () -> { return 0.0; }
                 ).fillBuilder(
                     Delay.NONE,
-                    StartPos.CENTER,
-                    Score.CHAMBER   ,
-                    Spike.TWO,
-                    false,
-                    false
+                    StartPos.NEXT_TAG
                 ).build()
         );
 

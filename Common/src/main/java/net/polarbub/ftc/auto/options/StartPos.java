@@ -1,18 +1,18 @@
 package net.polarbub.ftc.auto.options;
 
 public enum StartPos {
-    LEFT,
-    CENTER,
-    RIGHT;
+    TAG,
+    NEXT_TAG,
+    LAUNCH;
 
     @Override
     public String toString() {
-        if(this == LEFT) {
-            return "left of center line";
-        } else if (this == CENTER) {
-            return  "on center line";
-        } else if (this == RIGHT) {
-            return "right of center line";
+        if(this == TAG) {
+            return "in front of April Tag";
+        } else if (this == NEXT_TAG) {
+            return  "right wheel next to line (April Tag)";
+        } else if (this == LAUNCH) {
+            return "left wheel on end (launch zone line)";
         }
         throw new RuntimeException("StartPOS toString() incomplete");
     }
