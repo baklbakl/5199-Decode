@@ -17,84 +17,58 @@ public class SplitAuto {
 
     public static int distSensorPollInterval = 50;
     public static int distSensorStartWait = 100;
+    public static int angleOfArtifactRelease = 135;
 
-    private final Consumer<Double> setServoPosition;
-    private final Consumer<Motor> homeMotor;
+    private final BiConsumer<Motor, Double> runMotor;
+    private final Consumer<Double> runLaunchServo;
+
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
 
     public interface MotorFunction extends BiConsumer<Motor, Integer> {}
-    private final MotorFunction runMotorToPos;
-    private final MotorFunction runMotorToPosBlocking;
-    private final TriConsumer<Motor, Integer, Integer> runMotorToPosBlockingEnd;
-    private final Supplier<Double> getColorDist;
 
     private boolean stopThread = false;
     private Thread distSensorThread = null;
 
     private boolean useDistSensor = true;
 
-    public SplitAuto(Function<Pose2d, TrajectoryActionBuilder> createPathBuilder, Consumer<Double> setServoPosition, MotorFunction runMotorToPos, MotorFunction runMotorToPosBlocking, TriConsumer<Motor, Integer, Integer> runMotorToPosBlockingEnd, Consumer<Motor> homeMotor, Supplier<Double> getColorDist) {
-        this.setServoPosition = setServoPosition;
-        this.runMotorToPos = runMotorToPos;
-        this.runMotorToPosBlocking = runMotorToPosBlocking;
-        this.runMotorToPosBlockingEnd = runMotorToPosBlockingEnd;
-        this.homeMotor = homeMotor;
+    public SplitAuto(Function<Pose2d, TrajectoryActionBuilder> createPathBuilder, BiConsumer<Motor, Double> runMotor, Consumer<Double> runMoveServo) {
+        this.runMotor = runMotor;
         this.createPathBuilder = createPathBuilder;
-        this.getColorDist = getColorDist;
+        this.runLaunchServo = runMoveServo;
+    }
+    private void runLaunchServo(double pos) {
+        runLaunchServo.accept(pos);
     }
 
-    private void runSlideAndPivot(int pivotCounts, int slideCounts) {
-        runMotorToPos.accept(Motor.SLIDE, slideCounts);
-        runMotorToPosBlocking.accept(Motor.PIVOT, pivotCounts);
-        runMotorToPosBlocking.accept(Motor.SLIDE, slideCounts);
+    private void runLauncher(double launcherPower, boolean runServo) {
+        runMotor.accept(Motor.LAUNCHER_ONE, launcherPower);
+        runMotor.accept(Motor.LAUNCHER_TWO, launcherPower);
+        if (runServo) {
+            runLaunchServo(launcherPower);
+        }
+    }
+
+    private void runLauncher(double launcherPower) {
+        runLauncher(launcherPower, false);
+    }
+
+    private void runIntake(double intakePower) {
+        runMotor.accept(Motor.INTAKE, intakePower);
     }
     
-    private void startDistSensor() {
-        if(useDistSensor) {
-            stopThread = false;
-            distSensorThread = new Thread(() -> {
-                try {
-                    Thread.sleep(distSensorStartWait);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-                while(!stopThread) {
-                    if(getColorDist.get() < MainBotConfig.distSensorThresh) {
-                        setServoPosition.accept(MoveConfig.restingServoPos);
-                    }
-                    try {
-                        Thread.sleep(distSensorPollInterval);
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            });
-            distSensorThread.start();
-        }
-    }
-
-    private void stopDistSensorBlocking() {
-        if(useDistSensor) {
-            stopThread = true;
-            try {
-                distSensorThread.join();
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-    }
 
 
-    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos) {
+
+    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Park park) {
 
         Pose2d autoStartPosition;
 
         if(startPos == StartPos.TAG) {
-            autoStartPosition = new Pose2d(-55, -55, Math.toRadians(45));
+            autoStartPosition = new Pose2d(-55, -55, Math.toRadians(angleOfArtifactRelease));
         } else if (startPos == StartPos.NEXT_TAG) {
-            autoStartPosition = new Pose2d(-24, -72, Math.toRadians(270));
+            autoStartPosition = new Pose2d(-24, -72, Math.toRadians(90));
         } else {
-            autoStartPosition = new Pose2d(-55, -55, Math.toRadians(45));
+            autoStartPosition = new Pose2d(70, -20, Math.toRadians(180));
         }
 
 
@@ -106,9 +80,37 @@ public class SplitAuto {
             pathBuilder = pathBuilder.waitSeconds(10);
         }
 
+        if(startPos == StartPos.LAUNCH) {
+            pathBuilder = pathBuilder
+                    .stopAndAdd(() -> {
+                        runLauncher(MoveConfig.launchDrivePower);
+                    })
+                    //.splineTo(new Vector2d(-40, -40), Math.toRadians(angleOfArtifactRelease));
+                    .splineTo(new Vector2d(-10, -20), Math.toRadians(180))
+                    .splineToLinearHeading(new Pose2d(-40, -40, Math.toRadians(angleOfArtifactRelease)), Math.toRadians(180));
+
+        } else {
+            pathBuilder = pathBuilder
+//                    .setReversed(true)
+                    .splineToLinearHeading(new Pose2d(-40, -40, Math.toRadians(angleOfArtifactRelease)), 1);
+        }
+
         pathBuilder = pathBuilder
-                .setReversed(true)
-                .splineToLinearHeading(new Pose2d(-45.5, -45.5, Math.toRadians(225)), Math.toRadians(100));
+                .stopAndAdd(() -> {
+                    runIntake(MoveConfig.intakeDrivePower);
+                    try {
+                      Thread.sleep(2000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+
+
+
+
+
+        // .afterTime for continuous commands
+
 
         
         return pathBuilder;

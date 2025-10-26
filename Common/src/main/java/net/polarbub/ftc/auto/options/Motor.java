@@ -1,6 +1,7 @@
 package net.polarbub.ftc.auto.options;
 
 public enum Motor {
-    PIVOT,
-    SLIDE
+    INTAKE,
+    LAUNCHER_ONE,
+    LAUNCHER_TWO
 }

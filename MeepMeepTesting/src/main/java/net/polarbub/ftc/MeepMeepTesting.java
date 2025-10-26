@@ -89,14 +89,12 @@ public class MeepMeepTesting {
 
                 new SplitAuto(
                         (startPose) -> bot.getDrive().actionBuilder(startPose),
-                        (doubl) -> {},
-                        (motor, pos) -> {},
-                        (motor, pos) -> {},
-                        (motor, pos, endpos) -> {}, (motor) -> {},
-                        () -> { return 0.0; }
+                        (motor, power) -> {},
+                        (power) -> {}
                 ).fillBuilder(
-                    Delay.NONE,
-                    StartPos.NEXT_TAG
+                        Delay.NONE,
+                        StartPos.LAUNCH,
+                        Park.YES
                 ).build()
         );
 
