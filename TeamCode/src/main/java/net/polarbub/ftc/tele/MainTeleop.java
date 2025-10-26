@@ -131,10 +131,10 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(left_bumper == right_bumper) {
                     hardware.intakeDrive.setPower(0);
                 } else if(left_bumper) {
-                    hardware.intakeDrive.setPower(-1);
+                    hardware.intakeDrive.setPower(1);
                 }
                 else if(right_bumper) {
-                    hardware.intakeDrive.setPower(1);
+                    hardware.intakeDrive.setPower(-1);
                 }
             }));
 
@@ -142,6 +142,7 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(y) {
                     runLauncher = !runLauncher;
                     if(runLauncher) {
+                        //FIX: Replace this with run with velocity
                         hardware.launchDrive.setPower(0.7);
                         hardware.launchDrive2.setPower(0.7);
                     } else {
@@ -152,18 +153,9 @@ public class MainTeleop extends FastIterativeOpMode {
             }));
 
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
-                float calculation = (left_trigger - right_trigger + 1)/2;
-
-                if(calculation == 0.5) {
-                    hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-                } else if(calculation == 0) {
-                    //FIX: add to MainBotConfig
-                    hardware.intakeServo.setPosition(1);
-                }
-                else if(calculation == 1) {
-                    //FIX: add to MainBotConfig
-                    hardware.intakeServo.setPosition(0);
-                }
+                float calculation = (right_trigger - left_trigger + 1)/2;
+                hardware.moverServo.setPosition(calculation);
+                hardware.moverServo2.setPosition(calculation);
             }));
 
         } catch (NoSuchFieldException e) {

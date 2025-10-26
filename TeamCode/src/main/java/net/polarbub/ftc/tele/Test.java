@@ -4,10 +4,8 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.hardware.LynxModuleInitializer;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 @TeleOp(name = "Test", group = MainBotConfig.opmodeGroupName)
 public class Test extends FastIterativeOpMode {
@@ -39,7 +37,7 @@ public class Test extends FastIterativeOpMode {
      */
     public void start_internal() {
         runtime.reset();
-        hardware.intakeServo.setPosition(MainBotConfig.MoveConfig.grabServoPos);
+        hardware.moverServo.setPosition(MainBotConfig.MoveConfig.grabServoPos);
     }
 
     /*

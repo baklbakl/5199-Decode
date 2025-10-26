@@ -1,25 +1,9 @@
 package net.polarbub.ftc.hardware;
 
 import com.acmerobotics.roadrunner.ftc.Encoder;
-import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
-import com.acmerobotics.roadrunner.ftc.RawEncoder;
-import com.qualcomm.hardware.lynx.*;
-import com.qualcomm.hardware.motors.GoBILDA5202Series;
-import com.qualcomm.hardware.rev.Rev2mDistanceSensor;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
-import com.qualcomm.hardware.rev.RevColorSensorV3;
-import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.*;
-import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
-import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import net.polarbub.ftc.MainBotConfig;
-
-import static java.lang.Double.NaN;
-import static net.polarbub.ftc.MainBotConfig.MoveConfig;
-
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.openftc.easyopencv.OpenCvCamera;
-import org.openftc.easyopencv.OpenCvCameraFactory;
 
 public class MainBotHardware {
     public final DcMotorExEx leftFrontDrive;
@@ -33,7 +17,8 @@ public class MainBotHardware {
     public final DcMotorExEx launchDrive;
     public final DcMotorExEx launchDrive2;
 
-    public final Servo intakeServo;
+    public final Servo moverServo;
+    public final Servo moverServo2;
 
     public final RevBlinkinLedDriver blinkin;
 
@@ -64,8 +49,10 @@ public class MainBotHardware {
         launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
         launchDrive2 = child.createDcMotor(MainBotConfig.launchDrive2ID);
 
-        intakeServo = parent.createServo(MainBotConfig.launchServoID);
-        intakeServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+        moverServo = parent.createServo(MainBotConfig.moverServoID);
+        moverServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
+        moverServo2 = parent.createServo(MainBotConfig.moverServo2ID);
+        moverServo2.setPosition(MainBotConfig.MoveConfig.restingServoPos);
 
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));

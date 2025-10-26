@@ -19,7 +19,6 @@ import net.polarbub.ftc.lib.FastIterativeOpMode;
 import net.polarbub.ftc.lib.optiondriver.BooleanOption;
 import net.polarbub.ftc.lib.optiondriver.EnumOption;
 import net.polarbub.ftc.lib.optiondriver.OptionDriver;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -160,7 +159,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                     return mecanumDrive.actionBuilder(startPose);
                 },
                 (doubl) -> {
-                    hardware.intakeServo.setPosition(doubl);
+                    hardware.moverServo.setPosition(doubl);
                 },
                 this::runMotorToPos,
                 (motor, pos) -> {
