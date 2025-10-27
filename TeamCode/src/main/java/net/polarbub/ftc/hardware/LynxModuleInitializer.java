@@ -16,6 +16,7 @@ import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.util.Device;
+import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.SingletonHelper;
@@ -78,9 +79,16 @@ public class LynxModuleInitializer {
 
     private LynxModuleInitializer(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
-        // Empty the hardware map so no one tries to use it
-        for(String name : hardwareMap.getAllNames(HardwareDevice.class)) {
-            hardwareMap.remove(name, hardwareMap.get(name));
+        // Empty the hardware map so no one tries to use it except for LynxModules and LynxUsbDevices because the
+        // FTC Libs uses the hardware map the close those.
+        for(HardwareDevice device : hardwareMap.getAll(HardwareDevice.class)) {
+            String name = String.valueOf(hardwareMap.getNamesOf(device));
+            if(!(device instanceof LynxUsbDevice)) {
+                RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
+                hardwareMap.remove(name, device);
+            } else {
+                RobotLog.ii("LynxModuleInitializer", "Leaving device called: \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
+            }
         }
 
         EventLoopManager loopManager = null;
@@ -126,13 +134,16 @@ public class LynxModuleInitializer {
                 parentModuleAddress = MainBotConfig.expansionHubAddress;
                 errorString = "Could not find parent USB connected Expansion Hub with address " + parentModuleAddress + ". Check the connection and that the address is set correctly.";
             }
-            
+
             try {
                 parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(parentModuleAddress, true)).build()));
                 parentModule.module.pingAndQueryKnownInterfacesAndEtc();
             } catch (RobotCoreException e) {
                 throw new RuntimeException(errorString, e);
             }
+
+            //Put the control hub back so that stopping when the opmode works right
+            hardwareMap.put("Control Hub " + parentModule.module, parentModule.module);
 
             TeamCodeWarningSource.getInstance().clearGlobalWarning();
 
@@ -143,7 +154,14 @@ public class LynxModuleInitializer {
                             usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, false)).build())
                     );
                     localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
+                    //Put the control hub back so that stopping when the opmode works right
+                    hardwareMap.put("Expansion Hub " + localChildModule.module.toString(), localChildModule.module);
+                    
                 } catch (RobotCoreException e) {
+                    if(localChildModule != null) {
+                        localChildModule.module.close();
+                    }
+
                     localChildModule = null;
                     TeamCodeWarningSource.getInstance().setGlobalWarning(
                             "Could not find RS485 connected Expansion Hub with address "
