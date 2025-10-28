@@ -18,6 +18,7 @@ import net.polarbub.ftc.lib.variablewatcher.SingleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.TripleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import net.polarbub.ftc.MainBotConfig.MoveConfig;
 import org.openftc.apriltag.AprilTagDetection;
 
 
@@ -75,7 +76,7 @@ public class MainTeleop extends FastIterativeOpMode {
      */
 
     public void init_internal() {
-        hardware = MainBotHardware.getOrCreate(hardwareMap);;
+        hardware = MainBotHardware.getOrCreate(hardwareMap);
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
@@ -142,12 +143,9 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(y) {
                     runLauncher = !runLauncher;
                     if(runLauncher) {
-                        //FIX: Replace this with run with velocity
-                        hardware.launchDrive.setPower(0.7);
-                        hardware.launchDrive2.setPower(0.7);
+                        hardware.launchDrive.setVelocity(2000);
                     } else {
                         hardware.launchDrive.setPower(0);
-                        hardware.launchDrive2.setPower(0);
                     }
                 }
             }));

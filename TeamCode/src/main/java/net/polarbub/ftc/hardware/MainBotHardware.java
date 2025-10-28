@@ -21,6 +21,7 @@ public class MainBotHardware {
     public final DcMotorExEx launchDrive;
     public final DcMotorExEx launchDrive2;
 
+
     public final Servo moverServo;
     public final Servo moverServo2;
 
@@ -60,7 +61,9 @@ public class MainBotHardware {
 
         intakeDrive = child.createDcMotor(MainBotConfig.intakeDriveID);
         launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
-        launchDrive2 = child.createDcMotor(MainBotConfig.launchDrive2ID);
+        launchDrive2 = child.createDcMotor(2);
+
+        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         moverServo = parent.createServo(MainBotConfig.moverServoID);
         moverServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);

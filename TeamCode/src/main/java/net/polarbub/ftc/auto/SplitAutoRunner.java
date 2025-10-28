@@ -19,6 +19,7 @@ import net.polarbub.ftc.lib.FastIterativeOpMode;
 import net.polarbub.ftc.lib.optiondriver.BooleanOption;
 import net.polarbub.ftc.lib.optiondriver.EnumOption;
 import net.polarbub.ftc.lib.optiondriver.OptionDriver;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,112 +37,70 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
     public Alliance alliance;
     public StartPos startPos;
-    public Score score;
-    public Spike spike;
-    public boolean park;
-    public boolean useDistSensor;
+    public Park park;
     public Delay delay;
 
     private static class MotorData {
         private final DcMotorExEx motor;
-        private final Field lastPos;
         private final SplitAutoRunner thiss;
         private final double power;
-        private final double homingPower;
 
-        public int getLastPos() {
-            try {
-                return (Integer) lastPos.get(thiss);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
 
-        public void setLastPos(int lastPos) {
-            try {
-                this.lastPos.set(thiss, lastPos);
-            } catch (IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-        }
 
-        private MotorData(SplitAutoRunner thiss, DcMotorExEx motor, double power, double homingPower, Field lastPos) {
+        private MotorData(SplitAutoRunner thiss, DcMotorExEx motor, double power) {
             this.motor = motor;
-            this.lastPos = lastPos;
-            this.lastPos.setAccessible(true);
             this.thiss = thiss;
             this.power = power;
-            this.homingPower = homingPower;
         }
     }
 
     private MotorData getDriveFromMotor(Motor motor) {
-        try {
-            if(motor == Motor.SLIDE) {
-                return new MotorData(
-                        this,
-                        hardware.intakeDrive,
-                        MainBotConfig.MoveConfig.slidePower,
-                        MainBotConfig.MoveConfig.slideHomingPower,
-                        this.getClass().getDeclaredField("lastSlideCounts")
-                );
-            } else if(motor == Motor.PIVOT) {
-                return new MotorData(
-                        this,
-                        hardware.intakeDrive,
-                        MainBotConfig.MoveConfig.pivotPower,
-                        MainBotConfig.MoveConfig.pivotHomingPower,
-                        this.getClass().getDeclaredField("lastPivotCounts")
-                );
-            }
-
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
+        if(motor == Motor.INTAKE) {
+            return new MotorData(
+                    this,
+                    hardware.intakeDrive,
+                    MainBotConfig.MoveConfig.intakeDrivePower
+            );
+        } else if(motor == Motor.LAUNCHER_ONE) {
+            return new MotorData(
+                    this,
+                    hardware.launchDrive,
+                   MainBotConfig.MoveConfig.launchDrivePower
+            );
+        }  else if(motor == Motor.LAUNCHER_TWO) {
+            return new MotorData(
+                    this,
+                    hardware.launchDrive2,
+                    MainBotConfig.MoveConfig.launchDrivePower
+            );
         }
+
         throw new RuntimeException("getDriveFromMotor() incomplete. Tried to get motor \"" + motor + "\"");
     }
 
-    private Integer lastPivotCounts = new Integer(Integer.MAX_VALUE);
-    private Integer lastSlideCounts = new Integer(Integer.MAX_VALUE);
-
-    private void runMotorToPos(MotorData drive, int pos) {
-        if(drive.getLastPos() != pos) {
-            drive.motor.runMotorToPos(pos, drive.power);
-            drive.setLastPos(pos);
-        }
+    public void runMotor(Motor motor, double power) {
+        runMotor(getDriveFromMotor(motor), power);
     }
 
-    private void runMotorToPos(Motor motor, int pos) {
-        runMotorToPos(getDriveFromMotor(motor), pos);
-//        MainBotHardware.runMotorToPos(getDriveFromMotor(motor).motor, pos, getMotorPower(motor));
+    public void runMotor(MotorData drive, double power) {
+        drive.motor.setPower(power);
     }
 
-    private void runMotorToPosBlocking(Motor motor, int targetPos, int endPos) {
-        MotorData drive = getDriveFromMotor(motor);
-
-        boolean wait = drive.getLastPos() != endPos;
-
-        runMotorToPos(drive, targetPos);
-//        MainBotHardware.runMotorToPos(drive.motor, pos, getMotorPower(motor));
-
-        while (Math.abs(drive.motor.getCurrentPosition() - endPos) > doneThresh && opModeIsActive() && wait) {
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException ignored) {}
-        }
+    public void runServo(double pos) {
+        hardware.moverServo.setPosition(pos);
+        hardware.moverServo2.setPosition(pos);
     }
+
+
 
     @Override
     protected void init_internal() {
         optionDriver = new OptionDriver();
         try {
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
-            optionDriver.add(new EnumOption<>("Right wheels", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
+            optionDriver.add(new EnumOption<>("Start Pos", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
             optionDriver.add(new EnumOption<>("Delay", "x", gamepad1, this.getClass().getField("delay"), this, Delay.class));
-            optionDriver.add(new EnumOption<>("Score", "y", gamepad1, this.getClass().getField("score"), this, Score.class));
-            optionDriver.add(new EnumOption<>("Spike", "dpad_right", gamepad1, this.getClass().getField("spike"), this, Spike.class));
             optionDriver.add(new BooleanOption("Park", "a", gamepad1, this.getClass().getField("park"), this));
-            optionDriver.add(new BooleanOption("Use distance sensor", "b", gamepad1, this.getClass().getField("useDistSensor"), this));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -149,31 +108,19 @@ public class SplitAutoRunner extends FastIterativeOpMode {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotHomingPower);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotHomingPower);
 
         splitAuto = new SplitAuto(
                 (startPose) -> {
                     mecanumDrive = new MecanumDrive(hardware, startPose);
                     return mecanumDrive.actionBuilder(startPose);
                 },
-                (doubl) -> {
-                    hardware.moverServo.setPosition(doubl);
+                (motor, power) -> {
+                    runMotor(motor, power);
                 },
-                this::runMotorToPos,
-                (motor, pos) -> {
-                    runMotorToPosBlocking(motor, pos, pos);
-                },
-                this::runMotorToPosBlocking,
-                (motor) -> {
-                    MotorData drive = getDriveFromMotor(motor);
-                    drive.motor.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                    drive.motor.setPower(drive.homingPower);
-                },
-                () -> {
-                    return null;
-                }
+                this::runServo
         );
     }
 
@@ -190,7 +137,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            path = splitAuto.fillBuilder(delay, startPos, score, spike, park, useDistSensor).build();
+            path = splitAuto.fillBuilder(delay, startPos, park).build();
 
             telemetry.addLine(out);
             telemetry.addLine("\nDone building paths");
@@ -207,13 +154,13 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
         hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slidePower);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slidePower);
         hardware.intakeDrive.setTargetPosition(0);
 
         hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotPower);
-        hardware.intakeDrive.setTargetPosition(MainBotConfig.MoveConfig.restingPivotCounts);
+//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotPower);
+//        hardware.intakeDrive.setTargetPosition(MainBotConfig.MoveConfig.restingPivotCounts);
 
         AtomicBoolean pathDone = new AtomicBoolean(false);
         Actions.runBlocking(
