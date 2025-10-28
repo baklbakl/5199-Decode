@@ -143,11 +143,9 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(y) {
                     runLauncher = !runLauncher;
                     if(runLauncher) {
-                        hardware.launchDrive.setPower(MoveConfig.launchDrivePower);
-                        hardware.launchDrive2.setPower(MoveConfig.launchDrivePower);
+                        hardware.launchDrive.setVelocity(2000);
                     } else {
                         hardware.launchDrive.setPower(0);
-                        hardware.launchDrive2.setPower(0);
                     }
                 }
             }));
