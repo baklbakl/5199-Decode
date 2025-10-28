@@ -36,7 +36,7 @@ public class Test extends FastIterativeOpMode {
      */
     public void start_internal() {
         runtime.reset();
-        hardware.moverServo.setPosition(MainBotConfig.MoveConfig.grabServoPos);
+//        hardware.moverServo.setPosition(MainBotConfig.MoveConfig.grabServoPos);
     }
 
     /*

@@ -89,6 +89,7 @@ public class SplitAuto {
                     .splineTo(new Vector2d(-10, -20), Math.toRadians(180))
                     .splineToLinearHeading(new Pose2d(-40, -40, Math.toRadians(angleOfArtifactRelease)), Math.toRadians(180));
 
+
         } else {
             pathBuilder = pathBuilder
 //                    .setReversed(true)
@@ -103,7 +104,15 @@ public class SplitAuto {
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                });
+                })
+                .splineTo(new Vector2d(35, -35), Math.toRadians(270))
+                .splineTo(new Vector2d(35, -50), Math.toRadians(90));
+            // add intake here
+        pathBuilder = pathBuilder
+                .splineTo(new Vector2d(-40, -40), Math.toRadians(180));
+                // add launch here
+
+
 
 
 
