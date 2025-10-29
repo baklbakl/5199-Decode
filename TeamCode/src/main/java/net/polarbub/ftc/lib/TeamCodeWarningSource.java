@@ -1,9 +1,18 @@
 package net.polarbub.ftc.lib;
 
+import com.qualcomm.robotcore.robot.Robot;
 import com.qualcomm.robotcore.util.GlobalWarningSource;
+import com.qualcomm.robotcore.util.RobotLog;
+import net.polarbub.ftc.BuildConfig;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+//ADD: Warning when using extracted libs
 public class TeamCodeWarningSource extends RequireSingleInstance implements GlobalWarningSource {
     private static TeamCodeWarningSource instance = null;
+
 
     public static TeamCodeWarningSource getInstance() {
         return instance;
@@ -18,6 +27,7 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
     }
 
     private int suppressionCount = 0;
+//    private List<String> warnings = new ArrayList<>();
     private String warning  = "";
 
     @Override
@@ -26,7 +36,23 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
             return "";
         }
 
-        return warning;
+        List<String> warnings = new ArrayList<>();
+
+        warnings.add(warning);
+
+        if(BuildConfig.FLAVOR.equals("extractedLibs")) {
+            if(!warning.isEmpty()) {
+                warnings.add("\n\n");
+            }
+            warnings.add("NOT LEGAL FOR COMP!!!! Using extracted FTC libraries. To use legal AAR libs switch build flavor to \"aarLibs\"");
+        } else if (!BuildConfig.FLAVOR.equals("aarLibs")) {
+            if(!warning.isEmpty()) {
+                warnings.add("\n\n");
+            }
+            warnings.add("Unknown build flavor. Probably not using the official AAR libs and is NOT legal for comp");
+        }
+
+        return RobotLog.combineGlobalWarnings(warnings);
     }
 
     @Override
@@ -44,7 +70,6 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
 
     @Override
     public void setGlobalWarning(String warning) {
-        this.warning = warning;
     }
 
     @Override

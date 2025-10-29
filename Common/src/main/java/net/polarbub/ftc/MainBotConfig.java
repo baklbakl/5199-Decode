@@ -18,8 +18,8 @@ public class MainBotConfig {
     public static final int paraEncoder1ID = 0;
     public static final int perpEncoderID = 1;
 
-    public static final int moverServoID = 0;
-    public static final int moverServo2ID = 1;
+    public static final int moverServoID = 4;
+    public static final int moverServo2ID = 5;
     public static final int blinkinServoID = 2;
 
     public static double distSensorThresh = 0.8;
