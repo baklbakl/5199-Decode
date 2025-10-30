@@ -42,8 +42,7 @@ public class Test extends FastIterativeOpMode {
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
     public void loop_internal() {
-        hardware.modules.parentModule.module.clearBulkCache();
-        hardware.modules.childModule.module.clearBulkCache();
+        hardware.modules.clearBulkCache();
     }
 
     /*

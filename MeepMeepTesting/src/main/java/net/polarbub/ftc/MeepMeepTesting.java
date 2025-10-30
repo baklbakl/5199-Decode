@@ -10,6 +10,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.lang.Math;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 class CustomVelConstraint implements VelConstraint {
@@ -66,8 +67,7 @@ public class MeepMeepTesting {
                 0.0,
                 builder.getBaseTurnConstraints(),
                 new MinVelConstraint(
-
-                        List.of(
+                        Arrays.asList(
                                 new TranslationalVelConstraint(40.0),
                                 new CustomVelConstraint()
                         )
