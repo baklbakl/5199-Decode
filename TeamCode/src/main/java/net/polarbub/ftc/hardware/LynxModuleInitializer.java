@@ -83,7 +83,7 @@ public class LynxModuleInitializer {
         // FTC Libs uses the hardware map the close those.
         for(HardwareDevice device : hardwareMap.getAll(HardwareDevice.class)) {
             String name = String.valueOf(hardwareMap.getNamesOf(device));
-            if(!(device instanceof LynxUsbDevice)) {
+            if(!(device instanceof LynxUsbDevice) || !(device instanceof LynxEmbeddedIMU)) {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
                 hardwareMap.remove(name, device);
             } else {

@@ -78,8 +78,8 @@ public final class TuningOpModes {
                             md.rightFront,
                             md.rightBack
                     ),
-                    /*leftEncs*/ null,
-                    /*rightEncs*/ null,
+                    Arrays.asList() /*leftEncs*/,
+                    Arrays.asList() /*rightEncs*/,
                     parEncs,
                     perpEncs,
                     md.lazyImu,

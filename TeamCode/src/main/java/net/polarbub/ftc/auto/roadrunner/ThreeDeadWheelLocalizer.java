@@ -23,9 +23,8 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
     private boolean initialized;
     private Pose2d pose;
 
-    private final LazyImu imu;
 
-    public ThreeDeadWheelLocalizer(MainBotHardware hardware, double inPerTick, Pose2d initialPose, LazyImu imu) {
+    public ThreeDeadWheelLocalizer(MainBotHardware hardware, double inPerTick, Pose2d initialPose) {
 //        par0 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, MainBotConfig.paraEncoder0ID)));
 //        par1 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class,MainBotConfig.paraEncoder1ID)));
 //        perp = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, MainBotConfig.perpEncoderID)));
@@ -34,8 +33,6 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
         perp = hardware.perpendicularEncoder;
 
         this.inPerTick = inPerTick;
-
-        this.imu = imu;
 
         FlightRecorder.write("THREE_DEAD_WHEEL_PARAMS", PARAMS);
 

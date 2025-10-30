@@ -79,7 +79,7 @@ public class MainBotHardware {
         perpendicularEncoder = parent.createEncoder(MainBotConfig.perpEncoderID);
 
         perpendicularEncoder.setDirection(DcMotorSimple.Direction.FORWARD);
-        parallelEncoder0.setDirection(DcMotorSimple.Direction.REVERSE);
-        parallelEncoder1.setDirection(DcMotorSimple.Direction.FORWARD);
+        parallelEncoder0.setDirection(DcMotorSimple.Direction.FORWARD);
+        parallelEncoder1.setDirection(DcMotorSimple.Direction.REVERSE);
     }
 }

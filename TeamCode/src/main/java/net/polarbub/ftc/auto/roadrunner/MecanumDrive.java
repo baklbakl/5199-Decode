@@ -51,20 +51,18 @@ public final class MecanumDrive {
 
         // drive model parameters
 //        public double inPerTick = (48.0 / 25.4 * Math.PI) / 2000;
-        public double inPerTick = 0.002955253978003639;
-        public double lateralInPerTick = 0.00244672160911003;
+        // 126.5 42370
+        public double inPerTick = 0.002985603021005428;
+        public double lateralMultiplier = 1;
 //        public double trackWidthTicks = 1/inPerTick * 11.25;
         public double trackWidthTicks = 4665.760926551696;
 
         // feedforward parameters (in tick units)
-//        public double kS = 0.0095;
-//        public double kV = 0.000663;
-//        public double kA = 0.000085;
         //ADD: different feedforwards for strafing and 45 degrees
-        public double kS = 1.5;
+        public double kS = 0.5;
 //        public double kSForward = 1;
 //        public double kSStrafe = 2;
-        public double kV = 0.00055;
+        public double kV = 0.00056;
 //        public double kVForward = 0.00056;
 //        public double kVStrafe = 0.00064;
         public double kASpeedUp = 0.0001;
@@ -96,7 +94,7 @@ public final class MecanumDrive {
     public static Params PARAMS = new Params();
 
     public final MecanumKinematics kinematics = new MecanumKinematics(
-            PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.inPerTick / PARAMS.lateralInPerTick);
+            PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.lateralMultiplier);
 
     public static Supplier<FeedForward> feedForwardSupplier = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
 
@@ -136,24 +134,19 @@ public final class MecanumDrive {
         rightBack = hardware.rightRearDrive;
         rightFront = hardware.rightFrontDrive;
 
-        leftFront.setDirection(DcMotor.Direction.FORWARD);
-        leftBack.setDirection(DcMotor.Direction.FORWARD);
-        rightFront.setDirection(DcMotor.Direction.REVERSE);
-        rightBack.setDirection(DcMotor.Direction.REVERSE);
-
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         //FIX: Make the IMU work again
-        lazyImu = new LazyHardwareMapImu(null, "imu", new RevHubOrientationOnRobot(PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
+        lazyImu = new LazyHardwareMapImu(hardware.hardwareMap, "imu", new RevHubOrientationOnRobot(PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
 //        lazyImu =  new LazyHardwareMapImu(hardwareMap, "imu", new RevHubOrientationOnRobot(PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
 
 //        voltageSensor = hardware.hardwareMap.voltageSensor.iterator().next();
         voltageSensor = hardware.modules.parentModule.voltageSensor;
 
-        localizer = new ThreeDeadWheelLocalizer(hardware, PARAMS.inPerTick, pose, lazyImu);
+        localizer = new ThreeDeadWheelLocalizer(hardware, PARAMS.inPerTick, pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
     }
