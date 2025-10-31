@@ -14,7 +14,6 @@ public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
             MainBotConfig.MoveConfig.class,
             SplitAuto.class,
-            SensorReader.class,
             MainTeleop.class,
             Test.class
     };

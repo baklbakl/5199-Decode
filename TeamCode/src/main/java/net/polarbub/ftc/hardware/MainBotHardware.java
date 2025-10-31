@@ -1,11 +1,16 @@
 package net.polarbub.ftc.hardware;
 
 import com.acmerobotics.roadrunner.ftc.Encoder;
+import com.acmerobotics.roadrunner.ftc.LazyImu;
+import com.qualcomm.hardware.lynx.LynxEmbeddedBNO055IMUNew;
+import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.hardware.lynx.commands.core.LynxFirmwareVersionManager;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.hardware.*;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.RequireSingleInstance;
 import net.polarbub.ftc.lib.SingletonHelper;
+import org.jetbrains.annotations.NotNull;
 
 import java.lang.ref.WeakReference;
 
@@ -19,18 +24,18 @@ public class MainBotHardware {
 
     public final DcMotorExEx intakeDrive;
     public final DcMotorExEx launchDrive;
-    public final DcMotorExEx launchDrive2;
-
 
     public final Servo moverServo;
     public final Servo moverServo2;
 
+    //ADD: Color sensor support
+
     public final RevBlinkinLedDriver blinkin;
+    public final LazyImu lazyImu;
 
     public final HardwareMap hardwareMap;
-
+    //ADD: Webcam support
     public final LynxModuleInitializer modules;
-
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
         return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
@@ -45,6 +50,17 @@ public class MainBotHardware {
 
         LynxModuleInitializer.LynxModuleControllers parent = modules.parentModule;
         LynxModuleInitializer.LynxModuleControllers child = modules.childModule;
+
+        LynxModuleImuType imuType = parent.module.getImuType();
+
+        if(imuType == LynxModuleImuType.BNO055) {
+            lazyImu = () -> {
+                I2cDeviceSynchSimple result = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
+                return new LynxEmbeddedBNO055IMUNew(result, true);
+            };
+        } else {
+            throw new RuntimeException("Acceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
+        }
 
         leftFrontDrive = parent.createDcMotor(MainBotConfig.leftFrontDriveID);
         rightFrontDrive = parent.createDcMotor(MainBotConfig.rightFrontDriveID);
@@ -61,8 +77,6 @@ public class MainBotHardware {
 
         intakeDrive = child.createDcMotor(MainBotConfig.intakeDriveID);
         launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
-        launchDrive2 = child.createDcMotor(2);
-
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         moverServo = parent.createServo(MainBotConfig.moverServoID);

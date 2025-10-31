@@ -112,7 +112,7 @@ public final class MecanumDrive {
 
     public final VoltageSensor voltageSensor;
 
-    public final LazyImu lazyImu;
+//    public final LazyImu lazyImu;
 
     public final Localizer localizer;
     private final LinkedList<Pose2d> poseHistory = new LinkedList<>();
@@ -139,11 +139,6 @@ public final class MecanumDrive {
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        //FIX: Make the IMU work again
-        lazyImu = new LazyHardwareMapImu(hardware.hardwareMap, "imu", new RevHubOrientationOnRobot(PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
-//        lazyImu =  new LazyHardwareMapImu(hardwareMap, "imu", new RevHubOrientationOnRobot(PARAMS.logoFacingDirection, PARAMS.usbFacingDirection));
-
-//        voltageSensor = hardware.hardwareMap.voltageSensor.iterator().next();
         voltageSensor = hardware.modules.parentModule.voltageSensor;
 
         localizer = new ThreeDeadWheelLocalizer(hardware, PARAMS.inPerTick, pose);

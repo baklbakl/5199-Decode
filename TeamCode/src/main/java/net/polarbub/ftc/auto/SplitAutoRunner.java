@@ -26,72 +26,15 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Autonomous(name = "Split Auto")
 public class SplitAutoRunner extends FastIterativeOpMode {
-    private final int doneThresh = 20;
-
     private OptionDriver optionDriver;
     private MainBotHardware hardware;
     private SplitAuto splitAuto;
     private Action path = null;
     private MecanumDrive mecanumDrive;
-//    private double lastUpdateTime
 
     public Alliance alliance;
     public StartPos startPos;
-    public Park park;
     public Delay delay;
-
-    private static class MotorData {
-        private final DcMotorExEx motor;
-        private final SplitAutoRunner thiss;
-        private final double power;
-
-
-
-        private MotorData(SplitAutoRunner thiss, DcMotorExEx motor, double power) {
-            this.motor = motor;
-            this.thiss = thiss;
-            this.power = power;
-        }
-    }
-
-    private MotorData getDriveFromMotor(Motor motor) {
-        if(motor == Motor.INTAKE) {
-            return new MotorData(
-                    this,
-                    hardware.intakeDrive,
-                    MainBotConfig.MoveConfig.intakeDrivePower
-            );
-        } else if(motor == Motor.LAUNCHER_ONE) {
-            return new MotorData(
-                    this,
-                    hardware.launchDrive,
-                   MainBotConfig.MoveConfig.launchDrivePower
-            );
-        }  else if(motor == Motor.LAUNCHER_TWO) {
-            return new MotorData(
-                    this,
-                    hardware.launchDrive2,
-                    MainBotConfig.MoveConfig.launchDrivePower
-            );
-        }
-
-        throw new RuntimeException("getDriveFromMotor() incomplete. Tried to get motor \"" + motor + "\"");
-    }
-
-    public void runMotor(Motor motor, double power) {
-        runMotor(getDriveFromMotor(motor), power);
-    }
-
-    public void runMotor(MotorData drive, double power) {
-        drive.motor.setPower(power);
-    }
-
-    public void runServo(double pos) {
-        hardware.moverServo.setPosition(pos);
-        hardware.moverServo2.setPosition(pos);
-    }
-
-
 
     @Override
     protected void init_internal() {
@@ -100,27 +43,19 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
             optionDriver.add(new EnumOption<>("Start Pos", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
             optionDriver.add(new EnumOption<>("Delay", "x", gamepad1, this.getClass().getField("delay"), this, Delay.class));
-            optionDriver.add(new BooleanOption("Park", "a", gamepad1, this.getClass().getField("park"), this));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
 
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
-        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slideHomingPower);
-        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotHomingPower);
 
         splitAuto = new SplitAuto(
                 (startPose) -> {
                     mecanumDrive = new MecanumDrive(hardware, startPose);
                     return mecanumDrive.actionBuilder(startPose);
                 },
-                (motor, power) -> {
-                    runMotor(motor, power);
-                },
-                this::runServo
+                new RobotImplementation(hardware)
         );
     }
 
@@ -137,7 +72,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            path = splitAuto.fillBuilder(delay, startPos, park).build();
+            path = splitAuto.fillBuilder(delay, startPos).build();
 
             telemetry.addLine(out);
             telemetry.addLine("\nDone building paths");
@@ -151,16 +86,6 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     @Override
     protected void start_internal() {
         Alliance.lastAlliance = alliance;
-
-        hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.slidePower);
-        hardware.intakeDrive.setTargetPosition(0);
-
-        hardware.intakeDrive.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        hardware.intakeDrive.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-//        hardware.intakeDrive.setPower(MainBotConfig.MoveConfig.pivotPower);
-//        hardware.intakeDrive.setTargetPosition(MainBotConfig.MoveConfig.restingPivotCounts);
 
         AtomicBoolean pathDone = new AtomicBoolean(false);
         Actions.runBlocking(

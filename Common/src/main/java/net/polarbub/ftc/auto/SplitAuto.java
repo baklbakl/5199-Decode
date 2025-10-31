@@ -14,53 +14,17 @@ import java.util.function.Supplier;
 import static net.polarbub.ftc.MainBotConfig.MoveConfig;
 
 public class SplitAuto {
-
-    public static int distSensorPollInterval = 50;
-    public static int distSensorStartWait = 100;
-    public static int angleOfArtifactRelease = 135;
-
-    private final BiConsumer<Motor, Double> runMotor;
-    private final Consumer<Double> runLaunchServo;
+    public static double angleOfArtifactRelease = 135;
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
+    public final RobotInterface hardware;
 
-    public interface MotorFunction extends BiConsumer<Motor, Integer> {}
-
-    private boolean stopThread = false;
-    private Thread distSensorThread = null;
-
-    private boolean useDistSensor = true;
-
-    public SplitAuto(Function<Pose2d, TrajectoryActionBuilder> createPathBuilder, BiConsumer<Motor, Double> runMotor, Consumer<Double> runMoveServo) {
-        this.runMotor = runMotor;
+    public SplitAuto(Function<Pose2d, TrajectoryActionBuilder> createPathBuilder, RobotInterface hardware) {
         this.createPathBuilder = createPathBuilder;
-        this.runLaunchServo = runMoveServo;
-    }
-    private void runLaunchServo(double pos) {
-        runLaunchServo.accept(pos);
+        this.hardware = hardware;
     }
 
-    private void runLauncher(double launcherPower, boolean runServo) {
-        runMotor.accept(Motor.LAUNCHER_ONE, launcherPower);
-        runMotor.accept(Motor.LAUNCHER_TWO, launcherPower);
-        if (runServo) {
-            runLaunchServo(launcherPower);
-        }
-    }
-
-    private void runLauncher(double launcherPower) {
-        runLauncher(launcherPower, false);
-    }
-
-    private void runIntake(double intakePower) {
-        runMotor.accept(Motor.INTAKE, intakePower);
-    }
-    
-
-
-
-    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Park park) {
-
+    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos) {
         Pose2d autoStartPosition;
 
         if(startPos == StartPos.TAG) {
@@ -83,7 +47,7 @@ public class SplitAuto {
         if(startPos == StartPos.LAUNCH) {
             pathBuilder = pathBuilder
                     .stopAndAdd(() -> {
-                        runLauncher(MoveConfig.launchDrivePower);
+                        hardware.setLauncherSpeed(MoveConfig.launchTicksPerSec);
                     })
                     //.splineTo(new Vector2d(-40, -40), Math.toRadians(angleOfArtifactRelease));
                     .splineTo(new Vector2d(-10, -20), Math.toRadians(180))
@@ -98,7 +62,7 @@ public class SplitAuto {
 
         pathBuilder = pathBuilder
                 .stopAndAdd(() -> {
-                    runIntake(MoveConfig.intakeDrivePower);
+                    hardware.runIntake(IntakeDirection.IN);
                     try {
                       Thread.sleep(2000);
                     } catch (InterruptedException e) {
@@ -112,16 +76,8 @@ public class SplitAuto {
                 .splineTo(new Vector2d(-40, -40), Math.toRadians(180));
                 // add launch here
 
-
-
-
-
-
-
         // .afterTime for continuous commands
 
-
-        
         return pathBuilder;
     }
 }

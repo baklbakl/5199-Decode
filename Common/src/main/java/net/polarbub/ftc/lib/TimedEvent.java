@@ -18,7 +18,7 @@ public class TimedEvent {
     }
 
     /**
-     * @param interval the interval that the function is called on in ms
+     * @param interval the interval that the function is to be called on in ms
      */
     public TimedEvent(long interval, Runnable function) {
         this.function = function;

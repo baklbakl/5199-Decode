@@ -22,7 +22,6 @@ import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.SingletonHelper;
 import net.polarbub.ftc.lib.TeamCodeWarningSource;
 
-import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 
 import static net.polarbub.ftc.lib.OnCreateHandlers.eventLoop;
@@ -38,7 +37,7 @@ public class LynxModuleInitializer {
 
     public class LynxModuleControllers {
         public final LynxModule module;
-        public final LynxDcMotorController motorController;
+        public final LynxDcMotorControllerEx motorController;
         public final LynxServoController servoController;
         public final LynxAnalogInputController analogInputController;
         public final LynxVoltageSensor voltageSensor;
@@ -46,7 +45,7 @@ public class LynxModuleInitializer {
         public LynxModuleControllers(LynxModule module) {
             this.module = module;
             try {
-                motorController = new LynxDcMotorController(hardwareMap.appContext, module);
+                motorController = new LynxDcMotorControllerEx(hardwareMap.appContext, module);
                 servoController = new LynxServoController(hardwareMap.appContext, module);
                 analogInputController = new LynxAnalogInputController(hardwareMap.appContext, module);
                 voltageSensor = new LynxVoltageSensor(hardwareMap.appContext, module);
@@ -59,7 +58,7 @@ public class LynxModuleInitializer {
             DcMotorExEx motor;
 
             motor = new DcMotorExEx(motorController, id, DcMotorSimple.Direction.FORWARD, MotorConfigurationType.getMotorType(GoBILDA5202Series.class));
-            motor.setTargetPositionTolerance(MainBotConfig.motorPositionTolerance);
+            motor.setTargetPositionTolerance(MainBotConfig.MoveConfig.motorPositionTolerance);
             return motor;
         }
 

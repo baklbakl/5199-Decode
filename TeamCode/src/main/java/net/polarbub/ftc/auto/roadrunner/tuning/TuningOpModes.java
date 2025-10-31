@@ -20,6 +20,7 @@ import org.firstinspires.ftc.robotcore.internal.system.AppUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public final class TuningOpModes {
@@ -78,11 +79,11 @@ public final class TuningOpModes {
                             md.rightFront,
                             md.rightBack
                     ),
-                    Arrays.asList() /*leftEncs*/,
-                    Arrays.asList() /*rightEncs*/,
+                    Collections.emptyList() /*leftEncs*/,
+                    Collections.emptyList() /*rightEncs*/,
                     parEncs,
                     perpEncs,
-                    md.lazyImu,
+                    md.hardware.lazyImu,
                     md.voltageSensor,
                     //It would be nice if this were a AsyncFeedForward, but we would have to modify RR which isn't too fun to do
                     () -> new MotorFeedforward(MecanumDrive.PARAMS.kS,
