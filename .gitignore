@@ -21,7 +21,7 @@ out/
 # release/
 
 # Gradle files
-/.gradle
+.gradle
 /buildSrc/.gradle
 build
 /gradle/wrapper/gradle-wrapper.jar

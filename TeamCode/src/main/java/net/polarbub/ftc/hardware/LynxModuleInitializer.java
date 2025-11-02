@@ -3,13 +3,10 @@ package net.polarbub.ftc.hardware;
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.OverflowEncoder;
 import com.acmerobotics.roadrunner.ftc.RawEncoder;
-import com.qualcomm.ftccommon.FtcEventLoop;
-import com.qualcomm.ftccommon.FtcEventLoopBase;
-import com.qualcomm.ftccommon.FtcEventLoopHandler;
 import com.qualcomm.hardware.HardwareDeviceManager;
 import com.qualcomm.hardware.lynx.*;
 import com.qualcomm.hardware.motors.GoBILDA5202Series;
-import com.qualcomm.robotcore.eventloop.EventLoopManager;
+import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
@@ -17,14 +14,11 @@ import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigu
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.util.Device;
 import com.qualcomm.robotcore.util.RobotLog;
-import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.SingletonHelper;
 import net.polarbub.ftc.lib.TeamCodeWarningSource;
 
-import java.lang.reflect.Field;
-
-import static net.polarbub.ftc.lib.OnCreateHandlers.eventLoop;
+import static net.polarbub.ftc.lib.OnCreateHandlers.*;
 
 public class LynxModuleInitializer {
     public static LynxModuleInitializer getOrCreate(HardwareMap hardwareMap) {
@@ -58,7 +52,7 @@ public class LynxModuleInitializer {
             DcMotorExEx motor;
 
             motor = new DcMotorExEx(motorController, id, DcMotorSimple.Direction.FORWARD, MotorConfigurationType.getMotorType(GoBILDA5202Series.class));
-            motor.setTargetPositionTolerance(MainBotConfig.MoveConfig.motorPositionTolerance);
+//            motor.setTargetPositionTolerance(MainBotConfig.motorPositionTolerance);
             return motor;
         }
 
@@ -82,55 +76,25 @@ public class LynxModuleInitializer {
         // FTC Libs uses the hardware map the close those.
         for(HardwareDevice device : hardwareMap.getAll(HardwareDevice.class)) {
             String name = String.valueOf(hardwareMap.getNamesOf(device));
-            if(!(device instanceof LynxUsbDevice) || !(device instanceof LynxEmbeddedIMU)) {
+            if(device instanceof LynxUsbDevice || device instanceof LynxEmbeddedIMU || device instanceof RevColorSensorV3) {
+                RobotLog.ii("LynxModuleInitializer", "Leaving device called: \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
+            } else {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
                 hardwareMap.remove(name, device);
-            } else {
-                RobotLog.ii("LynxModuleInitializer", "Leaving device called: \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
             }
         }
 
-        EventLoopManager loopManager = null;
-
         try {
-            Field loopHandlerField = FtcEventLoopBase.class.getDeclaredField("ftcEventLoopHandler");
-            loopHandlerField.setAccessible(true);
-            FtcEventLoop loop = eventLoop.get();
-            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(loop);
-            loopManager = loopHandler.getEventLoopManager();
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("MainBotHardware HardwareMap oopsy", e);
-        }
+            UsbScanner scanner = UsbScanner.getOrCreate(hardwareMap);
 
-        try {
-            SerialNumber lynxSerialNumber = null;
-            if(Device.isRevControlHub()) {
-                lynxSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;
-            } else {
-                //Scan for devices if we aren't connected to a control hub
-                ScannedDevices devices = new HardwareDeviceManager(hardwareMap.appContext, loopManager).scanForUsbDevices();
-                for(SerialNumber sn : devices.keySet()) {
-                    if(devices.get(sn) == DeviceManager.UsbDeviceType.LYNX_USB_DEVICE) {
-                        if(lynxSerialNumber != null) {
-                            throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
-                        }
-                        lynxSerialNumber = sn;
-                    }
-                }
-
-                if(lynxSerialNumber == null) {
-                    throw new RuntimeException("No Expansion Hub (Lynx USB device) found. Please check that there is a Expansion Hub connected");
-                }
-            }
-
-            LynxUsbDevice usbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, lynxSerialNumber, loopManager, HardwareDeviceManager.createUsbManager());
+            LynxUsbDevice usbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
             int parentModuleAddress;
             String errorString;
             if(Device.isRevControlHub()) {
                 parentModuleAddress = LynxConstants.CH_EMBEDDED_MODULE_ADDRESS;
                 errorString = "Could not find built in parent Lynx Module inside Control Hub (something has gone seriously wrong). Address " + parentModuleAddress;
             } else {
-                parentModuleAddress = MainBotConfig.expansionHubAddress;
+                parentModuleAddress = MainBotHardware.expansionHubAddress;
                 errorString = "Could not find parent USB connected Expansion Hub with address " + parentModuleAddress + ". Check the connection and that the address is set correctly.";
             }
 
@@ -164,7 +128,7 @@ public class LynxModuleInitializer {
                     localChildModule = null;
                     TeamCodeWarningSource.getInstance().setGlobalWarning(
                             "Could not find RS485 connected Expansion Hub with address "
-                            + MainBotConfig.expansionHubAddress
+                            + MainBotHardware.expansionHubAddress
                             + ". This may be expected if no Expansion Hub is present. Check that the hub is connected, " +
                             "powered up, and that the address is correct."
                     );

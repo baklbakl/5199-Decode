@@ -1,13 +1,18 @@
 package net.polarbub.ftc.hardware;
 
 import androidx.annotation.NonNull;
+import com.qualcomm.hardware.lynx.LynxDcMotorController;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorController;
 import com.qualcomm.robotcore.hardware.DcMotorControllerEx;
 import com.qualcomm.robotcore.hardware.DcMotorImplEx;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
+import net.polarbub.ftc.MainBotConfig;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.jetbrains.annotations.NotNull;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import static java.lang.Double.NaN;
 
@@ -43,6 +48,16 @@ public class DcMotorExEx extends DcMotorImplEx {
     }
 
     public double getTargetVelocity() {
-        return controller.getTargetMotorVelocity(getPortNumber());
+        try {
+            Method m = DcMotorImplEx.class.getDeclaredMethod("adjustAngularRate", double.class);
+            m.setAccessible(true);
+            return (double) m.invoke(this, controller.getTargetMotorVelocity(getPortNumber()));
+        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public boolean isAtTargetVelocity() {
+        return Math.abs(getVelocity() - getTargetVelocity()) < MainBotConfig.motorVelocityTolerance;
     }
 }

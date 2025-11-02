@@ -9,7 +9,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-//ADD: Warning when using extracted libs
 public class TeamCodeWarningSource extends RequireSingleInstance implements GlobalWarningSource {
     private static TeamCodeWarningSource instance = null;
 

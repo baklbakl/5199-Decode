@@ -1,6 +1,6 @@
-package net.polarbub.ftc.auto.vision.opencv;
+package net.polarbub.ftc.auto.vision;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import org.opencv.calib3d.Calib3d;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -18,8 +18,7 @@ import org.openftc.easyopencv.OpenCvPipeline;
 
 import java.util.ArrayList;
 
-public class AprilTagDetectionPipeline extends OpenCvPipeline
-{
+public class AprilTagDetectionPipeline extends PipelineStarter {
     private long nativeApriltagPtr;
     private Mat grey = new Mat();
     private ArrayList<AprilTagDetection> detections = new ArrayList<>();
@@ -48,8 +47,9 @@ public class AprilTagDetectionPipeline extends OpenCvPipeline
     private boolean needToSetDecimation;
     private final Object decimationSync = new Object();
 
-    public AprilTagDetectionPipeline()
+    public AprilTagDetectionPipeline(MainBotHardware hardware)
     {
+        super(hardware, 800, 448);
         constructMatrix();
 
         // Allocate a native context object. See the corresponding deletion in the finalizer

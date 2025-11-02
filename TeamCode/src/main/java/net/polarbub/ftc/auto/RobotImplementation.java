@@ -17,7 +17,7 @@ public class RobotImplementation implements RobotInterface {
 
     @Override
     public boolean isLauncherSpunUp() {
-        return Math.abs(hardware.launchDrive.getVelocity() - hardware.launchDrive.getTargetVelocity()) < MainBotConfig.MoveConfig.motorPositionTolerance;
+        return hardware.launchDrive.isAtTargetVelocity();
     }
 
     @Override
@@ -26,10 +26,10 @@ public class RobotImplementation implements RobotInterface {
 
         switch(direction) {
             case IN:
-                power = 1;
+                power = MainBotConfig.intakeDrivePower;
                 break;
             case OUT:
-                power = -1;
+                power = -MainBotConfig.intakeDrivePower;
                 break;
             case STOP:
                 power = 0;
@@ -53,7 +53,7 @@ public class RobotImplementation implements RobotInterface {
                 power = 0;
                 break;
             case STOP:
-                power = MainBotConfig.MoveConfig.restingServoPos;
+                power = MainBotConfig.restingServoPos;
                 break;
             default:
                 throw new IllegalArgumentException("Unknown servo position for direction \"" + direction + "\"");

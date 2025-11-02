@@ -9,12 +9,7 @@ for(libName in extractedLibs) {
     include(libName)
     project(":" + libName).projectDir = file("ExtractedLibs/" + libName)
 }
-/*
-include(":Blocks")
-include(":RobotCore")
-include(":FtcCommon")
-include(":Hardware")
-include(":Inspection")
-include(":OnBotJava")
-include(":RobotServer")
-include(":Vision")*/
+
+include("RoadRunner:core")
+include("RoadRunner:ftc")
+//project(":RoadRunner_core").projectDir = file("RoadRunner/core")

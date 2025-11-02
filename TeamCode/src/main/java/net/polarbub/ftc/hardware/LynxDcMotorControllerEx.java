@@ -9,22 +9,28 @@ import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.LastKnown;
-import com.qualcomm.robotcore.util.Range;
 import com.qualcomm.robotcore.util.RobotLog;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Arrays;
 
 public class LynxDcMotorControllerEx extends LynxDcMotorController {
+    private LastKnown<Double>[] lastKnownTargetVelocities = new LastKnown[LynxConstants.NUMBER_OF_MOTORS];
+
     public LynxDcMotorControllerEx(Context context, LynxModule module) throws RobotCoreException, InterruptedException {
         super(context, module);
+
+        for(int i = 0; i < LynxConstants.NUMBER_OF_MOTORS; i++) {
+            lastKnownTargetVelocities[i] = new LastKnown<>();
+        }
     }
 
-    private LastKnown<Double>[] lastKnownTargetVelocities = new LastKnown[LynxConstants.NUMBER_OF_MOTORS];
+
 
     private void validateMotor(int motor) {
         try {
-            Method m = this.getClass().getDeclaredMethod("validateMotor", int.class);
+            Method m = LynxDcMotorController.class.getDeclaredMethod("validateMotor", int.class);
             m.setAccessible(true);
             m.invoke(this, motor);
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {

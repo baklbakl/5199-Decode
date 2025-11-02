@@ -1,4 +1,9 @@
 <?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
 <Robot type="FirstInspires-FTC">
-    <Webcam name="WC1" serialNumber="2D4CC410" />
+    <!--<Webcam name="WC1" serialNumber="8A0EC890"/>
+    <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
+        <LynxModule name="Control Hub" port="173">
+            <RevColorSensorV3 name="D0" port="1" bus="1" />
+        </LynxModule>
+    </LynxUsbDevice>-->
 </Robot>

@@ -35,6 +35,8 @@ tasks.register<Jar>("fatJar") {
 }
 
 dependencies {
-    implementation("com.acmerobotics.roadrunner:MeepMeep:0.1.7")
+    implementation("com.acmerobotics.roadrunner:MeepMeep:0.1.7") {
+        exclude("com.acmerobotics.roadrunner", "core")
+    }
     implementation(project(":Common"))
 }

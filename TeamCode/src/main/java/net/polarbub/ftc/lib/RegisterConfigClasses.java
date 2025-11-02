@@ -5,6 +5,7 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.reflection.ReflectionConfig;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.SplitAuto;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.tele.MainTeleop;
 import net.polarbub.ftc.tele.SensorReader;
 import net.polarbub.ftc.tele.Test;
@@ -12,7 +13,8 @@ import org.firstinspires.ftc.ftccommon.external.OnCreate;
 
 public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
-            MainBotConfig.MoveConfig.class,
+            MainBotConfig.class,
+            MainBotHardware.class,
             SplitAuto.class,
             MainTeleop.class,
             Test.class
@@ -20,7 +22,7 @@ public class RegisterConfigClasses {
 
     @OnCreate
     public static void start(Context context) {
-        FtcDashboard.suppressOpMode();
+//        FtcDashboard.suppressOpMode();
         FtcDashboard.start(context);
         FtcDashboard dash = FtcDashboard.getInstance();
         dash.withConfigRoot(customVariable -> {

@@ -2,15 +2,10 @@ package net.polarbub.ftc.auto.tuning
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
-import com.acmerobotics.roadrunner.PoseVelocity2d
-import com.acmerobotics.roadrunner.TimeProfile
-import com.acmerobotics.roadrunner.Vector2d
-import com.acmerobotics.roadrunner.constantProfile
-import com.acmerobotics.roadrunner.ftc.DriveView
+import com.acmerobotics.roadrunner.*
 import com.acmerobotics.roadrunner.ftc.DriveViewFactory
 import com.acmerobotics.roadrunner.ftc.RollingThreeMedian
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode
-import com.qualcomm.robotcore.hardware.HardwareMap
 import com.qualcomm.robotcore.util.ElapsedTime
 import java.util.function.Supplier
 
@@ -51,6 +46,7 @@ class ManualStrafeFeedforwardTuner(private val dvf: DriveViewFactory, private va
         val lastPositions = MutableList(view.perpEncs.size) { 0 }
         val lastTimes = view.perpEncs.map { ElapsedTime() }
         val velEstimates = view.perpEncs.map { RollingThreeMedian() }
+        val feedforward = feedForwardFactory.get();
 
         while (!isStopRequested) {
             telemetry.addData("mode", mode)
@@ -94,7 +90,7 @@ class ManualStrafeFeedforwardTuner(private val dvf: DriveViewFactory, private va
                     }
                     telemetry.addData("vref", v[0])
 
-                    val power =  feedForwardFactory.get().compute(v) / view.voltageSensor.voltage
+                    val power = feedforward.compute(v) / view.voltageSensor.voltage
                     view.setDrivePowers(PoseVelocity2d(Vector2d(0.0, power), 0.0))
                 }
                 Mode.DRIVER_MODE -> {

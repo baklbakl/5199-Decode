@@ -43,12 +43,6 @@ import java.util.function.Supplier;
 
 public final class MecanumDrive {
     public static class Params {
-        // IMU orientation
-        public RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
-                RevHubOrientationOnRobot.LogoFacingDirection.RIGHT;
-        public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
-                RevHubOrientationOnRobot.UsbFacingDirection.UP;
-
         // drive model parameters
 //        public double inPerTick = (48.0 / 25.4 * Math.PI) / 2000;
         // 126.5 42370
@@ -74,7 +68,7 @@ public final class MecanumDrive {
 
         // path profile parameters (in inches)
         public double maxWheelVel = 45;
-        public double minProfileAccel = -35;
+        public double minProfileAccel = -45;
         public double maxProfileAccel = 45;
 
         // turn profile parameters (in radians)

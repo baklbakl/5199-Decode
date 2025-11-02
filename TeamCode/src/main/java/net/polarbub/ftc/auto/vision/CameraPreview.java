@@ -2,17 +2,14 @@ package net.polarbub.ftc.auto.vision;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.HardwareMap;
+import net.polarbub.ftc.hardware.MainBotHardware;
 import org.opencv.core.Mat;
-import org.openftc.easyopencv.OpenCvPipeline;
-
-import static net.polarbub.ftc.auto.PipelineStarter.startPipeline;
 
 @Autonomous(name = "Camera Preview")
 public class CameraPreview extends LinearOpMode {
     @Override
     public void runOpMode() {
-        CameraPreviewPipline vision = new CameraPreviewPipline(hardwareMap);
+        CameraPreviewPipline vision = new CameraPreviewPipline(MainBotHardware.getOrCreate(hardwareMap));
         while (opModeInInit() && !isStopRequested()) {
             try {
                 Thread.sleep(1);
@@ -21,9 +18,9 @@ public class CameraPreview extends LinearOpMode {
     }
 }
 
-class CameraPreviewPipline extends OpenCvPipeline {
-    public CameraPreviewPipline(HardwareMap hardwareMap) {
-        startPipeline(this, hardwareMap);
+class CameraPreviewPipline extends PipelineStarter {
+    public CameraPreviewPipline(MainBotHardware hardware) {
+        super(hardware);
     }
 
     @Override

@@ -2,19 +2,59 @@ package net.polarbub.ftc.hardware;
 
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.LazyImu;
+import com.qualcomm.hardware.bosch.BNO055IMUNew;
 import com.qualcomm.hardware.lynx.LynxEmbeddedBNO055IMUNew;
-import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.lynx.commands.core.LynxFirmwareVersionManager;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import com.qualcomm.hardware.rev.RevColorSensorV3;
+import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.*;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.lib.RequireSingleInstance;
+import net.polarbub.ftc.lib.OnCreateHandlers;
 import net.polarbub.ftc.lib.SingletonHelper;
+import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
+import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
 
-import java.lang.ref.WeakReference;
-
 public class MainBotHardware {
+    //
+    // Dashboard options
+    //
+    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(30, 0, 0, 14.4);
+
+    //
+    // Hardware ports
+    //
+    // IMU orientation
+    public static final RevHubOrientationOnRobot.LogoFacingDirection logoFacingDirection =
+            RevHubOrientationOnRobot.LogoFacingDirection.FORWARD;
+    public static final RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
+            RevHubOrientationOnRobot.UsbFacingDirection.UP;
+
+    public static final int leftFrontDriveID = 0;
+    public static final int rightFrontDriveID = 1;
+    public static final int leftRearDriveID = 2;
+    public static final int rightRearDriveID = 3;
+
+    public static final int intakeDriveID = 0;
+    public static final int launchDriveID = 3;
+
+    public static final int paraEncoder0ID = 3;
+    public static final int paraEncoder1ID = 0;
+    public static final int perpEncoderID = 1;
+
+    public static final int moverServoID = 4;
+    public static final int moverServo2ID = 5;
+    public static final int blinkinServoID = 3;
+
+    //The address of the expansion hub when attached via USB or RS485
+    public static final int expansionHubAddress = 1;
+    public static final int colorSensorI2CBus = 1;
+
+    //
+    // Actual hardware
+    //
+
     public final DcMotorExEx leftFrontDrive;
     public final DcMotorExEx rightFrontDrive;
     public final DcMotorExEx leftRearDrive;
@@ -28,13 +68,13 @@ public class MainBotHardware {
     public final Servo moverServo;
     public final Servo moverServo2;
 
-    //ADD: Color sensor support
+    public final RevColorSensorV3 launcherColorDistSensor;
 
     public final RevBlinkinLedDriver blinkin;
     public final LazyImu lazyImu;
 
     public final HardwareMap hardwareMap;
-    //ADD: Webcam support
+    public final WebcamName webcamName;
     public final LynxModuleInitializer modules;
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
@@ -51,21 +91,10 @@ public class MainBotHardware {
         LynxModuleInitializer.LynxModuleControllers parent = modules.parentModule;
         LynxModuleInitializer.LynxModuleControllers child = modules.childModule;
 
-        LynxModuleImuType imuType = parent.module.getImuType();
-
-        if(imuType == LynxModuleImuType.BNO055) {
-            lazyImu = () -> {
-                I2cDeviceSynchSimple result = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
-                return new LynxEmbeddedBNO055IMUNew(result, true);
-            };
-        } else {
-            throw new RuntimeException("Acceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
-        }
-
-        leftFrontDrive = parent.createDcMotor(MainBotConfig.leftFrontDriveID);
-        rightFrontDrive = parent.createDcMotor(MainBotConfig.rightFrontDriveID);
-        leftRearDrive = parent.createDcMotor(MainBotConfig.leftRearDriveID);
-        rightRearDrive = parent.createDcMotor(MainBotConfig.rightRearDriveID);
+        leftFrontDrive = parent.createDcMotor(leftFrontDriveID);
+        rightFrontDrive = parent.createDcMotor(rightFrontDriveID);
+        leftRearDrive = parent.createDcMotor(leftRearDriveID);
+        rightRearDrive = parent.createDcMotor(rightRearDriveID);
 
         // To drive forward, most robots need the motor on one side to be reversed, because the axles point in opposite directions.
         // Pushing the left stick forward MUST make robot go forward. So adjust these two lines based on your first test drive.
@@ -75,25 +104,57 @@ public class MainBotHardware {
         leftRearDrive.setDirection(DcMotor.Direction.REVERSE);
         rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
-        intakeDrive = child.createDcMotor(MainBotConfig.intakeDriveID);
-        launchDrive = child.createDcMotor(MainBotConfig.launchDriveID);
+        intakeDrive = child.createDcMotor(intakeDriveID);
+        launchDrive = child.createDcMotor(launchDriveID);
+        launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
+        launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        moverServo = parent.createServo(MainBotConfig.moverServoID);
-        moverServo.setPosition(MainBotConfig.MoveConfig.restingServoPos);
-        moverServo2 = parent.createServo(MainBotConfig.moverServo2ID);
-        moverServo2.setPosition(MainBotConfig.MoveConfig.restingServoPos);
 
-        blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, MainBotConfig.blinkinServoID);
-        modules.parentModule.servoController.setServoPwmRange(MainBotConfig.blinkinServoID, new PwmControl.PwmRange(500, 2500));
+        moverServo = parent.createServo(moverServoID);
+        moverServo.setPosition(MainBotConfig.restingServoPos);
+        moverServo2 = parent.createServo(moverServo2ID);
+        moverServo2.setPosition(MainBotConfig.restingServoPos);
+
+        blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, blinkinServoID);
+        modules.parentModule.servoController.setServoPwmRange(blinkinServoID, new PwmControl.PwmRange(500, 2500));
         blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
 
-        parallelEncoder0 = parent.createEncoder(MainBotConfig.paraEncoder0ID);
-        parallelEncoder1 = parent.createEncoder(MainBotConfig.paraEncoder1ID);
-        perpendicularEncoder = parent.createEncoder(MainBotConfig.perpEncoderID);
+        parallelEncoder0 = parent.createEncoder(paraEncoder0ID);
+        parallelEncoder1 = parent.createEncoder(paraEncoder1ID);
+        perpendicularEncoder = parent.createEncoder(perpEncoderID);
 
         perpendicularEncoder.setDirection(DcMotorSimple.Direction.FORWARD);
         parallelEncoder0.setDirection(DcMotorSimple.Direction.FORWARD);
         parallelEncoder1.setDirection(DcMotorSimple.Direction.REVERSE);
+
+        LynxModuleImuType imuType = parent.module.getImuType();
+
+        if(imuType == LynxModuleImuType.BNO055) {
+            //This is kind of jank, but it works.
+            lazyImu = new LazyImu() {
+                private IMU imu = null;
+
+                @NotNull
+                @Override
+                public IMU get() {
+                    if(imu == null) {
+                        imu = new LynxEmbeddedBNO055IMUNew(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0), true);
+                        if(imu.initialize(new BNO055IMUNew.Parameters(new RevHubOrientationOnRobot(logoFacingDirection, usbFacingDirection)))) {
+                            imu.resetYaw();
+                        } else {
+                            throw new RuntimeException("Failed to init IMU");
+                        }
+                    }
+
+                    return imu;
+                }
+            };
+        } else {
+            throw new RuntimeException("Acceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
+        }
+
+        launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);
+        webcamName = WebcamNameImpl.forSerialNumber(UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber, () -> null, OnCreateHandlers.getEventLoopManger().get());
     }
 }

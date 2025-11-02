@@ -1,11 +1,14 @@
 package net.polarbub.ftc.tele;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.RobotLog;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.auto.vision.opencv.AprilTagDetectionPipeline;
+import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.Alliance;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
@@ -18,36 +21,36 @@ import net.polarbub.ftc.lib.variablewatcher.SingleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.TripleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
-import net.polarbub.ftc.MainBotConfig.MoveConfig;
 import org.openftc.apriltag.AprilTagDetection;
-
-
 
 import java.util.ArrayList;
 import java.util.List;
 
 import static java.lang.Math.abs;
 
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.openftc.easyopencv.OpenCvCamera;
-import org.openftc.easyopencv.OpenCvCameraFactory;
-import org.openftc.easyopencv.OpenCvCameraRotation;
-
 @TeleOp(name = "Main", group = MainBotConfig.opmodeGroupName)
-//@Config
 public class MainTeleop extends FastIterativeOpMode {
     //
     // Dashboard options
     //
-    public static long colorSensorCheckInterval = 100;
-    public static long incorrectColorFlashTime = 500;
-
-
+    public static long launcherVelocityCheckInterval = 200;
+    public static long launcherNoVisionVelocity = 1400;
+    
     //
     // Options
     //
+    //Offcolor lets us know that the blinkin is working when we press init
     private static final RevBlinkinLedDriver.BlinkinPattern offColor = RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_RAINBOW_PALETTE;
-    private static final RevBlinkinLedDriver.BlinkinPattern wrongArtifact = RevBlinkinLedDriver.BlinkinPattern.RED;
+
+    private static final RevBlinkinLedDriver.BlinkinPattern manualLaunchControl = RevBlinkinLedDriver.BlinkinPattern.VIOLET;
+
+    private static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
+    private static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
+
+    private static final RevBlinkinLedDriver.BlinkinPattern correctSpeed = RevBlinkinLedDriver.BlinkinPattern.BLUE;
+    private static final RevBlinkinLedDriver.BlinkinPattern speedingUpVisionLocked = RevBlinkinLedDriver.BlinkinPattern.YELLOW;
+    private static final RevBlinkinLedDriver.BlinkinPattern outOfLaunchRange = RevBlinkinLedDriver.BlinkinPattern.ORANGE;
+    private static final RevBlinkinLedDriver.BlinkinPattern tagNotFound = RevBlinkinLedDriver.BlinkinPattern.RED;
 
     //
     //Globals
@@ -59,15 +62,24 @@ public class MainTeleop extends FastIterativeOpMode {
     private List<TimedEvent> timedEvents = new ArrayList<>();
 
     private AprilTagDetectionPipeline pipeline;
-    private OpenCvCamera launchCamera;
 
     private Boolean runLauncher = false;
     private int aprilTagID;
 
+    private enum LauncherControlMethod {
+        MANUAL,
+        VISION,
+        PRESET
+    }
+
+    private LauncherControlMethod launcherControlMethod;
+
+
+
     //
     // Option Driver Options. MUST BE PUBLIC OR ELSE OPTION DRIVER CAN'T SEE IT.
     //
-    public Boolean isRunVision = false;
+    public Boolean runVision = false;
     public Alliance alliance = Alliance.lastAlliance;
 
 
@@ -82,13 +94,15 @@ public class MainTeleop extends FastIterativeOpMode {
 
         optionDriver = new OptionDriver();
         try {
-            optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("isRunVision"), this));
+            optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("runVision"), this));
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
 
         hardware.blinkin.setPattern(offColor);
+        launcherControlMethod = LauncherControlMethod.PRESET;
+        RobotLog.ii(this.getClass().getSimpleName(), hardware.launchDrive.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER).toString());
 
         //Control Scheme
         // Left shoulder - intake (black wheels)
@@ -129,84 +143,99 @@ public class MainTeleop extends FastIterativeOpMode {
             ));
 
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
+                double power;
                 if(left_bumper == right_bumper) {
-                    hardware.intakeDrive.setPower(0);
+                    power = MainBotConfig.restingServoPos;
                 } else if(left_bumper) {
-                    hardware.intakeDrive.setPower(1);
+                    power = 0;
+                } else if(right_bumper) {
+                    power = 1;
+                } else {
+                    throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
                 }
-                else if(right_bumper) {
-                    hardware.intakeDrive.setPower(-1);
-                }
+
+                hardware.moverServo.setPosition(power);
+                hardware.moverServo2.setPosition(power);
             }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("y"), (Boolean y) -> {
-                if(y) {
+                if(y && launcherControlMethod != LauncherControlMethod.MANUAL) {
                     runLauncher = !runLauncher;
                     if(runLauncher) {
-                        hardware.launchDrive.setVelocity(2000);
+                        hardware.launchDrive.setVelocity(launcherNoVisionVelocity);
                     } else {
-                        hardware.launchDrive.setPower(0);
+                        hardware.launchDrive.setVelocity(0);
+                        hardware.blinkin.setPattern(wrongSpeedNoVision);
                     }
                 }
             }));
 
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), (Boolean dpad_up) -> {
+                if(dpad_up) {
+                    hardware.launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MainBotHardware.launcherCoefficients);
+                }
+            }));
+
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
-                float calculation = (right_trigger - left_trigger + 1)/2;
-                hardware.moverServo.setPosition(calculation);
-                hardware.moverServo2.setPosition(calculation);
+                float power = left_trigger - right_trigger;
+                if(launcherControlMethod == LauncherControlMethod.MANUAL) {
+                    if(power > 0) {
+                        power /= 2;
+                    }
+                    hardware.launchDrive.setPower(power);
+                } else {
+                    hardware.intakeDrive.setPower(power);
+                }
+            }));
+
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_stick_button"), Boolean::equals, (Boolean left_stick_button) -> {
+                if(left_stick_button) {
+                    if(launcherControlMethod == LauncherControlMethod.VISION) {
+                        launcherControlMethod = LauncherControlMethod.PRESET;
+                        //ADD: Switch away from vision control
+                    } else if(runVision) {
+                        launcherControlMethod = LauncherControlMethod.VISION;
+                        //ADD: Switch over to vision control
+                    }
+                }
+            }));
+
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("right_stick_button"), Boolean::equals, (Boolean right_stick_button) -> {
+                if(right_stick_button) {
+                    if(launcherControlMethod == LauncherControlMethod.MANUAL) {
+                        launcherControlMethod = LauncherControlMethod.PRESET;
+                        hardware.intakeDrive.setPower(hardware.launchDrive.getPower());
+                        hardware.launchDrive.setVelocity(0);
+                        hardware.launchDrive.setPower(1);
+                        hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                        hardware.blinkin.setPattern(wrongSpeedNoVision);
+                    } else {
+                        launcherControlMethod = LauncherControlMethod.MANUAL;
+                        hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                        hardware.launchDrive.setPower(hardware.intakeDrive.getPower());
+                        hardware.intakeDrive.setPower(0);
+                        hardware.blinkin.setPattern(manualLaunchControl);
+                    }
+                }
             }));
 
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
 
-        if(isRunVision) {
-            launchCamera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"));
-            pipeline = new AprilTagDetectionPipeline();
-
-            launchCamera.setPipeline(pipeline);
-            launchCamera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
-                @Override
-                public void onOpened() {
-                    launchCamera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
-                }
-
-                @Override
-                public void onError(int errorCode) {
-
-                }
-            });
+        if(runVision) {
+            pipeline = new AprilTagDetectionPipeline(hardware);
         }
 
-//        timedEvents.add(new TimedEvent(colorSensorCheckInterval, () -> {
-//            int redDetected =  hardware.colorSensor.red();
-//            int blueDetected = hardware.colorSensor.blue();
-//            int greenDetected = hardware.colorSensor.green();
-//
-//            if (
-//                    ((redDetected > blueDetected && redDetected > greenDetected) && alliance == Alliance.BLUE) ||
-//                            ((blueDetected > redDetected && blueDetected > greenDetected) && alliance == Alliance.RED)
-//            ) {
-//                haveIncorrectColor = true;
-//            } else {
-//                if (haveIncorrectColor && warningOn) {
-////                        hardware.blinkin.setPattern(mode.toColor());
-//                    warningOn = false;
-//                }
-//                haveIncorrectColor = false;
-//            }
-//        }));
-//
-//        timedEvents.add(new TimedEvent(incorrectColorFlashTime, () -> {
-//            if(haveIncorrectColor) {
-//                if(warningOn) {
-////                        hardware.blinkin.setPattern(mode.toColor());
-//                } else {
-//                    hardware.blinkin.setPattern(wrongArtifact);
-//                }
-//                warningOn = !warningOn;
-//            }
-//        }));
+        timedEvents.add(new TimedEvent(launcherVelocityCheckInterval, () -> {
+            if(launcherControlMethod == LauncherControlMethod.PRESET && hardware.launchDrive.getTargetVelocity() != 0) {
+                if(hardware.launchDrive.isAtTargetVelocity()) {
+                    hardware.blinkin.setPattern(correctSpeedNoVision);
+                } else {
+                    hardware.blinkin.setPattern(wrongSpeedNoVision);
+                }
+            }
+        }));
 
         telemetry.addData("Status", "Initialized");
         telemetry.update();
@@ -241,11 +270,19 @@ public class MainTeleop extends FastIterativeOpMode {
      * Code to run ONCE when the driver hits PLAY
      */
     public void start_internal() {
-        if(alliance == Alliance.BLUE) {
-            aprilTagID = 20;
+        if(runVision) {
+            if(alliance == Alliance.BLUE) {
+                aprilTagID = 20;
+            } else {
+                aprilTagID = 24;
+            }
+            hardware.blinkin.setPattern(tagNotFound);
         } else {
-            aprilTagID = 24;
+            hardware.blinkin.setPattern(wrongSpeedNoVision);
         }
+
+
+
 
         runtime.reset();
     }
@@ -258,8 +295,11 @@ public class MainTeleop extends FastIterativeOpMode {
     private final long[] loopTimes = new long[5];
     private int loopTimesPos = 0;
 
+//    private long startTime = -1;
+//    private boolean lastVelocityZero = false;
+
     public void loop_internal() {
-        if(isRunVision) {
+        if(runVision) {
             ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
 
             telemetry.addData("Target ID", aprilTagID);
@@ -310,13 +350,43 @@ public class MainTeleop extends FastIterativeOpMode {
         averageNanos /= loopTimes.length;
         lastNanos = thisNanos;
 
-        telemetry.addLine("Mode:");
         telemetry.addData("Status",
                 "Loop Speed: " + 1.0d/(averageNanos/1000000000.0d) + " Hz\n" +
                         "Loop Time: " + averageNanos / 1000000000.0d + "s\n"
         );
-
         telemetry.update();
+
+//        TelemetryPacket packet = new TelemetryPacket();
+//        double velocity = hardware.launchDrive.getVelocity();
+//        double targetVelocity;
+//
+//        if(hardware.launchDrive.getMode() == DcMotor.RunMode.RUN_USING_ENCODER) {
+//            targetVelocity = hardware.launchDrive.getTargetVelocity();
+//            if(targetVelocity != 0 && lastVelocityZero && startTime == -1) {
+//                startTime = thisNanos;
+//            }
+//            lastVelocityZero = targetVelocity == 0;
+//
+//        } else {
+//            targetVelocity = launcherNoVisionVelocity;
+//
+//            if(velocity != 0 && lastVelocityZero) {
+//                RobotLog.ii("MainTeleOp", "Starting");
+//                startTime = thisNanos;
+//            }
+//            lastVelocityZero = velocity == 0;
+//        }
+//
+//        if(startTime != -1 && abs(velocity) >= abs(targetVelocity)) {
+//            RobotLog.ii("MainTeleOp", (thisNanos - startTime) / 1000000000.0d + " seconds to spin up");
+//            startTime = -1;
+//        }
+//
+//        packet.put("LauncherVelocity", velocity);
+//        packet.put("Target", targetVelocity);
+//        packet.put("Min", 0);
+//        packet.put("Max", 2000);
+//        FtcDashboard.getInstance().sendTelemetryPacket(packet);
     }
 
     /*
