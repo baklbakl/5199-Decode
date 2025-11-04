@@ -17,31 +17,24 @@ android {
 }
 
 dependencies {
-    val extractedLibsImplementation = configurations["extractedLibsImplementation"]
-    val extractedLibsApi = configurations["extractedLibsApi"]
-    extractedLibsImplementation(project(":Inspection"))
-    extractedLibsImplementation(project(":RobotServer"))
-//    extractedLibsImplementation(project(":Blocks"))
-//    extractedLibsImplementation(project(":OnBotJava"))
+    val implDeps = listOf("Inspection", "RobotServer")
+    val aarLibVersion = getStringProperty(project, "aarLibVersion")
+    val aarLibPrefix = getStringProperty(project, "aarLibPrefix")
+    for(dep: String in implDeps) {
+        configurations["extractedLibsImplementation"](":$dep")
+        configurations["aarLibsImplementation"]("$aarLibPrefix:$dep:$aarLibVersion")
+    }
 
-    extractedLibsApi(project(":RobotCore"))
-    extractedLibsApi(project(":Hardware"))
-    extractedLibsApi(project(":FtcCommon"))
-    extractedLibsApi(project(":Vision"))
+    val aarLibOnlyImplDeps = listOf("OnBotJava", "Blocks")
+    for(dep: String in aarLibOnlyImplDeps) {
+        configurations["aarLibsImplementation"]("$aarLibPrefix:$dep:$aarLibVersion")
+    }
 
-    val aarLibsImplementation = configurations["aarLibsImplementation"]
-    val aarLibsApi = configurations["aarLibsApi"]
-    val aarLibVersion = getStringProperty(project, "SDK_MAJOR_VERSION") + "." + getStringProperty(project, "SDK_MINOR_VERSION") + "." + getStringProperty(project, "SDK_POINT_VERSION")
-
-    aarLibsImplementation("org.firstinspires.ftc:Inspection:$aarLibVersion")
-    aarLibsImplementation("org.firstinspires.ftc:Blocks:$aarLibVersion")
-    aarLibsImplementation("org.firstinspires.ftc:RobotServer:$aarLibVersion")
-    aarLibsImplementation("org.firstinspires.ftc:OnBotJava:$aarLibVersion")
-
-    aarLibsApi("org.firstinspires.ftc:RobotCore:$aarLibVersion")
-    aarLibsApi("org.firstinspires.ftc:Hardware:$aarLibVersion")
-    aarLibsApi("org.firstinspires.ftc:FtcCommon:$aarLibVersion")
-    aarLibsApi("org.firstinspires.ftc:Vision:$aarLibVersion")
+    val apiDeps = listOf("RobotCore", "Hardware", "FtcCommon", "Vision")
+    for(dep: String in apiDeps) {
+        configurations["extractedLibsApi"](":$dep")
+        configurations["aarLibsApi"]("$aarLibPrefix:$dep:$aarLibVersion")
+    }
 
     implementation("androidx.appcompat:appcompat:1.7.1")
 }

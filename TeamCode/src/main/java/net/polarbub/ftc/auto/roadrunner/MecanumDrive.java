@@ -22,7 +22,6 @@ import com.acmerobotics.roadrunner.TurnConstraints;
 import com.acmerobotics.roadrunner.VelConstraint;
 import com.acmerobotics.roadrunner.ftc.*;
 import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -32,14 +31,11 @@ import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.auto.roadrunner.messages.DriveCommandMessage;
 import net.polarbub.ftc.auto.roadrunner.messages.MecanumCommandMessage;
 import net.polarbub.ftc.auto.roadrunner.messages.PoseMessage;
-import net.polarbub.ftc.auto.tuning.AsymMotorFeedforward;
-import net.polarbub.ftc.auto.tuning.FeedForward;
 
 import java.lang.Math;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.function.Supplier;
 
 public final class MecanumDrive {
     public static class Params {
@@ -90,7 +86,7 @@ public final class MecanumDrive {
     public final MecanumKinematics kinematics = new MecanumKinematics(
             PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.lateralMultiplier);
 
-    public static Supplier<FeedForward> feedForwardSupplier = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
+    public static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
 
     public final TurnConstraints defaultTurnConstraints = new TurnConstraints(
             PARAMS.maxAngVel, -PARAMS.maxAngAccel, PARAMS.maxAngAccel);
@@ -216,7 +212,7 @@ public final class MecanumDrive {
 
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
-            final FeedForward feedforward = feedForwardSupplier.get();
+            final FeedForward feedforward = feedForwardFactory.get();
 
             double leftFrontPower = feedforward.compute(wheelVels.leftFront) / voltage;
             double leftBackPower = feedforward.compute(wheelVels.leftBack) / voltage;
@@ -309,7 +305,7 @@ public final class MecanumDrive {
             double voltage = voltageSensor.getVoltage();
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
-            final FeedForward feedforward = feedForwardSupplier.get();
+            final FeedForward feedforward = feedForwardFactory.get();
             double leftFrontPower = feedforward.compute(wheelVels.leftFront) / voltage;
             double leftBackPower = feedforward.compute(wheelVels.leftBack) / voltage;
             double rightBackPower = feedforward.compute(wheelVels.rightBack) / voltage;
