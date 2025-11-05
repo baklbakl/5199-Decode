@@ -21,7 +21,7 @@ dependencies {
     val aarLibVersion = getStringProperty(project, "aarLibVersion")
     val aarLibPrefix = getStringProperty(project, "aarLibPrefix")
     for(dep: String in implDeps) {
-        configurations["extractedLibsImplementation"](":$dep")
+        configurations["extractedLibsImplementation"](project(":$dep"))
         configurations["aarLibsImplementation"]("$aarLibPrefix:$dep:$aarLibVersion")
     }
 
@@ -32,7 +32,7 @@ dependencies {
 
     val apiDeps = listOf("RobotCore", "Hardware", "FtcCommon", "Vision")
     for(dep: String in apiDeps) {
-        configurations["extractedLibsApi"](":$dep")
+        configurations["extractedLibsApi"](project(":$dep"))
         configurations["aarLibsApi"]("$aarLibPrefix:$dep:$aarLibVersion")
     }
 

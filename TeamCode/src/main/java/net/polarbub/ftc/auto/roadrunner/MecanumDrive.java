@@ -212,7 +212,7 @@ public final class MecanumDrive {
 
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
-            final FeedForward feedforward = feedForwardFactory.get();
+            final FeedForward feedforward = feedForwardFactory.make();
 
             double leftFrontPower = feedforward.compute(wheelVels.leftFront) / voltage;
             double leftBackPower = feedforward.compute(wheelVels.leftBack) / voltage;
@@ -305,7 +305,7 @@ public final class MecanumDrive {
             double voltage = voltageSensor.getVoltage();
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
-            final FeedForward feedforward = feedForwardFactory.get();
+            final FeedForward feedforward = feedForwardFactory.make();
             double leftFrontPower = feedforward.compute(wheelVels.leftFront) / voltage;
             double leftBackPower = feedforward.compute(wheelVels.leftBack) / voltage;
             double rightBackPower = feedforward.compute(wheelVels.rightBack) / voltage;

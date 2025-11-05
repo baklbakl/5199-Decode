@@ -5,13 +5,18 @@ aruneoz=Haasini
 Annakhg=Anna  
 cj-saez=CJ
 
+After cloning to get the rest of the code in submodules run `git submodule update`
 
 ## Folder Layout
-`TeamCode` is our code  
-`FtcRobotController` is the stub that combines all the 'closed source' FTC libraries and a bit of glue code into the robot controller app 
-`ExtractedLibs` contains an extracted version of the 'closed source' FTC libraries. This allows them to be easily inspected
+- `TeamCode` is our code that runs on the robot. It depends on `FtcRobotController` actually makes the Android app that we upload to RC.
+- `FtcRobotController` is a library that combines all the libraries that make up the FTC SDK and a bit of glue code into the robot controller app. The libraries can either be in comp legal AAR form or from `ExtractedLibs`
+- `ExtractedLibs` contains the extracted code of the 'closed source' FTC libraries. This allows them to be easily inspected
 and modified, but modifications are not allowed to be used in comp. See `ExtractedLibs/README.md` for more info   
-`buildSrc` contains plugins that have common build logic for multiple subprojects
+- `buildSrc` contains Gradle plugins that have common build logic for subprojects
+- `MeepMeepTesting` contains the code to start up MeepMeep. It runs the SplitAuto from `Common`
+- `Common` contains code that does not depend on the FTC SDK, so it can be run without the robot or Android. It contains our auto so that we can run it both in MeepMeep and actually on the Robot
+- `Submodules` contains other git repos that we depend on. Right now this contains a few parts of RoadRunner to allow to modify it from stock. Often the entire repo is not needed, so the needed folders are symlinked to other places in the repo. This will work on Linux and MacOS, but will not work on windows.
+- `RoadRunner` contains the source code to the `core` and `ftc` portions of RoadRunner. It allows us to modify them. It contains symlinks to the submodules directory 
 
 ## Hardware
 The FTC Control system is based around two Android devices and a motor controller. One of the Android devices is for the driver called the Driver Station (DS) and one for the robot called the Robot Controller (RC).
@@ -35,14 +40,14 @@ Controllers must be wired to prevent interference on 2.4 GHz and are connected t
 If a second controller was to be used a USB hub also had to be used. 
 To solve these problems REV made their Driver Hub. It has 3 built in USB-As for the controllers and a separate USB-C for charging.
 
-## WiFi
+### WiFi
 The WiFi modem in the Control Hub is able to act as an access point, so the DS connects to it as if it were a normal WiFi network,
 but the WiFi modems in the Android phones that we use as the RC for the demobots don't have the abiliy to be an access point.
 They work in wifi direct mode. To connect a DS to a phone RC go to Settings -> Pairing Method -> WiFi Direct. 
 Then with the RC app open on the RC phone on the DS go to Pair with Robot Controller, turn off Filter WiFi devices, and select the name of the RC that you are trying to connect to.
 You may have to wait a few seconds for it to show up and/or toggle Filter WiFi Devices on and off a few times 
 
-### Credentials
+#### Credentials
 Control Hub WiFi Password `verygoodpassword`
 The phone doesn't have a password as it uses WiFi Direct mode
 
@@ -74,7 +79,7 @@ In the past we solved this by naming each of the entries in the hardware map a l
 ## Roadrunner
 Roadrunner is the motion pathing library that we use. The tuning process is largely automatic, but it can be inaccurate, so Bryn has devised a process to manually tune it
 
-### Tuning
+### Manual Tuning
 1) Make sure the robot is on tiles and that below the tiles is a hard surface
 2) Go to https://rr.brott.dev/docs/v1-0/tuning/
 
@@ -95,38 +100,55 @@ This only works for three dead wheel setups.
     - Be careful to slowly start and stop the robot to prevent the dead wheels from slipping.
     - Be careful not to overshoot and have to go back because this will introduce error from backlash in the encoders.
     - Do this on a flat tile. Make sure there are no straps or other bumps under the tile. These make the value wander.
-5) Record the counts of all three encoders and calculate how far from the center the encoder is. `par0YTicks`, `par1YTicks` and `perpXTicks` should each equal their tick count divided by 2π then divided by the number of turns. Formula: `ticks / (2π * turns)` or `ticks(40π)`. `par0YTicks` should be negative while the others should be positive
-6) Repeat the test. The new values should be fairly close to the old ones. As well, the measured heading value should be the same as the localizer heading as reported in the telemetry of `LocalizationTest`. If one of these is not the case go back and try again.
+5) Record the counts of all three encoders and calculate how far from the center the encoder is. `par0YTicks`, `par1YTicks` and `perpXTicks` should each equal their tick count divided by 2π then divided by the number of turns. Formula: `ticks / (2π * turns)` or `ticks / 40π`. `par0YTicks` should be negative while the others should be positive
+6) Repeat the test. The measured heading value should be the same as the localizer heading as reported in the telemetry of `LocalizationTest`. It is absolutely CRITICAL that these values are very close. As well, the new encoder tick locations should be fairly close to the old ones. this If either one of these is not the case go back and try again.
    - Make sure that the robot actually turned how much you think it did. It is easy to lose count of how many times the robot has turned
-7) Spin the robot while looking at it on the field in the dashboard. If the robot drifts or runs out (doesn't spin perfectly in place) on the dashboard, but not in the real world then the values are wrong. Go back and try again
+7) Spin the robot while looking at it on the field in the dashboard. If the robot drifts or runs out (doesn't spin perfectly in place) on the dashboard, but not in the real world then the values are wrong. Go back and try again.
+   1) If the issue still happens after insuring the accuracy of `par0YTicks`, `par1YTicks`, and `perpXTicks` follow these steps to empirically tune out the wobble.
+   2) Unplug the perpendicular encoder and set `perpXTicks` to zero
+   3) Check for wobble again. If the wobble remains then the parallel encoders are the problem, if not skip to step ... The distance between the two (`|par0YTicks| + |par1YTicks|`) is correct if the heading is accurate, but the distribution between the two might not be.
+   4) While keeping the distance between the two encoders the same increase one and decrease the other until there is no more wobble on the dash.
+   5) Plug the perpendicular encoder back in and return `perpXTicks` to is previous value
+   6) Adjust `perpXTicks` until there is no more runout again
 
-#### Feedforward tuning
+#### Motion
 1) Follow the steps on the guide to get `ManualFeedForwardTuner` set up.
 2) Set kS, kV, kASpeedUp, and kASlowDown to zero. These are all in the dashboard under `MecanumDrive` -> `Params`.
+    - Feedforward works by adding all the terms together to get a motor power.
     - kS is the power added to overcome the static friction of the motors and get the robot moving.
+    - kV is multiplied by the target velocity
+    - kASpeedUp is multiplied by the target acceleration when speeding up
+    - kASlowDown is multiplied by the target acceleration when slowing down. This value is different because of some asymmetries in the way the motor drive brakes vs accelerates with PWM.
 3) Increase kS until just before the robot starts to move on its own. A good value to start at is 0.3. Typical values range from 0.5 - 1.5
-4) Tune the kV to try and make the measured velocity (normally in blue for one parallel encoder and red for the other) match the target velocity (normally in green) during the constant velocity section (the line are flat). Typical values vary quite a bit due to different ticks per inch values. A safe value to start with is 0.0002  
-    - It is normal for the robot to drift off course while tuning. Driver control mode can be used reposition the robot if it gets off course.
+4) `ManualFeedForwardStrafeTuner`, and `ManualFeedForwardAngularTuner` and find the kS values for those kinds of motion. 
+5) Pick a middle ground value between all three. More often the robot will be going forward than strafing or turning, so it is often better to pick a kS closer to the forward one.
+6) Start `ManualFeedForwardTuner` again and tune the kV to try and make the measured velocity (normally in blue for one parallel encoder and red for the other) match the target velocity (normally in green) during the constant velocity section (the line are flat). Typical values vary quite a bit due to different ticks per inch values. A safe value to start with is 0.0002  
+    - It is normal for the robot to drift off course while tuning. Driver control mode can be used reposition the robot if it gets off course. This will be corrected with feedback later.
     - It produces better results to go further on each back and forth as there is more time for the robot to settle in. This repo already has it turned up, but if not it can be changed under `ManualFeedForwardTuner` in the Dashboard. If you change this the tuner OpMode must be restarted. Ideally the whole length of the field should be used.
-5) Tune the kASpeedUp to try and make the lines match while speeding up. The can value also vary robot to robot for the same reason as kV. A safe value to start with is 0.00005.
-6) Do the same with kASlowDown, but for slowing down
-7) Set lateralMultiplier to 1
+7) Tune the kASpeedUp to try and make the lines match while speeding up. The can value also vary robot to robot for the same reason as kV. A safe value to start with is 0.00005.
+8) Do the same with kASlowDown, but for slowing down
+9) Set `LateralMultiplier` to 1
    - This scales the power sent to the wheels while strafing because the wheels tend to slip more while strafing than going forward.
-8) Run `ManualStrafeFeedForwardTuner`. This does the same thing as `ManualFeedForwardTuner` except it strafes instead of going forward
-9) Adjust lateralMultiplier until the constant velocity portion matches. The portions when the robot is accelerating may not be perfect, but there is no way to adjust the kA for strafing independent of that for going forward.
+10) Run `ManualFeedForwardStrafeTuner`. This does the same thing as `ManualFeedForwardTuner` except it strafes instead of going forward
+11) Adjust `LateralMultiplier` until the constant velocity portion matches. The portions when the robot is accelerating may not be perfect, but there is no way to adjust the kA for strafing independent of that for going forward.
+12) Run `ManualFeedForwardAngularTuner`. This spins the robot.
+13) Adjust `TrackWidthTicks` until the constant velocity portion matches. The portions when the robot is accelerating may not be perfect for the same reason.
+14) Go between all three feedfoward tuners and try to adjust the two kA values and try and find a middle ground values that work okay, but not perfectly for all three types of motion.
+15) Start `ManualFeedForwardTuner`. Increase the `maxWheelVel` until the robot cannot keep up any longer in the constant velocity section. 
+    - The max speed will change with the battery voltage, so make sure to perform this step with the minimum battery voltage you expect to use.
+16) Perform the same but with `maxProfileAccel` (which control speeding up) and `minProfileAccel` (which controls slowing down) 
+17) Run `ManualFeedbackTuner` and increase `axialGain`, `lateralGain`, and `headingGain` until the robot stays on course and stops drifting. If the values are too high the robot will oscillate. The drift can be seen by looking at robot on field in the dashboard.
+18) Run `ManualStafeFeedbackTuner` and double-check the values. These values can be adjusted as increased when running the real auto path to make the following more accurate or reduce to remove oscillations. 
 
-10) 
-11) TrackWidthTicks
-12) Feedback
-13) Max accel / velocity
-
-#### Changes needed to upstream
+### Changes needed to upstream
 ManualStrafeFeedforward
+ManualAngularFeedforward
+Added stuff to drive view factory
 ManualStrafeFeedback
 LocalizationTest to print out odometry ticks
 ASyncFeedForward
 
-#### Things to add to documentation
+### Things to add to documentation
 - How to update
   - Changes from stock quickstart
 - Dual / Normal version of something
@@ -136,32 +158,25 @@ ASyncFeedForward
   - The parallel ones HAVE to stay on the ground at all times - wheelees, etc. are a big problem
   - What ports they should be on
 - How to tune manually
-  - Finding encoder positions
-    - Track width
-  - Manual feedforward
-  - Async feedforward
-  - Feedback
-  - Acceleration Cap
-  - Velocity Cap
   - Centripetal acceleration
-  - In / tick
-#### Documentation
+  
+### Documentation
 https://rr.brott.dev/docs/v1-0/guides/centerstage-auto/
 https://cookbook.dairy.foundation/roadrunner_10/complete_trajectorybuilder_reference.html
 https://learnroadrunner.com/
 https://www.ctrlaltftc.com/
 
-### Code Style
+## Code Style
 Camel case most things. Class, Interface, etc names are Capital Camel case, everything else for the most part is lower Camel Case. 
 Brackets should be on the same line as their statement that starts them. See [this](https://en.wikipedia.org/wiki/Indentation_style#One_True_Brace) for more details
 
-#### TODO Style
+### TODO Style
 The todo regex can be changed in Android Studio in the settings under Editor -> TODO  
 `ADD:` A feature needs to be added.  
 `TEST:` A new feature needs to be tested.  
 `FIX:` A bug needs to be fixed.  
 
-### Software Tools
+## Software Tools
 - [Android Studio](https://developer.android.com/studio) will make your life easier by installing and setting up the SDK which you need to get started.
 - [REV Hardware Client](https://docs.revrobotics.com/rev-hardware-client/) can be used to configure update the apps on various Android devices and on the Expansion Hub.
 It can also set the WiFi password of the control hub as it doesn't have a screen. You probably won't need this and it's Windows only.
@@ -243,7 +258,7 @@ Initial Setup
 2. Run `adb tcpip 5555`  
 
 Each Time
-1. Connect to the `5199-RC` WiFi network
+1. Connect to the `5199-<letter>-RC` WiFi network
 2. Run `adb connect 192.168.43.1:5555`
 3. Click on the device drop down in Android Studio and it will show up
 
