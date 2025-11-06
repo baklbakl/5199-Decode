@@ -68,7 +68,7 @@ public class SplitAuto {
         } else if (startPos == StartPos.NEXT_TAG) {
             autoStartPosition = new Pose2d(-24, -72, Math.toRadians(90));
         } else {
-            autoStartPosition = new Pose2d(70, -20, Math.toRadians(180));
+            autoStartPosition = new Pose2d(70, 20, Math.toRadians(180));
         }
 
 
@@ -80,21 +80,21 @@ public class SplitAuto {
             pathBuilder = pathBuilder.waitSeconds(10);
         }
 
-        if(startPos == StartPos.LAUNCH) {
-            pathBuilder = pathBuilder
-                    .stopAndAdd(() -> {
-                        runLauncher(MoveConfig.launchDrivePower);
-                    })
-                    //.splineTo(new Vector2d(-40, -40), Math.toRadians(angleOfArtifactRelease));
-                    .splineTo(new Vector2d(-10, -20), Math.toRadians(180))
-                    .splineToLinearHeading(new Pose2d(-40, -40, Math.toRadians(angleOfArtifactRelease)), Math.toRadians(180));
-
-
-        } else {
-            pathBuilder = pathBuilder
-//                    .setReversed(true)
-                    .splineToLinearHeading(new Pose2d(-40, -40, Math.toRadians(angleOfArtifactRelease)), 1);
-        }
+//        if(startPos == StartPos.LAUNCH) {
+//            pathBuilder = pathBuilder
+//                    .stopAndAdd(() -> {
+//                        runLauncher(MoveConfig.launchDrivePower);
+//                    })
+//                    //.splineTo(new Vector2d(-40, -40), Math.toRadians(angleOfArtifactRelease));
+//                    .splineTo(new Vector2d(-10, -20), Math.toRadians(180))
+//                    .splineToLinearHeading(new Pose2d(-40, 25, Math.toRadians(angleOfArtifactRelease)), Math.toRadians(180));
+//
+//
+//        } else {
+//            pathBuilder = pathBuilder
+////                    .setReversed(true)
+//                    .splineToLinearHeading(new Pose2d(-40, 25, Math.toRadians(angleOfArtifactRelease)), 1);
+//        }
 
         pathBuilder = pathBuilder
                 .stopAndAdd(() -> {
@@ -104,13 +104,59 @@ public class SplitAuto {
                     } catch (InterruptedException e) {
                         throw new RuntimeException(e);
                     }
-                })
-                .splineTo(new Vector2d(35, -35), Math.toRadians(270))
-                .splineTo(new Vector2d(35, -50), Math.toRadians(90));
-            // add intake here
-        pathBuilder = pathBuilder
-                .splineTo(new Vector2d(-40, -40), Math.toRadians(180));
-                // add launch here
+                });
+
+            for (double x = 35.6; x >= -15; x = x -23.4)
+            {
+                pathBuilder = pathBuilder
+
+                        .setReversed(false)
+                        .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
+                        .splineTo(new Vector2d(-30.5, 41.9), Math.toRadians(0))
+                        .splineTo(new Vector2d(x, 40), Math.toRadians(90))
+                        .splineTo(new Vector2d(x, 50), Math.toRadians(90))
+                        .setReversed(true)
+                        .splineTo(new Vector2d(x+5, 30), Math.toRadians(270));
+
+
+
+
+
+//                        .splineTo(new Vector2d(x, 30), Math.toRadians(90));
+
+
+
+
+
+
+            }
+//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
+//
+//                .splineTo(new Vector2d(-20, 40), Math.toRadians(0))
+//
+//
+//                .splineTo(new Vector2d(35, -35), Math.toRadians(270))
+//                .splineTo(new Vector2d(35, -50), Math.toRadians(90));
+//
+//            // add intake here
+//        pathBuilder = pathBuilder
+//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
+//                // add launch here
+//                .splineTo(new Vector2d(11.8, -35), Math.toRadians(270))
+//                // add intake
+//                .splineTo(new Vector2d(11.8, -50), Math.toRadians(90))
+//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
+//                // add launch
+//                .splineTo(new Vector2d(-12, -35), Math.toRadians(270))
+//                //add intake
+//                .splineTo(new Vector2d(-12, -50), Math.toRadians(90))
+//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
+//                .stopAndAdd(() -> {
+//                    //In here
+//                });
+//                //add launch
+
+
 
 
 
