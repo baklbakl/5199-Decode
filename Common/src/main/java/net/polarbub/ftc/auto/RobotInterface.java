@@ -6,4 +6,6 @@ public interface RobotInterface {
 
     public void intake();
 
+    public int getSpike();
+
 }

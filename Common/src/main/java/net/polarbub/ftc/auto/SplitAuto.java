@@ -106,55 +106,25 @@ public class SplitAuto {
                     }
                 });
 
-            for (double x = 35.6; x >= -35; x = x -23.4)
-            {
-                pathBuilder = pathBuilder
-
-                        .setReversed(false)
-                        .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
-                        .splineTo(new Vector2d(-30.5, 41.9), Math.toRadians(0))
-                        .splineTo(new Vector2d(x, 40), Math.toRadians(90))
-                        .splineTo(new Vector2d(x, 50), Math.toRadians(90))
-                        .setReversed(true)
-                        .splineTo(new Vector2d(x+5, 30), Math.toRadians(270));
-
-
-
-
-
-//                        .splineTo(new Vector2d(x, 30), Math.toRadians(90));
-
-
-
-
-
-
-            }
-//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
+//            for (double x = 35.6; x >= -12; x = x -23.4)
+//            {
+//                pathBuilder = pathBuilder
 //
-//                .splineTo(new Vector2d(-20, 40), Math.toRadians(0))
+//                        .setReversed(false)
+//                        .splineTo(new Vector2d(-40, 25), Math.toRadians(140))
+//                       //add launch
+//                        .splineTo(new Vector2d(-30.5, 41.9), Math.toRadians(0))
+//                        .splineTo(new Vector2d(x, 40), Math.toRadians(90))
+//                        //add intake
+//                        .splineTo(new Vector2d(x, 50), Math.toRadians(90))
+//                        .setReversed(true)
+//                        .splineTo(new Vector2d(x+10, 30), Math.toRadians(320));
+//            }
+//                pathBuilder = pathBuilder
+//                        .setReversed(false)
+//                        .splineTo(new Vector2d(-40, 39), Math.toRadians(130));
 //
-//
-//                .splineTo(new Vector2d(35, -35), Math.toRadians(270))
-//                .splineTo(new Vector2d(35, -50), Math.toRadians(90));
-//
-//            // add intake here
-//        pathBuilder = pathBuilder
-//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
-//                // add launch here
-//                .splineTo(new Vector2d(11.8, -35), Math.toRadians(270))
-//                // add intake
-//                .splineTo(new Vector2d(11.8, -50), Math.toRadians(90))
-//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
-//                // add launch
-//                .splineTo(new Vector2d(-12, -35), Math.toRadians(270))
-//                //add intake
-//                .splineTo(new Vector2d(-12, -50), Math.toRadians(90))
-//                .splineTo(new Vector2d(-40, 25), Math.toRadians(130))
-//                .stopAndAdd(() -> {
-//                    //In here
-//                });
-//                //add launch
+
 
 
 

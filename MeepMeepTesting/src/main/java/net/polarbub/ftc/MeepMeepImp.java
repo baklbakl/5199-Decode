@@ -17,4 +17,9 @@ public class MeepMeepImp implements RobotInterface {
         System.out.println("intaking");
 
     }
+
+//    public int getSpike()
+//    {
+//        return spike;
+//    }
 }
