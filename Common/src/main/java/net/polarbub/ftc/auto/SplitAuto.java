@@ -106,7 +106,7 @@ public class SplitAuto {
                     }
                 });
 
-            for (double x = 35.6; x >= -15; x = x -23.4)
+            for (double x = 35.6; x >= -35; x = x -23.4)
             {
                 pathBuilder = pathBuilder
 
