@@ -102,7 +102,6 @@ public class MainTeleop extends FastIterativeOpMode {
 
         hardware.blinkin.setPattern(offColor);
         launcherControlMethod = LauncherControlMethod.PRESET;
-        RobotLog.ii(this.getClass().getSimpleName(), hardware.launchDrive.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER).toString());
 
         //Control Scheme
         // Left shoulder - intake (black wheels)
@@ -295,9 +294,6 @@ public class MainTeleop extends FastIterativeOpMode {
     private final long[] loopTimes = new long[5];
     private int loopTimesPos = 0;
 
-//    private long startTime = -1;
-//    private boolean lastVelocityZero = false;
-
     public void loop_internal() {
         if(runVision) {
             ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
@@ -325,6 +321,10 @@ public class MainTeleop extends FastIterativeOpMode {
             } else {
                 telemetry.addLine("No detections");
             }
+            telemetry.addData("FPS", pipeline.camera.getFps());
+            telemetry.addData("Ms per frame processing", pipeline.camera.getPipelineTimeMs());
+            telemetry.addData("Ms per frame overhead", pipeline.camera.getOverheadTimeMs());
+            telemetry.addData("Ms per frame total", pipeline.camera.getTotalFrameTimeMs());
         }
 
         hardware.modules.clearBulkCache();
@@ -355,38 +355,6 @@ public class MainTeleop extends FastIterativeOpMode {
                         "Loop Time: " + averageNanos / 1000000000.0d + "s\n"
         );
         telemetry.update();
-
-//        TelemetryPacket packet = new TelemetryPacket();
-//        double velocity = hardware.launchDrive.getVelocity();
-//        double targetVelocity;
-//
-//        if(hardware.launchDrive.getMode() == DcMotor.RunMode.RUN_USING_ENCODER) {
-//            targetVelocity = hardware.launchDrive.getTargetVelocity();
-//            if(targetVelocity != 0 && lastVelocityZero && startTime == -1) {
-//                startTime = thisNanos;
-//            }
-//            lastVelocityZero = targetVelocity == 0;
-//
-//        } else {
-//            targetVelocity = launcherNoVisionVelocity;
-//
-//            if(velocity != 0 && lastVelocityZero) {
-//                RobotLog.ii("MainTeleOp", "Starting");
-//                startTime = thisNanos;
-//            }
-//            lastVelocityZero = velocity == 0;
-//        }
-//
-//        if(startTime != -1 && abs(velocity) >= abs(targetVelocity)) {
-//            RobotLog.ii("MainTeleOp", (thisNanos - startTime) / 1000000000.0d + " seconds to spin up");
-//            startTime = -1;
-//        }
-//
-//        packet.put("LauncherVelocity", velocity);
-//        packet.put("Target", targetVelocity);
-//        packet.put("Min", 0);
-//        packet.put("Max", 2000);
-//        FtcDashboard.getInstance().sendTelemetryPacket(packet);
     }
 
     /*

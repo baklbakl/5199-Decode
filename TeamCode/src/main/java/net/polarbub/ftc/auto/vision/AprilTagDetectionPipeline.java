@@ -14,11 +14,20 @@ import org.opencv.imgproc.Imgproc;
 import org.openftc.apriltag.AprilTagDetection;
 import org.openftc.apriltag.AprilTagDetectorJNI;
 import org.openftc.apriltag.AprilTagPose;
-import org.openftc.easyopencv.OpenCvPipeline;
 
 import java.util.ArrayList;
 
 public class AprilTagDetectionPipeline extends PipelineStarter {
+    public static int detectionThreads = 3;
+    //This is in inches
+    public static double tagsizeIn = 5.21;
+    //These are in pixels
+    //FIX: Update the camera calibration for the full 1280 x 720, but also check that the control hub can run the full resolution
+    public static double fx = 578.272;
+    public static double fy = 578.272;
+    public static double cx = 402.145;
+    public static double cy = 221.506;
+
     private long nativeApriltagPtr;
     private Mat grey = new Mat();
     private ArrayList<AprilTagDetection> detections = new ArrayList<>();
@@ -33,27 +42,17 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     Scalar green = new Scalar(0,255,0,255);
     Scalar white = new Scalar(255,255,255,255);
 
-    double fx = 578.272;
-    double fy = 578.272;
-    double cx = 402.145;
-    double cy = 221.506;
-
-    // UNITS ARE METERS
-    double tagsize = 0.166;
-    double tagsizeX = 0.166;
-    double tagsizeY = 0.166;
-
     private float decimation;
     private boolean needToSetDecimation;
     private final Object decimationSync = new Object();
 
     public AprilTagDetectionPipeline(MainBotHardware hardware)
     {
-        super(hardware, 800, 448);
+        super(hardware, 1280, 720);
         constructMatrix();
 
         // Allocate a native context object. See the corresponding deletion in the finalizer
-        nativeApriltagPtr = AprilTagDetectorJNI.createApriltagDetector(AprilTagDetectorJNI.TagFamily.TAG_36h11.string, 3, 3);
+        nativeApriltagPtr = AprilTagDetectorJNI.createApriltagDetector(AprilTagDetectorJNI.TagFamily.TAG_36h11.string, 3, detectionThreads);
     }
 
     @Override
@@ -88,7 +87,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         }
 
         // Run AprilTag
-        detections = AprilTagDetectorJNI.runAprilTagDetectorSimple(nativeApriltagPtr, grey, tagsize, fx, fy, cx, cy);
+        detections = AprilTagDetectorJNI.runAprilTagDetectorSimple(nativeApriltagPtr, grey, tagsizeIn, fx, fy, cx, cy);
 
         synchronized (detectionsUpdateSync)
         {
@@ -99,8 +98,8 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         for(AprilTagDetection detection : detections)
         {
             Pose pose = aprilTagPoseToOpenCvPose(detection.pose);
-            drawAxisMarker(input, tagsizeY/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
-            draw3dCubeMarker(input, tagsizeX, tagsizeX, tagsizeY, 5, pose.rvec, pose.tvec, cameraMatrix);
+            drawAxisMarker(input, tagsizeIn/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
+            draw3dCubeMarker(input, tagsizeIn, tagsizeIn, tagsizeIn, 5, pose.rvec, pose.tvec, cameraMatrix);
         }
 
         return input;

@@ -4,8 +4,6 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.reflection.ReflectionConfig;
 import com.acmerobotics.roadrunner.DualNum;
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.PoseVelocity2d;
-import com.acmerobotics.roadrunner.Time;
 import com.acmerobotics.roadrunner.ftc.*;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
@@ -67,8 +65,10 @@ public final class TuningOpModes {
                     MecanumDrive.PARAMS.maxWheelVel,
                     MecanumDrive.PARAMS.minProfileAccel,
                     MecanumDrive.PARAMS.maxProfileAccel,
-                    MecanumDrive.PARAMS.trackWidthTicks / MecanumDrive.PARAMS.inPerTick,
-                    MecanumDrive.PARAMS.lateralMultiplier,
+                    MecanumDrive.PARAMS.maxAngVel,
+                    MecanumDrive.PARAMS.maxAngAccel,
+                    () -> MecanumDrive.PARAMS.trackWidth,
+                    () -> MecanumDrive.PARAMS.lateralMultiplier,
                     encoderGroups,
                     Arrays.asList(
                             md.leftFront,
@@ -84,8 +84,11 @@ public final class TuningOpModes {
                     perpEncs,
                     md.hardware.lazyImu,
                     (view) -> {
-                        PoseVelocity2d pair = dl.update();
-                        return new DualNum<>(Arrays.asList(dl.getPose().heading.toDouble(), pair.angVel));
+                        dl.update();
+//                        RobotLog.ii("TuningOpModes", String.valueOf(dl.getPoseVelocity().angVel));
+//                        RobotLog.ii("TuningOpModes", String.valueOf(Math.toDegrees(dl.getPoseVelocity().angVel)));
+                        return new DualNum<>(Arrays.asList(dl.getPose().heading.toDouble(), dl.getPoseVelocity().angVel));
+
                     },
                     md.voltageSensor,
                     MecanumDrive.feedForwardFactory,

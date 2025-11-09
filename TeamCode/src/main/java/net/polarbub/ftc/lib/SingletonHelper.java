@@ -17,7 +17,6 @@ public class SingletonHelper {
             instances.put(clazz, new WeakReference<>(instance));
             return instance;
         } else {
-            String TAG = SingletonHelper.class.getName();
             RobotLog.logStackTrace(Thread.currentThread(), "WARNING: Class: " + clazz.getCanonicalName() + " got existing reference. This is probably a bug or the GC being slow.");
             return reference.get();
         }

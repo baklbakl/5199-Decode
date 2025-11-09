@@ -43,50 +43,52 @@ public final class MecanumDrive {
 //        public double inPerTick = (48.0 / 25.4 * Math.PI) / 2000;
         // 126.5 42370
         public double inPerTick = 0.002985603021005428;
-        public double lateralMultiplier = 1;
-//        public double trackWidthTicks = 1/inPerTick * 11.25;
-        public double trackWidthTicks = 4665.760926551696;
+        public double lateralMultiplier = 1.23;
+        public double trackWidth = 13.65;
 
         // feedforward parameters (in tick units)
         //ADD: different feedforwards for strafing and 45 degrees
-        public double kS = 0.5;
+        public double kS = 1;
 //        public double kSForward = 1;
 //        public double kSStrafe = 2;
-        public double kV = 0.00056;
+        public double kV = 0.000515;
 //        public double kVForward = 0.00056;
 //        public double kVStrafe = 0.00064;
         public double kASpeedUp = 0.0001;
 //        public double kASpeedUpStrafe = 0.00012;
 //        public double kASpeedUpForward = 0.000075;
-        public double kASlowDown = 0.00015;
+        public double kASlowDown = 0.0002;
 //        public double kASlowDownStrafe = 0.00013;
 //        public double kASlowDownForward = 0.00033;
 
         // path profile parameters (in inches)
+        //Max wheel vel is 55. This means 55 in / sec for feedforward and 50 in / sec for strafe ish
         public double maxWheelVel = 45;
-        public double minProfileAccel = -45;
-        public double maxProfileAccel = 45;
+        //These probably could be 65, but they are 60 to play it safe
+        public double minProfileAccel = -40;
+        public double maxProfileAccel = 40;
 
         // turn profile parameters (in radians)
-        public double maxAngVel = 1.4; // shared with path
-        public double maxAngAccel = 1.4;
+        public double maxAngVel = 3; // shared with path
+        public double maxAngAccel = 3;
 
         // path controller gains
         public double axialGain = 3;
-        public double lateralGain = 3;
-        public double headingGain = 2; // shared with turn
+        public double lateralGain = 10;
+        public double headingGain = 3; // shared with turn
 
-        public double axialVelGain = 2;
-        public double lateralVelGain = 2.0;
+        public double axialVelGain = 0;
+        public double lateralVelGain = 0.0;
         public double headingVelGain = 0.0; // shared with turn
     }
 
     public static Params PARAMS = new Params();
 
     public final MecanumKinematics kinematics = new MecanumKinematics(
-            PARAMS.inPerTick * PARAMS.trackWidthTicks, PARAMS.lateralMultiplier);
+            PARAMS.trackWidth, PARAMS.lateralMultiplier);
 
-    public static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
+    //FIX: The kASlowDown doesn't seem to fix as much as it did in the past.
+    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
 
     public final TurnConstraints defaultTurnConstraints = new TurnConstraints(
             PARAMS.maxAngVel, -PARAMS.maxAngAccel, PARAMS.maxAngAccel);
@@ -208,6 +210,7 @@ public final class MecanumDrive {
             driveCommandWriter.write(new DriveCommandMessage(command));
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
+
             double voltage = voltageSensor.getVoltage();
 
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,

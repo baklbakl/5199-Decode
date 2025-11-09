@@ -1,5 +1,6 @@
 # Duct-Tape-and-a-Prayer repo
 polarbub=Bryn  
+baklbakl=Bryn
 BotDevPanda (Mr. Panda)=Kavish  
 aruneoz=Haasini  
 Annakhg=Anna  
@@ -84,6 +85,8 @@ Roadrunner is the motion pathing library that we use. The tuning process is larg
 2) Go to https://rr.brott.dev/docs/v1-0/tuning/
 
 #### Localization
+
+<!--ADD: Update localization instructions with notes about how the robot will turn off center-->
 This only works for three dead wheel setups.
 1) Follow the guide through `ForwardPushTest`
    - Ignore the part about setting the drive class and localizer. The other types have been removed from our repo.
@@ -92,7 +95,8 @@ This only works for three dead wheel setups.
    - Make sure to keep the robot straight while pushing in `ForwardPushTest`. It moving at an angle will cause the reading to be wrong.
 2) Repeat the test and insure the results are repeatable
 3) Set `par0YTicks` and `perpXTicks` to -1000, `par1YTicks` to 1000.  These are all in `ThreeDeadWheelLocalizer`. The assumes the two parallel DeadWheels are the same distance from the center of the robot
-4) Run the `LocalizationTest` OpMode and spin robot 7200 degrees (20 turns) by driving it the controller. Make sure that it actually turns exactly 7200 degrees or to measure exactly how far it has turned. The next steps depend on accurately knowing how far the robot turned. Think an accuracy of two of three degrees. 
+4) Run the `LocalizationTest` OpMode and record the starting ticks of all the encoders from the telemetry. They are likely not zero to start
+5) Spin robot 7200 degrees (20 turns) by driving it the controller. Make sure that it actually turns exactly 7200 degrees or to measure exactly how far it has turned. The next steps depend on accurately knowing how far the robot turned. Think an accuracy of two of three degrees. 
     - Make sure that the robot stays in place while spinning and doesn't drift
     - It can be helpful to start the robot with the wheels lines up with a tile edge and then try and end with the same wheels lined up with an edge.
     - Stopping exactly at 7200 degrees of turning can be difficult. It is easier to measure how far the robot has turned. This be either be done by using the IMU or by measuring the initial heading with some sort of digital compass (a phone with a compass app works well), counting turns, and then measuring the final heading. The IMU heading is outputted in the telemetry of the `LocalizationTest` OpMode.
@@ -100,10 +104,10 @@ This only works for three dead wheel setups.
     - Be careful to slowly start and stop the robot to prevent the dead wheels from slipping.
     - Be careful not to overshoot and have to go back because this will introduce error from backlash in the encoders.
     - Do this on a flat tile. Make sure there are no straps or other bumps under the tile. These make the value wander.
-5) Record the counts of all three encoders and calculate how far from the center the encoder is. `par0YTicks`, `par1YTicks` and `perpXTicks` should each equal their tick count divided by 2π then divided by the number of turns. Formula: `ticks / (2π * turns)` or `ticks / 40π`. `par0YTicks` should be negative while the others should be positive
-6) Repeat the test. The measured heading value should be the same as the localizer heading as reported in the telemetry of `LocalizationTest`. It is absolutely CRITICAL that these values are very close. As well, the new encoder tick locations should be fairly close to the old ones. this If either one of these is not the case go back and try again.
+6) Record the counts of all three encoders and calculate how far from the center the encoder is. `par0YTicks`, `par1YTicks` and `perpXTicks` should each equal their tick count divided by 2π then divided by the number of turns. Formula: `ticks / (2π * turns)` or `ticks / (degrees turned * π / 180)` or `ticks / 40π` if the turn was exactly 7200 degrees. `par0YTicks` should be negative while the others should be positive
+7) Repeat the test. The measured heading value should be the same as the localizer heading as reported in the telemetry of `LocalizationTest`. It is absolutely CRITICAL that these values are very close. As well, the new encoder tick locations should be fairly close to the old ones. this If either one of these is not the case go back and try again.
    - Make sure that the robot actually turned how much you think it did. It is easy to lose count of how many times the robot has turned
-7) Spin the robot while looking at it on the field in the dashboard. If the robot drifts or runs out (doesn't spin perfectly in place) on the dashboard, but not in the real world then the values are wrong. Go back and try again.
+8) Spin the robot while looking at it on the field in the dashboard. If the robot drifts or runs out (doesn't spin perfectly in place) on the dashboard, but not in the real world then the values are wrong. Go back and try again.
    1) If the issue still happens after insuring the accuracy of `par0YTicks`, `par1YTicks`, and `perpXTicks` follow these steps to empirically tune out the wobble.
    2) Unplug the perpendicular encoder and set `perpXTicks` to zero
    3) Check for wobble again. If the wobble remains then the parallel encoders are the problem, if not skip to step ... The distance between the two (`|par0YTicks| + |par1YTicks|`) is correct if the heading is accurate, but the distribution between the two might not be.
@@ -127,6 +131,7 @@ This only works for three dead wheel setups.
     - It produces better results to go further on each back and forth as there is more time for the robot to settle in. This repo already has it turned up, but if not it can be changed under `ManualFeedForwardTuner` in the Dashboard. If you change this the tuner OpMode must be restarted. Ideally the whole length of the field should be used.
 7) Tune the kASpeedUp to try and make the lines match while speeding up. The can value also vary robot to robot for the same reason as kV. A safe value to start with is 0.00005.
 8) Do the same with kASlowDown, but for slowing down
+<!--ADD: Note about how to change kS now to adjust the cross-over behavior-->
 9) Set `LateralMultiplier` to 1
    - This scales the power sent to the wheels while strafing because the wheels tend to slip more while strafing than going forward.
 10) Run `ManualFeedForwardStrafeTuner`. This does the same thing as `ManualFeedForwardTuner` except it strafes instead of going forward
@@ -136,7 +141,8 @@ This only works for three dead wheel setups.
 14) Go between all three feedfoward tuners and try to adjust the two kA values and try and find a middle ground values that work okay, but not perfectly for all three types of motion.
 15) Start `ManualFeedForwardTuner`. Increase the `maxWheelVel` until the robot cannot keep up any longer in the constant velocity section. 
     - The max speed will change with the battery voltage, so make sure to perform this step with the minimum battery voltage you expect to use.
-16) Perform the same but with `maxProfileAccel` (which control speeding up) and `minProfileAccel` (which controls slowing down) 
+<!--ADD: Explain what happens when the accel is too high-->
+16) Perform the same but with `maxProfileAccel` (which control speeding up) and `minProfileAccel` (which controls slowing down). Th
 17) Run `ManualFeedbackTuner` and increase `axialGain`, `lateralGain`, and `headingGain` until the robot stays on course and stops drifting. If the values are too high the robot will oscillate. The drift can be seen by looking at robot on field in the dashboard.
 18) Run `ManualStafeFeedbackTuner` and double-check the values. These values can be adjusted as increased when running the real auto path to make the following more accurate or reduce to remove oscillations. 
 

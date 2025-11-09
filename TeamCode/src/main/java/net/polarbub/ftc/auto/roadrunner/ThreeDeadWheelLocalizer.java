@@ -8,9 +8,10 @@ import net.polarbub.ftc.auto.roadrunner.messages.ThreeDeadWheelInputsMessage;
 
 public final class ThreeDeadWheelLocalizer implements Localizer {
     public static class Params {
-        public double par0YTicks = -1889; // y position of the first parallel encoder (in tick units)
-        public double par1YTicks = 1889; // y position of the second parallel encoder (in tick units)
-        public double perpXTicks = -1182.808938012382; // x position of the perpendicular encoder (in tick units)
+        //Total always seems to be 3977 ish, but the balance changes, so I just took that value and divied by two
+        public double par0YTicks = -1991; // y position of the first parallel encoder (in tick units)
+        public double par1YTicks = 1991; // y position of the second parallel encoder (in tick units)
+        public double perpXTicks = 850; // x position of the perpendicular encoder (in tick units) - very inconsistent. The robot runs out ... Need drive encoders
     }
 
     public static Params PARAMS = new Params();
@@ -25,9 +26,6 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
 
 
     public ThreeDeadWheelLocalizer(MainBotHardware hardware, double inPerTick, Pose2d initialPose) {
-//        par0 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, MainBotConfig.paraEncoder0ID)));
-//        par1 = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class,MainBotConfig.paraEncoder1ID)));
-//        perp = new OverflowEncoder(new RawEncoder(hardwareMap.get(DcMotorEx.class, MainBotConfig.perpEncoderID)));
         par0 = hardware.parallelEncoder0;
         par1 = hardware.parallelEncoder1;
         perp = hardware.perpendicularEncoder;
@@ -47,6 +45,11 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
     @Override
     public Pose2d getPose() {
         return pose;
+    }
+
+    private PoseVelocity2d velocity = null;
+    public PoseVelocity2d getPoseVelocity() {
+        return velocity == null ? new PoseVelocity2d(new Vector2d(0,0),0) : velocity;
     }
 
 //    private int startPar0 = 0;
@@ -113,6 +116,7 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
         lastPerpPos = perpPosVel.position;
 
         pose = pose.plus(twist.value());
-        return twist.velocity().value();
+        velocity = twist.velocity().value();
+        return velocity;
     }
 }

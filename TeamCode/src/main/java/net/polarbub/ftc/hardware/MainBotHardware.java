@@ -9,12 +9,15 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.*;
+import com.qualcomm.robotcore.util.RobotLog;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.OnCreateHandlers;
 import net.polarbub.ftc.lib.SingletonHelper;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.Arrays;
 
 public class MainBotHardware {
     //
@@ -124,7 +127,7 @@ public class MainBotHardware {
         parallelEncoder1 = parent.createEncoder(paraEncoder1ID);
         perpendicularEncoder = parent.createEncoder(perpEncoderID);
 
-        perpendicularEncoder.setDirection(DcMotorSimple.Direction.FORWARD);
+        perpendicularEncoder.setDirection(DcMotorSimple.Direction.REVERSE);
         parallelEncoder0.setDirection(DcMotorSimple.Direction.FORWARD);
         parallelEncoder1.setDirection(DcMotorSimple.Direction.REVERSE);
 
