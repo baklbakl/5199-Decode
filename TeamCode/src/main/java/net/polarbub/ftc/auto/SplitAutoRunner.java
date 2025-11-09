@@ -54,8 +54,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 (startPose) -> {
                     mecanumDrive = new MecanumDrive(hardware, startPose);
                     return mecanumDrive.actionBuilder(startPose);
-                },
-                new RobotImplementation(hardware)
+                }
         );
     }
 
