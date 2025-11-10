@@ -1,14 +1,10 @@
 package net.polarbub.ftc.hardware;
 
 import androidx.annotation.NonNull;
-import com.qualcomm.hardware.lynx.LynxDcMotorController;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorController;
-import com.qualcomm.robotcore.hardware.DcMotorControllerEx;
 import com.qualcomm.robotcore.hardware.DcMotorImplEx;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
-import net.polarbub.ftc.MainBotConfig;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import com.qualcomm.robotcore.util.RobotLog;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.reflect.InvocationTargetException;
@@ -58,6 +54,10 @@ public class DcMotorExEx extends DcMotorImplEx {
     }
 
     public boolean isAtTargetVelocity() {
-        return Math.abs(getVelocity() - getTargetVelocity()) < MainBotConfig.motorVelocityTolerance;
+        return isAtTargetVelocity(MainBotHardware.motorVelocityTolerance);
+    }
+
+    public boolean isAtTargetVelocity(int tolerance) {
+        return Math.abs(getVelocity() - getTargetVelocity()) < tolerance;
     }
 }

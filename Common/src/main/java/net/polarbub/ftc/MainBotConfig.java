@@ -9,13 +9,6 @@ public class MainBotConfig {
 
     public static final String opmodeGroupName = "1 - TeleOp";
     public static final String demoGroupName = "2 - DemoBots";
-
-
-    //
-    // Dashboard Variables
-    //
-    public static int motorVelocityTolerance = 30;
-    public static double restingServoPos = 0.5;
-    public static double launchTicksPerSec = 1500;
-    public static double intakeDrivePower = 1;
+    public static double launch1TicksPerSecAuto = 1320;
+    public static double launch2TicksPerSecAuto = 1320;
 }

@@ -2,13 +2,11 @@ package net.polarbub.ftc;
 
 import net.polarbub.ftc.auto.RobotInterface;
 
-import java.awt.Robot;
-
 public class MeepMeepImp implements RobotInterface {
 
 
     @Override
-    public void launch() {
+    public void launch(int numToLaunch, double speed) {
       System.out.println("launch") ;
     }
 
@@ -18,8 +16,12 @@ public class MeepMeepImp implements RobotInterface {
 
     }
 
-//    public int getSpike()
-//    {
-//        return spike;
-//    }
+    @Override
+    public void stopIntake() {
+
+    }
+
+    public int getSpike() {
+        return 0;
+    }
 }
