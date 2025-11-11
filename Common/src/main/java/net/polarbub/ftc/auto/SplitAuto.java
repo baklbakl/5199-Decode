@@ -53,7 +53,18 @@ public class SplitAuto {
 
         //The spike mark is on the middle of the tile. Tiles are 23.5 in square
         //Spike 1
-        double spikeX = -15;
+        double spikeX;
+        if (robot.getSpike() == 1) {
+            spikeX = -13;
+        }
+        else if (robot.getSpike() == 2)
+        {
+            spikeX = 10.2;
+        }
+        else {
+            spikeX = -14;
+        }
+
         //Spike 2
 //        double spikeX = 36 - 24;
         //Spike 3
@@ -77,10 +88,10 @@ public class SplitAuto {
                 .splineTo(new Vector2d(spikeX, 30), Math.toRadians(90))
                 .splineTo(new Vector2d(spikeX, 46), Math.toRadians(90), new TranslationalVelConstraint(5))
                 .setReversed(true)
-                .splineTo(new Vector2d(spikeX+10, 30), Math.toRadians(320))
+                .splineTo(new Vector2d(spikeX+10, 23), Math.toRadians(320))
                 .setReversed(false)
                 .afterTime(0, robot::stopIntake)
-                .splineToLinearHeading(launchPos, launchPos.heading)
+                .splineToLinearHeading(launchPos, Math.toRadians(90))
                 .stopAndAdd(() -> robot.launch(3, MainBotConfig.launch2TicksPerSecAuto));
 
 

@@ -22,6 +22,6 @@ public class MeepMeepImp implements RobotInterface {
     }
 
     public int getSpike() {
-        return 0;
+        return 2;
     }
 }

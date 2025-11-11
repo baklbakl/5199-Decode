@@ -2,8 +2,10 @@ package net.polarbub.ftc.auto;
 
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import net.polarbub.ftc.MainBotConfig;
+import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.openftc.apriltag.AprilTagDetection;
 
 import java.util.function.Supplier;
 
@@ -14,19 +16,22 @@ public class RobotImpl implements RobotInterface {
     private final MainBotHardware hardware;
     private final Supplier<Boolean> isOpModeActive;
 
+    private final AprilTagDetectionPipeline pipeline;
+
     public RobotImpl(MainBotHardware hardware, Supplier<Boolean> isOpModeActive) {
         this.hardware = hardware;
         this.isOpModeActive = isOpModeActive;
+        pipeline = new AprilTagDetectionPipeline(hardware);
     }
 
     @Override
     public void launch(int numToLaunch, double speed) {
-        if(hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
+        if (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
             hardware.moverServo.setPosition(MainBotHardware.outServoPos);
             hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
         }
 
-        while(hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
+        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -38,7 +43,7 @@ public class RobotImpl implements RobotInterface {
         hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
 
         hardware.launchDrive.setVelocity(speed);
-        while(!hardware.launchDrive.isAtTargetVelocity(10)) {
+        while (!hardware.launchDrive.isAtTargetVelocity(10)) {
             hardware.modules.clearBulkCache();
             try {
                 Thread.sleep(10);
@@ -62,13 +67,13 @@ public class RobotImpl implements RobotInterface {
         int atSpeedSamples = requiredAtSpeedSamples + 1;
 
         //ADD: Timeout for launching
-        while(isOpModeActive.get() && speedDips < numToLaunch) {
+        while (isOpModeActive.get() && speedDips < numToLaunch) {
             hardware.modules.clearBulkCache();
-            if(hardware.launchDrive.isAtTargetVelocity()) {
-                if(atSpeedSamples == requiredAtSpeedSamples) {
+            if (hardware.launchDrive.isAtTargetVelocity()) {
+                if (atSpeedSamples == requiredAtSpeedSamples) {
                     atSpeedSamples++;
                     speedDips++;
-                } else if(atSpeedSamples < requiredAtSpeedSamples) {
+                } else if (atSpeedSamples < requiredAtSpeedSamples) {
                     atSpeedSamples++;
                 }
 
@@ -109,6 +114,18 @@ public class RobotImpl implements RobotInterface {
 
     @Override
     public int getSpike() {
+        if (pipeline.getLatestDetections() != null && !pipeline.getLatestDetections().isEmpty()) {
+            for (AprilTagDetection d : pipeline.getLatestDetections()) {
+                if (d.id == 21) {
+                    return 1;
+                } else if (d.id == 22) {
+                    return 2;
+                } else if (d.id == 23) {
+                    return 3;
+                }
+            }
+
+        }
         return 0;
     }
 }
