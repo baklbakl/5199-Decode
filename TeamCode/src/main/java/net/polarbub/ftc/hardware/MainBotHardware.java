@@ -9,21 +9,24 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.*;
-import com.qualcomm.robotcore.util.RobotLog;
-import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.OnCreateHandlers;
 import net.polarbub.ftc.lib.SingletonHelper;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Arrays;
-
 public class MainBotHardware {
+    public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
+    public static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
     //
     // Dashboard options
     //
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(30, 0, 0, 14.4);
+    public static int motorVelocityTolerance = 50;
+    public static double restingServoPos = 0.5;
+    public static double inServoPos = 0;
+    public static double outServoPos = 1;
+    public static double inIntakePower = 1;
 
     //
     // Hardware ports
@@ -111,13 +114,13 @@ public class MainBotHardware {
         launchDrive = child.createDcMotor(launchDriveID);
         launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+        launchDrive.setVelocity(0);
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-
         moverServo = parent.createServo(moverServoID);
-        moverServo.setPosition(MainBotConfig.restingServoPos);
+        moverServo.setPosition(restingServoPos);
         moverServo2 = parent.createServo(moverServo2ID);
-        moverServo2.setPosition(MainBotConfig.restingServoPos);
+        moverServo2.setPosition(restingServoPos);
 
         blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, blinkinServoID);
         modules.parentModule.servoController.setServoPwmRange(blinkinServoID, new PwmControl.PwmRange(500, 2500));
