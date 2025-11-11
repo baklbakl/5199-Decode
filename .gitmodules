@@ -1,6 +1,6 @@
 [submodule "Submodules/road-runner"]
 	path = Submodules/road-runner
-	url = git@github.com:DuckTapeAndAPrayer/road-runner.git
+	url = https://github.com/DuckTapeAndAPrayer/road-runner.git
 [submodule "Submodules/road-runner-ftc"]
 	path = Submodules/road-runner-ftc
-	url = git@github.com:DuckTapeAndAPrayer/road-runner-ftc.git
+	url = https://github.com/DuckTapeAndAPrayer/road-runner-ftc.git
