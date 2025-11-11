@@ -1,22 +1,20 @@
 package net.polarbub.ftc.auto.options;
 
 public enum StartPos {
-    GOAL("Touching goal"),
-    CLASSIFIER("Touching classifier ramp"),
-    AUDIENCE_IN("In audience launch zone"),
-    AUDIENCE_OUT("Just overlapping audience launch zone"),
-
-    ;
-
-    StartPos(String conversion) {
-        this.conversion = conversion;
-    }
-
-    private final String conversion;
+    TAG,
+    NEXT_TAG,
+    LAUNCH;
 
     @Override
     public String toString() {
-        return conversion;
+        if(this == TAG) {
+            return "in front of April Tag";
+        } else if (this == NEXT_TAG) {
+            return  "right wheel next to line (April Tag)";
+        } else if (this == LAUNCH) {
+            return "left wheel on end (launch zone line)";
+        }
+        throw new RuntimeException("StartPOS toString() incomplete");
     }
 }
 

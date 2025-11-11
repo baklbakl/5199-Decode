@@ -52,7 +52,6 @@ public class LynxModuleInitializer {
             DcMotorExEx motor;
 
             motor = new DcMotorExEx(motorController, id, DcMotorSimple.Direction.FORWARD, MotorConfigurationType.getMotorType(GoBILDA5202Series.class));
-            motor.setPower(0);
             return motor;
         }
 

@@ -2,44 +2,14 @@ package net.polarbub.ftc.auto.vision;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.Disabled;
-import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
-import org.openftc.apriltag.AprilTagDetection;
 
-import java.util.ArrayList;
-
+@Disabled
 @Autonomous(name = "Test Vision")
 public class TestVision extends FastIterativeOpMode {
-    private AprilTagDetectionPipeline pipeline;
 
     @Override
-    protected void init_internal() {
-        pipeline = new AprilTagDetectionPipeline(MainBotHardware.getOrCreate(hardwareMap));
-    }
-
-    @Override
-    protected void init_loop_internal() {
-        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
-
-        telemetry.addData("Target ID", 24);
-        if (detections != null && !detections.isEmpty()) {
-            telemetry.addData("Detections", detections.size());
-            for (AprilTagDetection d : detections) {
-                telemetry.addLine("Target Found!");
-                telemetry.addData("ID", d.id);
-                telemetry.addData("x (m)", "%.3f", d.pose.x);
-                telemetry.addData("y (m)", "%.3f", d.pose.y);
-                telemetry.addData("z (m)", "%.3f", d.pose.z);
-            }
-
-        } else {
-            telemetry.addLine("No detections");
-        }
-        telemetry.addData("FPS", pipeline.camera.getFps());
-        telemetry.addData("Ms per frame processing", pipeline.camera.getPipelineTimeMs());
-        telemetry.addData("Ms per frame overhead", pipeline.camera.getOverheadTimeMs());
-        telemetry.addData("Ms per frame total", pipeline.camera.getTotalFrameTimeMs());
-        telemetry.update();
+    protected void stop_internal() {
 
     }
 
@@ -50,10 +20,54 @@ public class TestVision extends FastIterativeOpMode {
 
     @Override
     protected void loop_internal() {
+//        List<FindRedSpecimen.PipelineData> detectedObjects = visionPipeline.getDetectedObjects();
+//        List<FindRedSpecimen.PipelineData> previousDetectedObjects = new ArrayList<>();
+//
+//        if (!detectedObjects.equals(previousDetectedObjects)) {
+//            for (int i = 0; i < Math.min(detectedObjects.size(), 3); i++) {
+//                FindRedSpecimen.PipelineData data = detectedObjects.get(i);
+//                telemetry.addLine(String.format("Object %d:", i + 1));
+//                telemetry.addData("Position", data.position);
+//                telemetry.addData("Distance", data.distance + " cm\n");
+//            }
+//        }
+//        previousDetectedObjects = new ArrayList<>(detectedObjects);  // Update cache
+
+
+        telemetry.update();
+
     }
 
     @Override
-    protected void stop_internal() {
+    protected void init_loop_internal() {
+
+    }
+
+    @Override
+    protected void init_internal() {
+
+        // Vision
+//             int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
+//                    camera = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "WC1"), cameraMonitorViewId);
+//
+//                    visionPipeline = new FindRedSpecimen(telemetry);
+//                    camera.setPipeline(visionPipeline);
+//                    camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
+//                        @Override
+//                        public void onOpened() {
+//                            camera.startStreaming(800, 448, OpenCvCameraRotation.UPRIGHT);
+//                        }
+//
+//                        @Override
+//                        public void onError(int errorCode) {
+//
+//                        }
+//                    });
+//
+//            FtcDashboard dashboard = FtcDashboard.getInstance();
+//            telemetry = new MultipleTelemetry(telemetry, dashboard.getTelemetry());
+//            FtcDashboard.getInstance().startCameraStream(camera, 10);
+
 
     }
 }

@@ -1,10 +1,9 @@
 package net.polarbub.ftc.auto;
 
 public interface RobotInterface {
-    void launch(int numToLaunch, double speed);
+    public void launch();
 
-    void intake();
-    void stopIntake();
+    public void intake();
 
-    int getSpike();
+    public int getSpike();
 }

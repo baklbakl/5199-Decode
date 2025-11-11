@@ -44,6 +44,9 @@ public class MainTeleop extends FastIterativeOpMode {
 
     private static final RevBlinkinLedDriver.BlinkinPattern manualLaunchControl = RevBlinkinLedDriver.BlinkinPattern.VIOLET;
 
+    private static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
+    private static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
+
     private static final RevBlinkinLedDriver.BlinkinPattern correctSpeed = RevBlinkinLedDriver.BlinkinPattern.BLUE;
     private static final RevBlinkinLedDriver.BlinkinPattern speedingUpVisionLocked = RevBlinkinLedDriver.BlinkinPattern.YELLOW;
     private static final RevBlinkinLedDriver.BlinkinPattern outOfLaunchRange = RevBlinkinLedDriver.BlinkinPattern.ORANGE;
@@ -77,7 +80,6 @@ public class MainTeleop extends FastIterativeOpMode {
     // Option Driver Options. MUST BE PUBLIC OR ELSE OPTION DRIVER CAN'T SEE IT.
     //
     public Boolean runVision = false;
-    public Boolean runLauncherPIDFTuner = false;
     public Alliance alliance = Alliance.lastAlliance;
 
 
@@ -93,8 +95,7 @@ public class MainTeleop extends FastIterativeOpMode {
         optionDriver = new OptionDriver();
         try {
             optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("runVision"), this));
-            optionDriver.add(new BooleanOption("Run Launcher PIDF Tuner", "dpad_up", gamepad1, this.getClass().getField("runLauncherPIDFTuner"), this));
-            optionDriver.add(new EnumOption<>("Alliance", "cross", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
+            optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -143,11 +144,11 @@ public class MainTeleop extends FastIterativeOpMode {
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
                 double power;
                 if(left_bumper == right_bumper) {
-                    power = MainBotHardware.restingServoPos;
+                    power = MainBotConfig.restingServoPos;
                 } else if(left_bumper) {
-                    power = MainBotHardware.inServoPos;
+                    power = 0;
                 } else if(right_bumper) {
-                    power = MainBotHardware.outServoPos;
+                    power = 1;
                 } else {
                     throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
                 }
@@ -163,8 +164,14 @@ public class MainTeleop extends FastIterativeOpMode {
                         hardware.launchDrive.setVelocity(launcherNoVisionVelocity);
                     } else {
                         hardware.launchDrive.setVelocity(0);
-                        hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
+                        hardware.blinkin.setPattern(wrongSpeedNoVision);
                     }
+                }
+            }));
+
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), (Boolean dpad_up) -> {
+                if(dpad_up) {
+                    hardware.launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MainBotHardware.launcherCoefficients);
                 }
             }));
 
@@ -200,7 +207,7 @@ public class MainTeleop extends FastIterativeOpMode {
                         hardware.launchDrive.setVelocity(0);
                         hardware.launchDrive.setPower(1);
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                        hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
+                        hardware.blinkin.setPattern(wrongSpeedNoVision);
                     } else {
                         launcherControlMethod = LauncherControlMethod.MANUAL;
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -215,12 +222,16 @@ public class MainTeleop extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
+        if(runVision) {
+            pipeline = new AprilTagDetectionPipeline(hardware);
+        }
+
         timedEvents.add(new TimedEvent(launcherVelocityCheckInterval, () -> {
             if(launcherControlMethod == LauncherControlMethod.PRESET && hardware.launchDrive.getTargetVelocity() != 0) {
                 if(hardware.launchDrive.isAtTargetVelocity()) {
-                    hardware.blinkin.setPattern(MainBotHardware.correctSpeedNoVision);
+                    hardware.blinkin.setPattern(correctSpeedNoVision);
                 } else {
-                    hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
+                    hardware.blinkin.setPattern(wrongSpeedNoVision);
                 }
             }
         }));
@@ -264,23 +275,12 @@ public class MainTeleop extends FastIterativeOpMode {
             } else {
                 aprilTagID = 24;
             }
-            pipeline = new AprilTagDetectionPipeline(hardware);
             hardware.blinkin.setPattern(tagNotFound);
         } else {
-            hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
+            hardware.blinkin.setPattern(wrongSpeedNoVision);
         }
 
-        if(runLauncherPIDFTuner) {
-            try {
-                variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), (Boolean dpad_up) -> {
-                    if(dpad_up) {
-                        hardware.launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MainBotHardware.launcherCoefficients);
-                    }
-                }));
-            } catch (NoSuchFieldException e) {
-                throw new RuntimeException(e);
-            }
-        }
+
 
 
         runtime.reset();
@@ -293,9 +293,6 @@ public class MainTeleop extends FastIterativeOpMode {
     private long lastNanos = 0;
     private final long[] loopTimes = new long[5];
     private int loopTimesPos = 0;
-
-    private long startTime = -1;
-    private boolean lastVelocityZero = false;
 
     public void loop_internal() {
         if(runVision) {
@@ -340,40 +337,6 @@ public class MainTeleop extends FastIterativeOpMode {
         long thisNanos = runtime.nanoseconds();
         for(TimedEvent event : timedEvents) {
             event.tick(thisNanos);
-        }
-
-        if(runLauncherPIDFTuner) {
-            TelemetryPacket packet = new TelemetryPacket();
-            double velocity = hardware.launchDrive.getVelocity();
-            double targetVelocity;
-
-            if(hardware.launchDrive.getMode() == DcMotor.RunMode.RUN_USING_ENCODER) {
-                targetVelocity = hardware.launchDrive.getTargetVelocity();
-                if(targetVelocity != 0 && lastVelocityZero && startTime == -1) {
-                    startTime = thisNanos;
-                }
-                lastVelocityZero = targetVelocity == 0;
-
-            } else {
-                targetVelocity = launcherNoVisionVelocity;
-
-                if(velocity != 0 && lastVelocityZero) {
-                    RobotLog.ii("MainTeleOp", "Starting launcher");
-                    startTime = thisNanos;
-                }
-                lastVelocityZero = velocity == 0;
-            }
-
-            if(startTime != -1 && abs(velocity) >= abs(targetVelocity)) {
-                RobotLog.ii("MainTeleOp", (thisNanos - startTime) / 1000000000.0d + " seconds to spin up");
-                startTime = -1;
-            }
-
-            packet.put("LauncherVelocity", velocity);
-            packet.put("Target", targetVelocity);
-            packet.put("Min", 0);
-            packet.put("Max", 2000);
-            FtcDashboard.getInstance().sendTelemetryPacket(packet);
         }
 
         //Average the last five iterations of the loop to minimize jumping around

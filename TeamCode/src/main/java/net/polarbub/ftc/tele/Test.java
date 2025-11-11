@@ -4,7 +4,6 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.auto.RobotImpl;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
 
@@ -17,10 +16,12 @@ public class Test extends FastIterativeOpMode {
 
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-        hardware = MainBotHardware.getOrCreate(hardwareMap);
-        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
+//        allHubs = hardwareMap.getAll(LynxModule.class);
+//        hardware = MainBotHardware.getOrCreate(hardwareMap);
+//        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
     
         // Tell the driver that initialization is complete.
+        System.gc();
         telemetry.addData("Status", "Initialized");
         telemetry.update();
     }
@@ -36,8 +37,6 @@ public class Test extends FastIterativeOpMode {
      */
     public void start_internal() {
         runtime.reset();
-        RobotImpl robot = new RobotImpl(hardware, this::opModeIsActive);
-        robot.launch(3, MainBotConfig.launch1TicksPerSecAuto);
     }
 
     /*
