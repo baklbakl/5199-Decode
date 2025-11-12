@@ -12,8 +12,8 @@ public class SplitAuto {
     public static int distSensorPollInterval = 50;
     public static int distSensorStartWait = 100;
 
-    public static Pose2d launchPos = new Pose2d(-50, 35, Math.toRadians(205));
-    public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(270));
+    public static Pose2d launchPos = new Pose2d(-50, 35, Math.toRadians(215));
+    public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(280));
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -73,14 +73,19 @@ public class SplitAuto {
 
         if(startPos == StartPos.GOAL || startPos == StartPos.CLASSIFIER) {
             pathBuilder = pathBuilder.setTangent(Math.toRadians(315))
+
                     .splineToLinearHeading(launchPos, Math.toRadians(315));
         } else {
-            pathBuilder = pathBuilder.splineToLinearHeading(launchPos, Math.toRadians(180));
+
+            pathBuilder = pathBuilder
+                    .splineTo(new Vector2d(0, 20), Math.toRadians(180))
+                    .splineToSplineHeading(launchPos, Math.toRadians(180));
         }
 
         pathBuilder = pathBuilder
                 .stopAndAdd(() -> robot.launch(3, MainBotConfig.launch1TicksPerSecAuto))
                 .setTangent(Math.toRadians(315))
+
                 .splineToLinearHeading(obeliskPose, Math.toRadians(315))
 //                .setTangent(Math.toRadians(angleOfArtifactRelease))
                 .afterTime(0, robot::intake)

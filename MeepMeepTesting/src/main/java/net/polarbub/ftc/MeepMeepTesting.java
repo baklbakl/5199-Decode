@@ -122,7 +122,7 @@ public class MeepMeepTesting {
                         new MeepMeepImp()
                 ).fillBuilder(
                         Delay.NONE,
-                        StartPos.GOAL
+                        StartPos.AUDIENCE_OUT
                 ).build()
         );
 
