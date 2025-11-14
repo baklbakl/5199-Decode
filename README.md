@@ -65,9 +65,10 @@ We have replaced the Groovy buildscripts with easier to maintain Kotlin ones. (N
 ### How to update the FTC libraries
 To update the AAR libraries
   1) Edit `gradle.properties` and update `SDK_MAJOR_VERSION`, `SDK_MINOR_VERSION`, and `SDK_POINT_VERSION` to the current version.
-  2) Copy and paste `FTCRobotController/src/main/res/`, `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcOpModeRegister` and `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/PermissionValidatorWrapper` from the [FIRST GitHub repo](https://github.com/FIRST-Tech-Challenge/FtcRobotController) to here
-  3) In the repo check to see if there were any changes to `FTCRobotController/src/main/AndroidManifest.xml` or `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity` and apply them here. If there are any conflicts try to figure out if our version has the changed code and if so how our version differs from stock. `ExtractedLibs/README.md` details the changes made and why. They can't be copied and pasted because there are changes in them from stock that would be lost by copying and pasting. 
-4) You're done!
+  2) Go to the [FIRST GitHub repo](https://github.com/FIRST-Tech-Challenge/FtcRobotController) and see if there were any changes to any files in `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal` from the last version to this version.
+  3) If the files have changed copy and paste the new version unless the file is `FTCRobotController/src/main/AndroidManifest.xml` or `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity`. In those cases look at the individual changes and apply them to our files because we run a patched version of those files to allow for Extracted Libs to work.
+    - If there are any conflicts (we changed the same area they changed) try to figure out what the changes do and how to integrate them together. See `ExtractedLibs/README.md` details the changes made and why. 
+  4) You're done!
 
 See `ExtractedLibs/README.md` for how to update the Extracted Libs
 
@@ -147,18 +148,19 @@ This only works for three dead wheel setups.
 18) Run `ManualStafeFeedbackTuner` and double-check the values. These values can be adjusted as increased when running the real auto path to make the following more accurate or reduce to remove oscillations. 
 
 ### Changes needed to upstream
-ManualStrafeFeedforward
-ManualAngularFeedforward
-Added stuff to drive view factory
-ManualStrafeFeedback
-LocalizationTest to print out odometry ticks
-ASyncFeedForward
+ManualStrafeFeedforward  
+ManualAngularFeedforward  
+Added stuff to drive view factory  
+ManualStrafeFeedback  
+LocalizationTest to print out odometry ticks  
+ASyncFeedForward  
 
 ### Things to add to documentation
 - How to update
   - Changes from stock quickstart
 - Dual / Normal version of something
 - Pose vs Vector
+- Occupations from vel gain
 - How constraints work
 - Where encoders should be
   - The parallel ones HAVE to stay on the ground at all times - wheelees, etc. are a big problem
@@ -196,8 +198,8 @@ If you don't want to deal with using git in the terminal then you can use [GitHu
 2) Make sure you have access to the GitHub repo (how are you reading this if you don't)
 3) [Add you ssh public key to GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh). Keep in mind that the school's network blocks ssh, so you need to be on a personal hotspot or at home to use it.
 4) Open a terminal and navigate to the folder that you want the repo folder it be in.
-5) Run `git clone git@github.com:polarbub/FTC.git`
-6) The `FTC` folder now has a local copy of the code
+5) Run `git clone git@github.com:DuckTapeAndAPrayer/FTC-Decode.git --recurseive`
+6) The `FTC-Decoce` folder now has a local copy of the code
 
 ### Usage
 To push your changes for everyone else to see do the following
@@ -219,27 +221,27 @@ There are many other things that can done with git and other ways to use it, but
 Open the folder in Android Studio to get started
 
 ### Building & Uploading
-1) Press the play button
-2) Press start the opmode on the driver station
+1) Press the play button in Android Studio
+2) Start the opmode on the driver station
 
 ### Where does println() go?
-If you're running via Android Studio then it goes into the Logcat tab at the bottom.
+If you're running via Android Studio then it goes into the Logcat tab on the left.
 
 ### Debugging
 Press the debug icon (looks like a bug) to the right of the run button. Sometimes it will time out. If it does launch the app 
-normally and then to Run -> Attach Debugger to Android Process. 
+normally and then go Run -> Attach Debugger to Android Process. 
 
 ## Extra Credit
 For extra credit you can take the 'Bryn needs to know how it works' approach and use the actual tools that Android Studio uses. Don't do this it will take a bunch more time that it needs to.
 
 ### Software
 - Newish JDK (at least 17)
-- Gradle 8
+- Gradle 9
 - Android SDK and sources version 34 
 - Android studio  
 
 ### Building
-The Android app must be built with Gradle 8. 
+The Android app must be built with Gradle 9. 
 The whole thing can be built with `gradle build` (or `./gradlew build` if you don't have the right version installed. 
 It just grabs an old version of gradle). Most of the time you don't want this. All you want is to build the debug version
 which can be done with the `gradle assembleDebug`. We won't be using release mode as that is for uploading to the play
@@ -247,7 +249,7 @@ store which we don't plan on doing. [Source](https://developer.android.com/build
 
 ### Uploading
 Make sure you have debug mode enabled on the device you want to send it to. Then run `adb -d install TeamCode/build/outputs/apk/debug/TeamCode-debug.apk`
-It should get automatically started by the driver station when you connect. The same procedure can be used with the [Driver Station APK](https://github.com/FIRST-Tech-Challenge/FtcRobotController/releases) to update the Driver Station app without using the REV Hardware Client.
+It should get automatically started by the driver station when you connect. The same procedure can be used with the [Driver Station APK](https://github.com/FIRST-Tech-Challenge/FtcRobotController/releases) to update the Driver Station app without using the REV Hardware Client. If the app won't install due to it already being installed first run `adb uninstall com.qualcomm.ftcrobotcontroller` then try installing again.
 
 If you want gradle to install the Robot Controller App for you, you can use `gradle installDebug` to build (if your apk is out of date from your code)
 and upload it to the device.
