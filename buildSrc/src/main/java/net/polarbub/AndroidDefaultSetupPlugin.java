@@ -1,9 +1,6 @@
 package net.polarbub;
 
-import com.android.build.api.dsl.BuildType;
-import com.android.build.api.dsl.CommonExtension;
-import com.android.build.api.dsl.DefaultConfig;
-import com.android.build.api.dsl.Lint;
+import com.android.build.api.dsl.*;
 import com.android.build.gradle.internal.dsl.BaseAppModuleExtension;
 import com.android.build.gradle.internal.dsl.InternalTestedExtension;
 import org.gradle.api.Action;
@@ -34,7 +31,12 @@ public class AndroidDefaultSetupPlugin implements Plugin<Project> {
 
             DefaultConfig defaultConfig = extension.getDefaultConfig();
             defaultConfig.setMinSdk(PropertiesHelper.getIntProperty(target, "androidsdk.minVersion"));
-            defaultConfig.getNdk().getAbiFilters().add("arm64-v8a");
+
+            AbiSplit splits = extension.getSplits().getAbi();
+            splits.setEnable(true);
+            splits.setUniversalApk(false);
+            splits.reset();
+            splits.include("arm64-v8a", "armeabi-v7a");
 
             NamedDomainObjectContainer<? extends BuildType> buildTypes = extension.getBuildTypes();
             BuildType debugBuild = buildTypes.getByName("debug");

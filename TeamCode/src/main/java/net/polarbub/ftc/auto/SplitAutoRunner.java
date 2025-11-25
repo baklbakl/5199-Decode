@@ -1,16 +1,11 @@
 package net.polarbub.ftc.auto;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.InstantAction;
-import com.acmerobotics.roadrunner.ParallelAction;
-import com.acmerobotics.roadrunner.SequentialAction;
+import com.acmerobotics.roadrunner.*;
 import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import net.polarbub.ftc.hardware.DcMotorExEx;
-import net.polarbub.ftc.MainBotConfig;
+import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.auto.options.*;
 import net.polarbub.ftc.auto.roadrunner.MecanumDrive;
@@ -19,9 +14,9 @@ import net.polarbub.ftc.lib.FastIterativeOpMode;
 import net.polarbub.ftc.lib.optiondriver.BooleanOption;
 import net.polarbub.ftc.lib.optiondriver.EnumOption;
 import net.polarbub.ftc.lib.optiondriver.OptionDriver;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.openftc.apriltag.AprilTagDetection;
 
-import java.lang.reflect.Field;
+import java.lang.Math;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Autonomous(name = "Split Auto")
@@ -30,11 +25,14 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     private MainBotHardware hardware;
     private SplitAuto splitAuto;
     private Action path = null;
+    private AprilTagDetectionPipeline pipeline;
+    private TrajectoryActionBuilder builder = null;
     private MecanumDrive mecanumDrive;
 
     public Alliance alliance;
     public StartPos startPos;
     public Delay delay;
+    public boolean useVision;
 
     @Override
     protected void init_internal() {
@@ -42,7 +40,8 @@ public class SplitAutoRunner extends FastIterativeOpMode {
         try {
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
             optionDriver.add(new EnumOption<>("Start Pos", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
-            optionDriver.add(new EnumOption<>("Delay", "x", gamepad1, this.getClass().getField("delay"), this, Delay.class));
+            optionDriver.add(new EnumOption<>("Delay", "cross", gamepad1, this.getClass().getField("delay"), this, Delay.class));
+            optionDriver.add(new BooleanOption("Use Vision", "triangle", gamepad1, this.getClass().getField("useVision"), this));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -72,7 +71,8 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            path = splitAuto.fillBuilder(delay, startPos).build();
+            builder = splitAuto.fillBuilder(delay, startPos, alliance, useVision);
+            path = builder.build();
 
             telemetry.addLine(out);
             telemetry.addLine("\nDone building paths");
@@ -86,12 +86,46 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     @Override
     protected void start_internal() {
         Alliance.lastAlliance = alliance;
+        if(useVision) {
+            pipeline = new AprilTagDetectionPipeline(hardware);
+        }
 
         AtomicBoolean pathDone = new AtomicBoolean(false);
         Actions.runBlocking(
                 new ParallelAction(
                         new SequentialAction(
                                 path,
+                                new InstantAction(() -> {
+                                   if(useVision) {
+                                       int spike = 0;
+
+                                       if (pipeline.getLatestDetections() != null && !pipeline.getLatestDetections().isEmpty()) {
+                                           for (AprilTagDetection d : pipeline.getLatestDetections()) {
+                                               if(spike != 0) {
+                                                   telemetry.addData("Duplicate tag", d.id);
+                                                   continue;
+                                               }
+
+                                               if (d.id == 21) {
+                                                   spike = 1;
+                                               } else if (d.id == 22) {
+                                                   spike = 2;
+                                               } else if (d.id == 23) {
+                                                   spike = 3;
+                                               }
+                                           }
+                                       }
+
+                                       if (spike == 0) {
+                                           telemetry.addLine("No obelisk tag found. Going to spike 1");
+                                           spike = 1;
+                                       } else {
+                                           telemetry.addData("Spike", spike);
+                                       }
+
+                                       Actions.runBlocking(splitAuto.fillBuilderPostVision(builder.fresh(), useVision, spike, alliance).build());
+                                   }
+                                }),
                                 new InstantAction(() -> {
                                     pathDone.set(true);
                                 })

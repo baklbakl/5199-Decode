@@ -8,6 +8,7 @@ OnBotJava and Blocks were disabled to save space. As well, all the unnecessary .
 In total the extracted libs flavor is about 22 MB while the aar one is about 56 MB. The aar one without 32-bit libraries is about 46 MB.
 This cuts upload time in at least half. See the main `README.md` for how to make a 32-bit build
 
+[//]: # (ADD: Change the extracted libs to be a git submodule of OpenFTC extracted RC)
 ## How to update 
 1) Grab a copy of the pre-extracted code from [here](https://github.com/OpenFTC/Extracted-RC)
 2) Copy and paste all of the files in `<libname>/src/` into `ExtractedLibs/<libname>/src` except where patches are noted below. Depending on the patch either manually copy over the changes or simply don't copy those files. 

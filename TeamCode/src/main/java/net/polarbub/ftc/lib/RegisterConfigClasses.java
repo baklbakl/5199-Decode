@@ -4,6 +4,7 @@ import android.content.Context;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.reflection.ReflectionConfig;
 import net.polarbub.ftc.MainBotConfig;
+import net.polarbub.ftc.auto.RobotImpl;
 import net.polarbub.ftc.auto.SplitAuto;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.tele.MainTeleop;
@@ -17,6 +18,7 @@ public class RegisterConfigClasses {
             MainBotHardware.class,
             SplitAuto.class,
             MainTeleop.class,
+            RobotImpl.class,
             Test.class
     };
 

@@ -5,6 +5,4 @@ public interface RobotInterface {
 
     void intake();
     void stopIntake();
-
-    int getSpike();
 }

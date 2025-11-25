@@ -6,7 +6,6 @@ import com.acmerobotics.roadrunner.ftc.RawEncoder;
 import com.qualcomm.hardware.HardwareDeviceManager;
 import com.qualcomm.hardware.lynx.*;
 import com.qualcomm.hardware.motors.GoBILDA5202Series;
-import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
@@ -14,7 +13,6 @@ import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigu
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.util.Device;
 import com.qualcomm.robotcore.util.RobotLog;
-import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.lib.SingletonHelper;
 import net.polarbub.ftc.lib.TeamCodeWarningSource;
 
@@ -75,7 +73,7 @@ public class LynxModuleInitializer {
         // FTC Libs uses the hardware map the close those.
         for(HardwareDevice device : hardwareMap.getAll(HardwareDevice.class)) {
             String name = String.valueOf(hardwareMap.getNamesOf(device));
-            if(device instanceof LynxUsbDevice || device instanceof LynxEmbeddedIMU || device instanceof RevColorSensorV3) {
+            if(device instanceof LynxUsbDevice) {
                 RobotLog.ii("LynxModuleInitializer", "Leaving device called: \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
             } else {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");

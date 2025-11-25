@@ -36,18 +36,11 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
         }
 
         List<String> warnings = new ArrayList<>();
-
         warnings.add(warning);
 
         if(BuildConfig.FLAVOR.equals("extractedLibs")) {
-            if(!warning.isEmpty()) {
-                warnings.add("\n\n");
-            }
             warnings.add("NOT LEGAL FOR COMP!!!! Using extracted FTC libraries. To use legal AAR libs switch build flavor to \"aarLibs\"");
         } else if (!BuildConfig.FLAVOR.equals("aarLibs")) {
-            if(!warning.isEmpty()) {
-                warnings.add("\n\n");
-            }
             warnings.add("Unknown build flavor. Probably not using the official AAR libs and is NOT legal for comp");
         }
 
@@ -67,12 +60,18 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
             suppressionCount--;
     }
 
+
     @Override
-    public void setGlobalWarning(String warning) {
+    public void setGlobalWarning(String warning) {}
+
+    public void setWarning(String warning) {
+        this.warning = warning;
     }
 
     @Override
-    public void clearGlobalWarning() {
+    public void clearGlobalWarning() {}
+
+    public void clearWarning() {
         this.warning = "";
     }
 }

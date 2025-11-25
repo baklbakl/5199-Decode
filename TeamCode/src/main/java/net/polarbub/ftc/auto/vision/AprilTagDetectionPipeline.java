@@ -28,10 +28,10 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     public static double tagsizeIn = 5.21;
     //These are in pixels
     //FIX: Update the camera calibration for the full 1280 x 720. See https://ftc-docs.firstinspires.org/en/latest/programming_resources/vision/camera_calibration/camera-calibration.html
-    public static double fx = 578.272;
-    public static double fy = 578.272;
-    public static double cx = 402.145;
-    public static double cy = 221.506;
+    public static double fx = 822.317 * 2;
+    public static double fy = 822.317 * 2;
+    public static double cx = 319.495 * 2;
+    public static double cy = 242.502 * 2;
 
     private long nativeApriltagPtr;
     private Mat grey = new Mat();

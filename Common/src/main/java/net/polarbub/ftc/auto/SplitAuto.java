@@ -3,27 +3,60 @@ package net.polarbub.ftc.auto;
 import com.acmerobotics.roadrunner.*;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.options.*;
+import net.polarbub.ftc.lib.Alliance;
 
 import java.lang.Math;
 import java.util.function.Function;
 
 public class SplitAuto {
-
     public static int distSensorPollInterval = 50;
     public static int distSensorStartWait = 100;
 
-    public static Pose2d launchPos = new Pose2d(-50, 35, Math.toRadians(215));
     public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(280));
+    public static Pose2d launchPos = new Pose2d(-53, 35, Math.toRadians(190));
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
+
+
+    private Alliance alliance = null;
 
     public SplitAuto(Function<Pose2d, TrajectoryActionBuilder> createPathBuilder, RobotInterface robot) {
         this.createPathBuilder = createPathBuilder;
         this.robot = robot;
     }
 
-    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos) {
+    public static Pose2dDual<Arclength> transformPose(Pose2dDual<Arclength> pose) {
+        return new Pose2dDual<>(pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse());
+    }
+
+    public Pose2d transformIfBlue(Pose2d pose) {
+        if(alliance == Alliance.BLUE) {
+            return new Pose2d(pose.position.x, -pose.position.y, transformIfBlue(pose.heading.toDouble()));
+        } else {
+            return pose;
+        }
+    }
+
+    public Vector2d transformIfBlue(Vector2d pose) {
+        if(alliance == Alliance.BLUE) {
+            return new Vector2d(pose.x, -pose.y);
+        } else {
+            return pose;
+        }
+    }
+
+    public double transformIfBlue(double angle) {
+        if(alliance == Alliance.BLUE) {
+            return (Math.toRadians(360) - angle);
+        } else {
+            return angle;
+        }
+    }
+
+    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Alliance alliance, boolean useVision) {
+        this.alliance = alliance;
+
         Pose2d autoStartPosition;
 
         switch (startPos) {
@@ -31,7 +64,7 @@ public class SplitAuto {
                 autoStartPosition = new Pose2d(-71 + 2.5 + MainBotConfig.robotChassisLength/2, 71 - 24 - MainBotConfig.robotChassisWidth / 2, Math.toRadians(180));
                 break;
             case CLASSIFIER:
-                autoStartPosition = new Pose2d(-71 + 20 + MainBotConfig.robotChassisWidth/2, 71 - 8.5 - MainBotConfig.robotChassisLength / 2, Math.toRadians(90));
+                autoStartPosition = new Pose2d(-71 + 20 + MainBotConfig.robotChassisWidth/2, 71 - 7.5 - MainBotConfig.robotChassisLength / 2, Math.toRadians(90));
                 break;
             case AUDIENCE_IN:
                 autoStartPosition = new Pose2d(71 - 1.5 - MainBotConfig.robotChassisLength/2, MainBotConfig.robotChassisWidth / 2, Math.toRadians(180));
@@ -43,7 +76,31 @@ public class SplitAuto {
                 throw new RuntimeException("Incomplete startPos switch");
         }
 
-        TrajectoryActionBuilder pathBuilder = createPathBuilder.apply(autoStartPosition);
+        TrajectoryActionBuilder pathBuilder = createPathBuilder.apply(transformIfBlue(autoStartPosition));
+
+        Pose2d transformedLaunchPose = launchPos;
+
+        if(alliance == Alliance.BLUE) {
+//            try {
+//                Field beginEndVelField = pathBuilder.getClass().getDeclaredField("beginEndVel");
+//                beginEndVelField.setAccessible(true);
+//
+//                pathBuilder = new TrajectoryActionBuilder(
+//                        pathBuilder.getTurnActionFactory(),
+//                        pathBuilder.getTrajectoryActionFactory(),
+//                        pathBuilder.getTrajectoryBuilderParams(),
+//                        autoStartPosition,
+//                        (Double) beginEndVelField.get(pathBuilder),
+//                        pathBuilder.getBaseTurnConstraints(),
+//                        pathBuilder.getBaseVelConstraint(),
+//                        pathBuilder.getBaseAccelConstraint(),
+//                        SplitAuto::transformPose
+//                );
+//            } catch (IllegalAccessException | NoSuchFieldException e) {
+//                throw new RuntimeException(e);
+//            }
+            transformedLaunchPose = transformIfBlue(new Pose2d(launchPos.position, launchPos.heading.plus(Math.toRadians(200))));
+        }
 
         if(delay == Delay.FIVE) {
             pathBuilder = pathBuilder.waitSeconds(5);
@@ -51,53 +108,34 @@ public class SplitAuto {
             pathBuilder = pathBuilder.waitSeconds(10);
         }
 
-        //The spike mark is on the middle of the tile. Tiles are 23.5 in square
-        //Spike 1
-        double spikeX;
-        if (robot.getSpike() == 1) {
-            spikeX = -13;
+        if(startPos == StartPos.GOAL) {
+            pathBuilder = pathBuilder.setTangent(transformIfBlue(Math.toRadians(315)));
+        } else if(startPos == StartPos.CLASSIFIER) {
+            pathBuilder = pathBuilder.setTangent(transformIfBlue(Math.toRadians(270)));
         }
-        else if (robot.getSpike() == 2)
-        {
-            spikeX = 10.2;
-        }
-        else {
-            spikeX = -14;
-        }
-
-        //Spike 2
-//        double spikeX = 36 - 24;
-        //Spike 3
-//        double spikeX = 36;
-
 
         if(startPos == StartPos.GOAL || startPos == StartPos.CLASSIFIER) {
-            pathBuilder = pathBuilder.setTangent(Math.toRadians(315))
-
-                    .splineToLinearHeading(launchPos, Math.toRadians(315));
+            pathBuilder = pathBuilder
+                    .splineToLinearHeading(transformedLaunchPose, transformIfBlue(Math.toRadians(315)));
         } else {
 
             pathBuilder = pathBuilder
-                    .splineTo(new Vector2d(0, 20), Math.toRadians(180))
-                    .splineToSplineHeading(launchPos, Math.toRadians(180));
+                    .splineTo(transformIfBlue(new Vector2d(0, 20)), transformIfBlue(Math.toRadians(180)))
+                    .splineToSplineHeading(transformedLaunchPose, transformIfBlue(Math.toRadians(180)));
         }
 
         pathBuilder = pathBuilder
-                .stopAndAdd(() -> robot.launch(3, MainBotConfig.launch1TicksPerSecAuto))
-                .setTangent(Math.toRadians(315))
+                .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? MainBotConfig.launch1TicksPerSecAutoBlue : MainBotConfig.launch1TicksPerSecAuto))
+                .setTangent(transformIfBlue(Math.toRadians(315)));
+        if(useVision) {
+            pathBuilder = pathBuilder
+                    .splineToLinearHeading(transformIfBlue(obeliskPose), transformIfBlue(Math.toRadians(315)));
 
-                .splineToLinearHeading(obeliskPose, Math.toRadians(315))
-//                .setTangent(Math.toRadians(angleOfArtifactRelease))
-                .afterTime(0, robot::intake)
-                .setTangent(Math.toRadians(270))
-                .splineTo(new Vector2d(spikeX, 30), Math.toRadians(90))
-                .splineTo(new Vector2d(spikeX, 46), Math.toRadians(90), new TranslationalVelConstraint(5))
-                .setReversed(true)
-                .splineTo(new Vector2d(spikeX+10, 23), Math.toRadians(320))
-                .setReversed(false)
-                .afterTime(0, robot::stopIntake)
-                .splineToLinearHeading(launchPos, Math.toRadians(90))
-                .stopAndAdd(() -> robot.launch(3, MainBotConfig.launch2TicksPerSecAuto));
+        }
+
+        if(!useVision) {
+            pathBuilder = fillBuilderPostVision(pathBuilder, useVision, 1, alliance);
+        }
 
 
         if(true) return pathBuilder;
@@ -118,6 +156,58 @@ public class SplitAuto {
         pathBuilder = pathBuilder
                 .setReversed(false)
                 .splineTo(new Vector2d(-40, 39), Math.toRadians(130));
+
+        return pathBuilder;
+    }
+
+//    public TrajectoryActionBuilder fillBuilderPostVision(boolean useVision, int spike) {
+//        fillBuilderPostVision(createPathBuilder.apply())
+//    }
+
+    public TrajectoryActionBuilder fillBuilderPostVision(TrajectoryActionBuilder pathBuilder, boolean useVision, int spike, Alliance alliance) {
+        double spikeX;
+        if (spike == 1) {
+            spikeX = -13;
+        } else if (spike == 2) {
+            spikeX = 10.2;
+        } else if (spike == 3) {
+            spikeX =  34;
+        } else {
+            throw new IllegalArgumentException("Invalid spike " + spike + " valid numbers are 1..3");
+        }
+
+        Pose2d transformedLaunchPose = launchPos;
+
+        if(alliance == Alliance.BLUE) {
+            System.out.println("Transforming blue alliance");
+            transformedLaunchPose = transformIfBlue(new Pose2d(launchPos.position, launchPos.heading.plus(Math.toRadians(200))));
+        }
+
+        pathBuilder = pathBuilder
+                .afterTime(0, robot::intake)
+                .setTangent(transformIfBlue(Math.toRadians(270)));
+
+        if(useVision) {
+            pathBuilder = pathBuilder
+                    .splineToSplineHeading(transformIfBlue(new Pose2d(-36, 10, Math.toRadians(0))), transformIfBlue(Math.toRadians(0)))
+                    .setTangent(transformIfBlue(Math.toRadians(0)))
+                    .splineTo(transformIfBlue(new Vector2d(spikeX, 30)), transformIfBlue(Math.toRadians(90)));
+        } else {
+            pathBuilder = pathBuilder
+                    .splineToSplineHeading(transformIfBlue(new Pose2d(spikeX, 30, Math.toRadians(90))), transformIfBlue(Math.toRadians(90)));
+        }
+
+        System.out.println(Math.toDegrees(transformIfBlue(Math.toRadians(320))));
+
+        pathBuilder = pathBuilder
+                .splineTo(transformIfBlue(new Vector2d(spikeX, 50)), transformIfBlue(Math.toRadians(90)), new TranslationalVelConstraint(5))
+                .afterTime(0.3, robot::stopIntake)
+                .setReversed(true)
+                .splineTo(transformIfBlue(new Vector2d(spikeX+10, 23)), transformIfBlue(Math.toRadians(320)))
+                .setReversed(false)
+                .afterTime(0, robot::stopIntake)
+                .splineToLinearHeading(transformedLaunchPose, transformIfBlue(Math.toRadians(180)))
+                .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? MainBotConfig.launch2TicksPerSecAutoBlue : MainBotConfig.launch2TicksPerSecAuto));
 
         return pathBuilder;
     }

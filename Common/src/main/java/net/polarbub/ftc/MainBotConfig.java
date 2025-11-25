@@ -10,5 +10,8 @@ public class MainBotConfig {
     public static final String opmodeGroupName = "1 - TeleOp";
     public static final String demoGroupName = "2 - DemoBots";
     public static double launch1TicksPerSecAuto = 1320;
+    public static double launch1TicksPerSecAutoBlue = 1280;
     public static double launch2TicksPerSecAuto = 1320;
+    public static double launch2TicksPerSecAutoBlue = 1280;
+    public static long teleOplauncherNoVisionVelocity = 1400;
 }

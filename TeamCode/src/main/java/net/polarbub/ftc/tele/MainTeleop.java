@@ -34,8 +34,7 @@ public class MainTeleop extends FastIterativeOpMode {
     // Dashboard options
     //
     public static long launcherVelocityCheckInterval = 200;
-    public static long launcherNoVisionVelocity = 1400;
-    
+
     //
     // Options
     //
@@ -71,15 +70,11 @@ public class MainTeleop extends FastIterativeOpMode {
 
     private LauncherControlMethod launcherControlMethod;
 
-
-
     //
     // Option Driver Options. MUST BE PUBLIC OR ELSE OPTION DRIVER CAN'T SEE IT.
     //
     public Boolean runVision = false;
-    public Boolean runLauncherPIDFTuner = false;
     public Alliance alliance = Alliance.lastAlliance;
-
 
     /*
      * Code to run ONCE when the driver hits INIT
@@ -93,7 +88,6 @@ public class MainTeleop extends FastIterativeOpMode {
         optionDriver = new OptionDriver();
         try {
             optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("runVision"), this));
-            optionDriver.add(new BooleanOption("Run Launcher PIDF Tuner", "dpad_up", gamepad1, this.getClass().getField("runLauncherPIDFTuner"), this));
             optionDriver.add(new EnumOption<>("Alliance", "cross", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
@@ -160,7 +154,7 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(y && launcherControlMethod != LauncherControlMethod.MANUAL) {
                     runLauncher = !runLauncher;
                     if(runLauncher) {
-                        hardware.launchDrive.setVelocity(launcherNoVisionVelocity);
+                        hardware.launchDrive.setVelocity(MainBotConfig.teleOplauncherNoVisionVelocity);
                     } else {
                         hardware.launchDrive.setVelocity(0);
                         hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
@@ -198,7 +192,6 @@ public class MainTeleop extends FastIterativeOpMode {
                         launcherControlMethod = LauncherControlMethod.PRESET;
                         hardware.intakeDrive.setPower(hardware.launchDrive.getPower());
                         hardware.launchDrive.setVelocity(0);
-                        hardware.launchDrive.setPower(1);
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                         hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
                     } else {
@@ -270,19 +263,6 @@ public class MainTeleop extends FastIterativeOpMode {
             hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
         }
 
-        if(runLauncherPIDFTuner) {
-            try {
-                variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), (Boolean dpad_up) -> {
-                    if(dpad_up) {
-                        hardware.launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MainBotHardware.launcherCoefficients);
-                    }
-                }));
-            } catch (NoSuchFieldException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-
         runtime.reset();
     }
 
@@ -293,9 +273,6 @@ public class MainTeleop extends FastIterativeOpMode {
     private long lastNanos = 0;
     private final long[] loopTimes = new long[5];
     private int loopTimesPos = 0;
-
-    private long startTime = -1;
-    private boolean lastVelocityZero = false;
 
     public void loop_internal() {
         if(runVision) {
@@ -340,40 +317,6 @@ public class MainTeleop extends FastIterativeOpMode {
         long thisNanos = runtime.nanoseconds();
         for(TimedEvent event : timedEvents) {
             event.tick(thisNanos);
-        }
-
-        if(runLauncherPIDFTuner) {
-            TelemetryPacket packet = new TelemetryPacket();
-            double velocity = hardware.launchDrive.getVelocity();
-            double targetVelocity;
-
-            if(hardware.launchDrive.getMode() == DcMotor.RunMode.RUN_USING_ENCODER) {
-                targetVelocity = hardware.launchDrive.getTargetVelocity();
-                if(targetVelocity != 0 && lastVelocityZero && startTime == -1) {
-                    startTime = thisNanos;
-                }
-                lastVelocityZero = targetVelocity == 0;
-
-            } else {
-                targetVelocity = launcherNoVisionVelocity;
-
-                if(velocity != 0 && lastVelocityZero) {
-                    RobotLog.ii("MainTeleOp", "Starting launcher");
-                    startTime = thisNanos;
-                }
-                lastVelocityZero = velocity == 0;
-            }
-
-            if(startTime != -1 && abs(velocity) >= abs(targetVelocity)) {
-                RobotLog.ii("MainTeleOp", (thisNanos - startTime) / 1000000000.0d + " seconds to spin up");
-                startTime = -1;
-            }
-
-            packet.put("LauncherVelocity", velocity);
-            packet.put("Target", targetVelocity);
-            packet.put("Min", 0);
-            packet.put("Max", 2000);
-            FtcDashboard.getInstance().sendTelemetryPacket(packet);
         }
 
         //Average the last five iterations of the loop to minimize jumping around

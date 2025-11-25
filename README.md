@@ -22,10 +22,10 @@ and modified, but modifications are not allowed to be used in comp. See `Extract
 ## Hardware
 The FTC Control system is based around two Android devices and a motor controller. One of the Android devices is for the driver called the Driver Station (DS) and one for the robot called the Robot Controller (RC).
 There are very strict rules for electronics for FTC. The only part of the system that is allowed to have its code changed is the RC App.
-For example teams can't take a device based on a Raspberry Pi and put their own custom code or even install their own packages. 
+For example, teams can't take a device based on a Raspberry Pi and put their own custom code or even install their own packages. 
 Initially the Android devices were actually phones, but the list of allowable devices was very limited as they all had to have the same chipset to make it so all teams had the same amount of processing power.
-Eventually REV Robotics, the manufacturer of the motor controller made their own versions of both of the devices with better performance and convenience than the phones. Even though phones are still allowed most teams use the REV devices.
-To connect between the two devices WIFI is used.
+Eventually REV Robotics, the manufacturer of the motor controller made their own versions of both of the devices with better performance and convenience than the phones. Even though phones are still allowed, most teams use the REV devices.
+WiFi is used to connect between the two devices.
 
 To control the robot itself a RC is used. The two main components of an RC are the Motor Controller, called by REV an Hardware Interface Board (HIB), and the Android Device.
 The RC can either consist of a Phone and an Expansion hub or a Control Hub which integrates both together. Either setup may have a extra Expansion Hub added to be able to control more actuators and sensors.
@@ -100,14 +100,15 @@ This only works for three dead wheel setups.
 5) Spin robot 7200 degrees (20 turns) by driving it the controller. Make sure that it actually turns exactly 7200 degrees or to measure exactly how far it has turned. The next steps depend on accurately knowing how far the robot turned. Think an accuracy of two of three degrees. 
     - Make sure that the robot stays in place while spinning and doesn't drift
     - It can be helpful to start the robot with the wheels lines up with a tile edge and then try and end with the same wheels lined up with an edge.
-    - Stopping exactly at 7200 degrees of turning can be difficult. It is easier to measure how far the robot has turned. This be either be done by using the IMU or by measuring the initial heading with some sort of digital compass (a phone with a compass app works well), counting turns, and then measuring the final heading. The IMU heading is outputted in the telemetry of the `LocalizationTest` OpMode.
+    - Stopping exactly at 7200 degrees of turning can be difficult. It is easier to measure how far the robot has turned. This be done by using by measuring the initial heading with some sort of digital compass (a phone with a compass app works well), counting turns, and then measuring the final heading.
     - Accuracy can also be increased by doing more turns, so any error is a smaller compared to the number of ticks
     - Be careful to slowly start and stop the robot to prevent the dead wheels from slipping.
     - Be careful not to overshoot and have to go back because this will introduce error from backlash in the encoders.
     - Do this on a flat tile. Make sure there are no straps or other bumps under the tile. These make the value wander.
 6) Record the counts of all three encoders and calculate how far from the center the encoder is. `par0YTicks`, `par1YTicks` and `perpXTicks` should each equal their tick count divided by 2π then divided by the number of turns. Formula: `ticks / (2π * turns)` or `ticks / (degrees turned * π / 180)` or `ticks / 40π` if the turn was exactly 7200 degrees. `par0YTicks` should be negative while the others should be positive
-7) Repeat the test. The measured heading value should be the same as the localizer heading as reported in the telemetry of `LocalizationTest`. It is absolutely CRITICAL that these values are very close. As well, the new encoder tick locations should be fairly close to the old ones. this If either one of these is not the case go back and try again.
+7) Repeat the test. The measured heading value should be the same as the localizer heading as reported in the telemetry of `LocalizationTest`. It is absolutely CRITICAL that these values are very close. On 20 turns an acceptable error is 10-20 degrees. As well, the new encoder tick locations should be fairly close to the old ones. If either one of these is not the case go back and try again.
    - Make sure that the robot actually turned how much you think it did. It is easy to lose count of how many times the robot has turned
+   - 
 8) Spin the robot while looking at it on the field in the dashboard. If the robot drifts or runs out (doesn't spin perfectly in place) on the dashboard, but not in the real world then the values are wrong. Go back and try again.
    1) If the issue still happens after insuring the accuracy of `par0YTicks`, `par1YTicks`, and `perpXTicks` follow these steps to empirically tune out the wobble.
    2) Unplug the perpendicular encoder and set `perpXTicks` to zero

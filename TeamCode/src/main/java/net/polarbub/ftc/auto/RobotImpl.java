@@ -1,6 +1,8 @@
 package net.polarbub.ftc.auto;
 
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
+import com.qualcomm.robotcore.util.ElapsedTime;
+import com.qualcomm.robotcore.util.RobotLog;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
@@ -10,25 +12,30 @@ import org.openftc.apriltag.AprilTagDetection;
 import java.util.function.Supplier;
 
 public class RobotImpl implements RobotInterface {
-    public static int requiredAtSpeedSamples = 5;
-    public static double safeBallDist = 1.2;
+    public static int requiredAtSpeedSamples = 10;
+    public static double safeBallDist = 1.4;
+    public static double launchTimeOut = 10;
 
     private final MainBotHardware hardware;
     private final Supplier<Boolean> isOpModeActive;
 
-    private final AprilTagDetectionPipeline pipeline;
+
 
     public RobotImpl(MainBotHardware hardware, Supplier<Boolean> isOpModeActive) {
         this.hardware = hardware;
         this.isOpModeActive = isOpModeActive;
-        pipeline = new AprilTagDetectionPipeline(hardware);
     }
 
     @Override
     public void launch(int numToLaunch, double speed) {
-        if (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
-            hardware.moverServo.setPosition(MainBotHardware.outServoPos);
-            hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
+        hardware.moverServo.setPosition(MainBotHardware.outServoPos);
+        hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
+        hardware.launchDrive.setVelocity(-200);
+
+        try {
+            Thread.sleep(500);
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
         }
 
         while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
@@ -41,7 +48,6 @@ public class RobotImpl implements RobotInterface {
 
         hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
         hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
-
         hardware.launchDrive.setVelocity(speed);
         while (!hardware.launchDrive.isAtTargetVelocity(10)) {
             hardware.modules.clearBulkCache();
@@ -51,10 +57,11 @@ public class RobotImpl implements RobotInterface {
                 throw new RuntimeException(e);
             }
         }
+        RobotLog.ii("RobotImpl", "At speed start");
 
         //Wait a little longer to be safe
         try {
-            Thread.sleep(50);
+            Thread.sleep(300);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -65,24 +72,56 @@ public class RobotImpl implements RobotInterface {
 
         int speedDips = 0;
         int atSpeedSamples = requiredAtSpeedSamples + 1;
+        int underSpeedSamples = requiredAtSpeedSamples + 1;
 
         //ADD: Timeout for launching
+        ElapsedTime time = new ElapsedTime();
+        time.reset();
+        
         while (isOpModeActive.get() && speedDips < numToLaunch) {
+            if(time.seconds() >= launchTimeOut) {
+                RobotLog.ii("RobotImpl", "Timed out");
+                break;
+            }
             hardware.modules.clearBulkCache();
             if (hardware.launchDrive.isAtTargetVelocity()) {
+                if(underSpeedSamples != requiredAtSpeedSamples) {
+                    underSpeedSamples = 0;
+                }
+
                 if (atSpeedSamples == requiredAtSpeedSamples) {
                     atSpeedSamples++;
-                    speedDips++;
+
+                    if(underSpeedSamples == requiredAtSpeedSamples) {
+                        //We were under speed
+                        speedDips++;
+                    }
+
+                    underSpeedSamples = 0;
+
+                    RobotLog.ii("RobotImpl", "speed dip logged # " + speedDips);
+
                 } else if (atSpeedSamples < requiredAtSpeedSamples) {
                     atSpeedSamples++;
+                    RobotLog.ii("RobotImpl", "At speed");
                 }
 
                 hardware.blinkin.setPattern(MainBotHardware.correctSpeedNoVision);
             } else {
                 atSpeedSamples = 0;
+
+                if(underSpeedSamples < requiredAtSpeedSamples) {
+                    underSpeedSamples++;
+                    RobotLog.ii("RobotImpl", "Under speed inc to " + underSpeedSamples);
+                } else {
+                    RobotLog.ii("RobotImpl", "Under speed");
+                }
+
                 hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
             }
 
+
+            RobotLog.ii("RobotImpl", "Velocity" + hardware.launchDrive.getVelocity());
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
@@ -103,6 +142,7 @@ public class RobotImpl implements RobotInterface {
         hardware.moverServo.setPosition(MainBotHardware.inServoPos);
         hardware.moverServo2.setPosition(MainBotHardware.inServoPos);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+        hardware.launchDrive.setVelocity(-200);
     }
 
     @Override
@@ -110,22 +150,6 @@ public class RobotImpl implements RobotInterface {
         hardware.intakeDrive.setPower(0);
         hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
         hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
-    }
-
-    @Override
-    public int getSpike() {
-        if (pipeline.getLatestDetections() != null && !pipeline.getLatestDetections().isEmpty()) {
-            for (AprilTagDetection d : pipeline.getLatestDetections()) {
-                if (d.id == 21) {
-                    return 1;
-                } else if (d.id == 22) {
-                    return 2;
-                } else if (d.id == 23) {
-                    return 3;
-                }
-            }
-
-        }
-        return 0;
+        hardware.launchDrive.setVelocity(0);
     }
 }

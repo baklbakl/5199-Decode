@@ -20,8 +20,4 @@ public class MeepMeepImp implements RobotInterface {
     public void stopIntake() {
 
     }
-
-    public int getSpike() {
-        return 1;
-    }
 }

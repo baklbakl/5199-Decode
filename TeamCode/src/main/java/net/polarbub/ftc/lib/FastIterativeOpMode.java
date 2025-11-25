@@ -24,13 +24,13 @@ public abstract class FastIterativeOpMode extends LinearOpMode {
         stop_internal();
     }
 
-    protected abstract void stop_internal();
+    protected abstract void init_internal();
+
+    protected abstract void init_loop_internal();
 
     protected abstract void start_internal();
 
     protected abstract void loop_internal();
 
-    protected abstract void init_loop_internal();
-
-    protected abstract void init_internal();
+    protected abstract void stop_internal();
 }
