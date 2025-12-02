@@ -13,7 +13,7 @@ public class SplitAuto {
     public static int distSensorStartWait = 100;
 
     public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(280));
-    public static Pose2d launchPos = new Pose2d(-53, 35, Math.toRadians(190));
+    public static Pose2d launchPos = new Pose2d(-53, 35, Math.toRadians(120));
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -203,10 +203,11 @@ public class SplitAuto {
                 .splineTo(transformIfBlue(new Vector2d(spikeX, 50)), transformIfBlue(Math.toRadians(90)), new TranslationalVelConstraint(5))
                 .afterTime(0.3, robot::stopIntake)
                 .setReversed(true)
-                .splineTo(transformIfBlue(new Vector2d(spikeX+10, 23)), transformIfBlue(Math.toRadians(320)))
-                .setReversed(false)
+//                .splineTo(transformIfBlue(new Vector2d(spikeX+10, 23)), transformIfBlue(Math.toRadians(320)))
+//                .setReversed(false)
                 .afterTime(0, robot::stopIntake)
                 .splineToLinearHeading(transformedLaunchPose, transformIfBlue(Math.toRadians(180)))
+                
                 .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? MainBotConfig.launch2TicksPerSecAutoBlue : MainBotConfig.launch2TicksPerSecAuto));
 
         return pathBuilder;
