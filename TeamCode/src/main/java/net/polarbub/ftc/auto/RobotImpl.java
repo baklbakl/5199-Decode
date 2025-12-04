@@ -102,7 +102,7 @@ public class RobotImpl implements RobotInterface {
                     RobotLog.ii("RobotImpl", "At speed");
                 }
 
-                hardware.blinkin.setPattern(MainBotHardware.correctSpeedNoVision);
+                hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeedNoVision);
             } else {
                 atSpeedSamples = 0;
 
@@ -113,7 +113,7 @@ public class RobotImpl implements RobotInterface {
                     RobotLog.ii("RobotImpl", "Under speed");
                 }
 
-                hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVisionPattern);
+                hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
             }
 
 

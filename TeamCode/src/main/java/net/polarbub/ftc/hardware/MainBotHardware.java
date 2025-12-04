@@ -17,8 +17,6 @@ import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
 
 public class MainBotHardware {
-    public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVisionPattern = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
-    public static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
     //
     // Dashboard options
     //
@@ -30,6 +28,21 @@ public class MainBotHardware {
     public static double inIntakePower = 1;
     public static double ballInKickerDist = 2;
     public static long teleOpLauncherNoVisionVelocity = 1460;
+
+    //
+    // Options
+    //
+    public static class Patterns {
+        //Offcolor lets us know that the blinkin is working when we press init
+        public static final RevBlinkinLedDriver.BlinkinPattern off = RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_RAINBOW_PALETTE;
+        public static final RevBlinkinLedDriver.BlinkinPattern manualLaunchControl = RevBlinkinLedDriver.BlinkinPattern.VIOLET;
+        public static final RevBlinkinLedDriver.BlinkinPattern correctSpeed = RevBlinkinLedDriver.BlinkinPattern.BLUE;
+        public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedVisionLocked = RevBlinkinLedDriver.BlinkinPattern.YELLOW;
+        public static final RevBlinkinLedDriver.BlinkinPattern outOfLaunchRange = RevBlinkinLedDriver.BlinkinPattern.ORANGE;
+        public static final RevBlinkinLedDriver.BlinkinPattern tagNotFound = RevBlinkinLedDriver.BlinkinPattern.RED;
+        public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVisionPattern = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
+        public static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
+    }
 
     //
     // Hardware ports
