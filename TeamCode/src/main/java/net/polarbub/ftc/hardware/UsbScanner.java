@@ -1,10 +1,8 @@
 package net.polarbub.ftc.hardware;
 
+import androidx.annotation.Nullable;
 import com.qualcomm.hardware.HardwareDeviceManager;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
-import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerNotifier;
-import com.qualcomm.robotcore.eventloop.opmode.OpModeRegistrar;
+import com.qualcomm.robotcore.eventloop.opmode.*;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DeviceManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -25,10 +23,9 @@ public class UsbScanner {
         return SingletonHelper.getOrCreate(UsbScanner.class, () -> new UsbScanner(hardwareMap));
     }
 
-//    @OpModeRegistrar
-//    public static void register(OpModeManager manager) {
-////        manager
-//    }
+    public static void rescan(HardwareMap hardwareMap) {
+        SingletonHelper.refresh(UsbScanner.class, new UsbScanner(hardwareMap));
+    }
 
     public final SerialNumber lynxUsbSerialNumber;
     public final SerialNumber webCamSerialNumber;
@@ -38,9 +35,9 @@ public class UsbScanner {
             SerialNumber localLynxUsbSerialNumber = null;
             SerialNumber localWebCamSerialNumber = null;
 
-            if (Device.isRevControlHub()) {
-                localLynxUsbSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;
-            }
+//            if (Device.isRevControlHub()) {
+//                localLynxUsbSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;
+//            }
 
             ScannedDevices devices = new HardwareDeviceManager(hardwareMap.appContext, getEventLoopManger().get()).scanForUsbDevices();
             for (SerialNumber sn : devices.keySet()) {
@@ -69,6 +66,8 @@ public class UsbScanner {
             if (localWebCamSerialNumber == null) {
                 RobotLog.ww("UsbScanner", "No webcam found!\n" + Arrays.toString(Thread.currentThread().getStackTrace()));
                 TeamCodeWarningSource.getInstance().setWarning("No webcam found!");
+            } else {
+                TeamCodeWarningSource.getInstance().clearWarning();
             }
 
             lynxUsbSerialNumber = localLynxUsbSerialNumber;
@@ -76,5 +75,14 @@ public class UsbScanner {
         } catch (RobotCoreException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(obj instanceof UsbScanner) {
+            UsbScanner other = (UsbScanner) obj;
+            return other.lynxUsbSerialNumber.equals(lynxUsbSerialNumber) && (other.webCamSerialNumber == webCamSerialNumber || (other.webCamSerialNumber != null && webCamSerialNumber != null &&  other.webCamSerialNumber.equals(webCamSerialNumber)));
+        }
+        return false;
     }
 }

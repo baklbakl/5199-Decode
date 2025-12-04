@@ -7,9 +7,13 @@ import com.noahbres.meepmeep.roadrunner.entity.RoadRunnerBotEntity;
 import net.polarbub.ftc.auto.SplitAuto;
 import net.polarbub.ftc.auto.options.*;
 import net.polarbub.ftc.lib.Alliance;
+import org.apache.commons.lang3.tuple.MutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.Math;
+import java.util.Arrays;
+import java.util.List;
 
 class CustomVelConstraint implements VelConstraint {
     AngularVelConstraint base = new AngularVelConstraint(Math.PI / 2);

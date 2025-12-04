@@ -20,12 +20,20 @@ import static net.polarbub.ftc.lib.OnCreateHandlers.*;
 
 public class LynxModuleInitializer {
     public static LynxModuleInitializer getOrCreate(HardwareMap hardwareMap) {
-        return SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
+        LynxModuleInitializer ts = SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
+
+        if(!ts.scanner.equals(UsbScanner.getOrCreate(hardwareMap))) {
+            ts = new LynxModuleInitializer(hardwareMap);
+            SingletonHelper.refresh(LynxModuleInitializer.class, ts);
+        }
+
+        return ts;
     }
 
     public final HardwareMap hardwareMap;
     public final LynxModuleControllers parentModule;
     public final LynxModuleControllers childModule;
+    private final UsbScanner scanner;
 
     public class LynxModuleControllers {
         public final LynxModule module;
@@ -82,7 +90,7 @@ public class LynxModuleInitializer {
         }
 
         try {
-            UsbScanner scanner = UsbScanner.getOrCreate(hardwareMap);
+            scanner = UsbScanner.getOrCreate(hardwareMap);
 
             LynxUsbDevice usbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
             int parentModuleAddress;

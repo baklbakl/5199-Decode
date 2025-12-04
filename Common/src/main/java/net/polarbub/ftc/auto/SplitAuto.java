@@ -13,7 +13,11 @@ public class SplitAuto {
     public static int distSensorStartWait = 100;
 
     public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(280));
-    public static Pose2d launchPos = new Pose2d(-53, 35, Math.toRadians(120));
+    public static Pose2d launchPos = new Pose2d(-53, 35, Math.toRadians(190));
+    public static double launch1TicksPerSecAuto = 1320;
+    public static double launch1TicksPerSecAutoBlue = 1280;
+    public static double launch2TicksPerSecAuto = 1320;
+    public static double launch2TicksPerSecAutoBlue = 1280;
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -132,7 +136,7 @@ public class SplitAuto {
         }
 
         pathBuilder = pathBuilder
-                .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? MainBotConfig.launch1TicksPerSecAutoBlue : MainBotConfig.launch1TicksPerSecAuto))
+                .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? launch1TicksPerSecAutoBlue : launch1TicksPerSecAuto))
                 .setTangent(transformIfBlue(Math.toRadians(315)));
         if (useVision) {
             pathBuilder = pathBuilder
@@ -222,9 +226,7 @@ public class SplitAuto {
                             .afterTime(0, robot::stopIntake)
                             .splineToLinearHeading(transformedLaunchPose, transformIfBlue(Math.toRadians(180)))
 
-                            .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? MainBotConfig.launch2TicksPerSecAutoBlue : MainBotConfig.launch2TicksPerSecAuto));
-
-
+                            .stopAndAdd(() -> robot.launch(3, alliance == Alliance.BLUE ? launch2TicksPerSecAutoBlue : launch2TicksPerSecAuto));
         return pathBuilder;
     }
 }

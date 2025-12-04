@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.RobotImpl;
+import net.polarbub.ftc.auto.SplitAuto;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
 
@@ -37,7 +38,7 @@ public class Test extends FastIterativeOpMode {
     public void start_internal() {
         runtime.reset();
         RobotImpl robot = new RobotImpl(hardware, this::opModeIsActive);
-        robot.launch(3, MainBotConfig.launch1TicksPerSecAuto);
+        robot.launch(3, SplitAuto.launch1TicksPerSecAuto);
     }
 
     /*

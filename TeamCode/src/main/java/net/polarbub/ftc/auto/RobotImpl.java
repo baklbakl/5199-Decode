@@ -3,17 +3,13 @@ package net.polarbub.ftc.auto;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
-import net.polarbub.ftc.MainBotConfig;
-import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.openftc.apriltag.AprilTagDetection;
 
 import java.util.function.Supplier;
 
 public class RobotImpl implements RobotInterface {
     public static int requiredAtSpeedSamples = 10;
-    public static double safeBallDist = 1.4;
     public static double launchTimeOut = 10;
 
     private final MainBotHardware hardware;
@@ -28,8 +24,8 @@ public class RobotImpl implements RobotInterface {
 
     @Override
     public void launch(int numToLaunch, double speed) {
-        hardware.moverServo.setPosition(MainBotHardware.outServoPos);
-        hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
+//        hardware.moverServo.setPosition(MainBotHardware.outServoPos);
+//        hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
         hardware.launchDrive.setVelocity(-200);
 
         try {
@@ -38,7 +34,7 @@ public class RobotImpl implements RobotInterface {
             throw new RuntimeException(e);
         }
 
-        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < safeBallDist) {
+        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -46,8 +42,8 @@ public class RobotImpl implements RobotInterface {
             }
         }
 
-        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
-        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
+//        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
+//        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
         hardware.launchDrive.setVelocity(speed);
         while (!hardware.launchDrive.isAtTargetVelocity(10)) {
             hardware.modules.clearBulkCache();
@@ -66,8 +62,8 @@ public class RobotImpl implements RobotInterface {
             throw new RuntimeException(e);
         }
 
-        hardware.moverServo.setPosition(MainBotHardware.inServoPos);
-        hardware.moverServo2.setPosition(MainBotHardware.inServoPos);
+//        hardware.moverServo.setPosition(MainBotHardware.moverDrivePower);
+//        hardware.moverServo2.setPosition(MainBotHardware.moverDrivePower);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
 
         int speedDips = 0;
@@ -117,7 +113,7 @@ public class RobotImpl implements RobotInterface {
                     RobotLog.ii("RobotImpl", "Under speed");
                 }
 
-                hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVision);
+                hardware.blinkin.setPattern(MainBotHardware.wrongSpeedNoVisionPattern);
             }
 
 
@@ -132,15 +128,14 @@ public class RobotImpl implements RobotInterface {
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
         hardware.launchDrive.setVelocity(0);
         hardware.intakeDrive.setPower(0);
-        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
-        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
+//        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
+//        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
 
     }
 
     @Override
     public void intake() {
-        hardware.moverServo.setPosition(MainBotHardware.inServoPos);
-        hardware.moverServo2.setPosition(MainBotHardware.inServoPos);
+        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
         hardware.launchDrive.setVelocity(-200);
     }
@@ -148,8 +143,7 @@ public class RobotImpl implements RobotInterface {
     @Override
     public void stopIntake() {
         hardware.intakeDrive.setPower(0);
-        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
-        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
+        hardware.moverDrive.setPower(0);
         hardware.launchDrive.setVelocity(0);
     }
 }

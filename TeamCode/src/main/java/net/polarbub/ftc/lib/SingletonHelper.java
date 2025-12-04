@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 public class SingletonHelper {
-    public static Map<Class<?>, WeakReference<?>> instances = new HashMap<>();
+    private static final Map<Class<?>, WeakReference<?>> instances = new HashMap<>();
 
     public static <T> T getOrCreate(Class<T> clazz, Supplier<T> supplier) {
         WeakReference<T> reference = (WeakReference<T>) instances.get(clazz);
@@ -20,5 +20,9 @@ public class SingletonHelper {
             RobotLog.logStackTrace(Thread.currentThread(), "WARNING: Class: " + clazz.getCanonicalName() + " got existing reference. This is probably a bug or the GC being slow.");
             return reference.get();
         }
+    }
+
+    public static <T> void refresh(Class<T> clazz, T t) {
+        instances.put(clazz, new WeakReference<>(t));
     }
 }

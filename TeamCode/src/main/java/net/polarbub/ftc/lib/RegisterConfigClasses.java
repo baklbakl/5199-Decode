@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.config.reflection.ReflectionConfig;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.RobotImpl;
 import net.polarbub.ftc.auto.SplitAuto;
+import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.tele.MainTeleop;
 import net.polarbub.ftc.tele.SensorReader;
@@ -19,7 +20,8 @@ public class RegisterConfigClasses {
             SplitAuto.class,
             MainTeleop.class,
             RobotImpl.class,
-            Test.class
+            Test.class,
+            AprilTagDetectionPipeline.class
     };
 
     @OnCreate

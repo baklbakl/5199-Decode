@@ -13,7 +13,7 @@ public abstract class PipelineStarter extends OpenCvPipeline {
         camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {
             @Override
             public void onOpened() {
-                camera.startStreaming(width, height, OpenCvCameraRotation.UPSIDE_DOWN, OpenCvWebcam.StreamFormat.YUY2);
+                camera.startStreaming(width, height, OpenCvCameraRotation.UPRIGHT, OpenCvWebcam.StreamFormat.YUY2);
             }
 
             @Override
@@ -23,5 +23,14 @@ public abstract class PipelineStarter extends OpenCvPipeline {
 
     public PipelineStarter(MainBotHardware hardware) {
         this(hardware, 1280, 720);
+    }
+
+    public String getTimingTelemetry() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("FPS: ").append(camera.getFps()).append('\n');
+        sb.append("Ms per frame processing: ").append(camera.getPipelineTimeMs()).append('\n');
+        sb.append("Ms per frame overhead: ").append(camera.getPipelineTimeMs()).append('\n');
+        sb.append("Ms per frame total: ").append(camera.getPipelineTimeMs());
+        return sb.toString();
     }
 }

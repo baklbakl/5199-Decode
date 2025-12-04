@@ -9,6 +9,7 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.*;
+import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.lib.OnCreateHandlers;
 import net.polarbub.ftc.lib.SingletonHelper;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -16,7 +17,7 @@ import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
 
 public class MainBotHardware {
-    public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
+    public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVisionPattern = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
     public static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
     //
     // Dashboard options
@@ -24,9 +25,11 @@ public class MainBotHardware {
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(30, 0, 0, 14.4);
     public static int motorVelocityTolerance = 50;
     public static double restingServoPos = 0.5;
-    public static double inServoPos = 0;
-    public static double outServoPos = 1;
+    public static double moverDrivePower = 0.85;
+    public static double kickerServoUpPos = 0.7;
     public static double inIntakePower = 1;
+    public static double ballInKickerDist = 2;
+    public static long teleOpLauncherNoVisionVelocity = 1460;
 
     //
     // Hardware ports
@@ -42,16 +45,16 @@ public class MainBotHardware {
     public static final int leftRearDriveID = 2;
     public static final int rightRearDriveID = 3;
 
-    public static final int intakeDriveID = 0;
-    public static final int launchDriveID = 3;
+    public static final int intakeDriveID = 2;
+    public static final int launchDriveID = 0;
+    public static final int moverDriveID = 3;
 
     public static final int paraEncoder0ID = 3;
     public static final int paraEncoder1ID = 0;
     public static final int perpEncoderID = 1;
 
-    public static final int moverServoID = 4;
-    public static final int moverServo2ID = 5;
-    public static final int blinkinServoID = 3;
+    public static final int kickerServoID = 0;
+    public static final int blinkinServoID = 1;
 
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
@@ -70,9 +73,9 @@ public class MainBotHardware {
 
     public final DcMotorExEx intakeDrive;
     public final DcMotorExEx launchDrive;
+    public final DcMotorExEx moverDrive;
 
-    public final Servo moverServo;
-    public final Servo moverServo2;
+    public final Servo kickerServo;
 
     public final RevColorSensorV3 launcherColorDistSensor;
 
@@ -84,7 +87,12 @@ public class MainBotHardware {
     public final LynxModuleInitializer modules;
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
-        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+        if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap)) {
+            ts = new MainBotHardware(hardwareMap);
+            SingletonHelper.refresh(MainBotHardware.class, ts);
+        }
+        return ts;
     }
 
     private MainBotHardware(HardwareMap hardwareMap) {
@@ -108,22 +116,23 @@ public class MainBotHardware {
         leftFrontDrive.setDirection(DcMotor.Direction.FORWARD);
         rightFrontDrive.setDirection(DcMotor.Direction.REVERSE);
         leftRearDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
+        rightRearDrive.setDirection(DcMotor.Direction.FORWARD);
 
         intakeDrive = child.createDcMotor(intakeDriveID);
+        moverDrive = child.createDcMotor(moverDriveID);
+
         launchDrive = child.createDcMotor(launchDriveID);
+//        launchDrive.setDirection(DcMotorSimple.Direction.REVERSE);
         launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launchDrive.setVelocity(0);
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        moverServo = parent.createServo(moverServoID);
-        moverServo.setPosition(restingServoPos);
-        moverServo2 = parent.createServo(moverServo2ID);
-        moverServo2.setPosition(restingServoPos);
+        kickerServo = child.createServo(kickerServoID);
+        kickerServo.setPosition(0);
 
-        blinkin = new RevBlinkinLedDriver(modules.parentModule.servoController, blinkinServoID);
-        modules.parentModule.servoController.setServoPwmRange(blinkinServoID, new PwmControl.PwmRange(500, 2500));
+        blinkin = new RevBlinkinLedDriver(modules.childModule.servoController, blinkinServoID);
+        modules.childModule.servoController.setServoPwmRange(blinkinServoID, new PwmControl.PwmRange(500, 2500));
         blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
 
         parallelEncoder0 = parent.createEncoder(paraEncoder0ID);
@@ -161,6 +170,12 @@ public class MainBotHardware {
         }
 
         launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);
-        webcamName = WebcamNameImpl.forSerialNumber(UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber, () -> null, OnCreateHandlers.getEventLoopManger().get());
+
+        SerialNumber webCamSerial = UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber;
+
+        if(webCamSerial == null) {
+            throw new RuntimeException("No webcam found and webcam is required for MainBotHardware");
+        }
+        webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
     }
 }

@@ -40,10 +40,10 @@ public class LauncherPIDFCoefficientTuner extends FastIterativeOpMode {
         try {
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, gamepad1.getClass().getField("dpad_up"), Boolean::equals, (dpad_up) -> {
                 if(dpad_up) {
-                    if(hardware.launchDrive.getTargetVelocity() == MainBotConfig.teleOplauncherNoVisionVelocity) {
+                    if(hardware.launchDrive.getTargetVelocity() == MainBotHardware.teleOpLauncherNoVisionVelocity) {
                         hardware.launchDrive.setVelocity(0);
                     } else {
-                        hardware.launchDrive.setVelocity(MainBotConfig.teleOplauncherNoVisionVelocity);
+                        hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
                     }
                 }
             }));
@@ -113,9 +113,10 @@ public class LauncherPIDFCoefficientTuner extends FastIterativeOpMode {
                 startTime = thisNanos;
             }
             lastVelocityZero = targetVelocity == 0;
-            mt.addData("Current coefficients:", currentCoefficients);
+            mt.addData("Current coefficients", currentCoefficients);
+            mt.addData("Target Vel", targetVelocity);
         } else {
-            targetVelocity = MainBotConfig.teleOplauncherNoVisionVelocity;
+            targetVelocity = MainBotHardware.teleOpLauncherNoVisionVelocity;
 
             if(velocity != 0 && lastVelocityZero) {
                 startTime = thisNanos;

@@ -25,13 +25,13 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     public static int detectionThreads = 3;
     public static boolean drawDebugOnFrame = false;
     //This is in inches
-    public static double tagsizeIn = 5.21;
-    //These are in pixels
-    //FIX: Update the camera calibration for the full 1280 x 720. See https://ftc-docs.firstinspires.org/en/latest/programming_resources/vision/camera_calibration/camera-calibration.html
-    public static double fx = 822.317 * 2;
-    public static double fy = 822.317 * 2;
-    public static double cx = 319.495 * 2;
-    public static double cy = 242.502 * 2;
+    public static double tagsizeIn = 6.5;
+    //Camera calibration. These are in pixels
+    // See https://ftc-docs.firstinspires.org/en/latest/programming_resources/vision/camera_calibration/camera-calibration.html
+    public static double fx = 1381.21;
+    public static double fy = 1381.21;
+    public static double cx = 663.802;
+    public static double cy = 351.276;
 
     private long nativeApriltagPtr;
     private Mat grey = new Mat();
@@ -40,19 +40,18 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     private ArrayList<AprilTagDetection> detectionsUpdate = new ArrayList<>();
     private final Object detectionsUpdateSync = new Object();
 
-    Mat cameraMatrix;
+    private Mat cameraMatrix;
 
-    Scalar blue = new Scalar(7,197,235,255);
-    Scalar red = new Scalar(255,0,0,255);
-    Scalar green = new Scalar(0,255,0,255);
-    Scalar white = new Scalar(255,255,255,255);
+    private final static Scalar blue = new Scalar(7,197,235,255);
+    private final static Scalar red = new Scalar(255,0,0,255);
+    private final static Scalar green = new Scalar(0,255,0,255);
+    private final static Scalar white = new Scalar(255,255,255,255);
 
     private float decimation;
     private boolean needToSetDecimation;
     private final Object decimationSync = new Object();
 
-    public AprilTagDetectionPipeline(MainBotHardware hardware)
-    {
+    public AprilTagDetectionPipeline(MainBotHardware hardware) {
         super(hardware, 1280, 720);
         constructMatrix();
 
@@ -61,8 +60,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     }
 
     @Override
-    public void finalize()
-    {
+    public void finalize() {
         // Might be null if createApriltagDetector() threw an exception
         if(nativeApriltagPtr != 0)
         {
@@ -76,16 +74,28 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         }
     }
 
+    //The axis of the pose are relative to the camera, not the robot or the tag, so some trig is needed to compute the ground distance to the tag.
+    // For more see https://github.com/AprilRobotics/apriltag/tree/master?tab=readme-ov-file#pose-estimation
+    public static double getGroundDistance(AprilTagPose pose) {
+        return Math.cos(Math.atan(pose.y / pose.z)) * pose.z;
+    }
+
+    public static String aprilTagDetectionToString(AprilTagDetection d) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("ID: ").append(d.id).append('\n');
+        sb.append("x: ").append(String.format("%.3f", d.pose.x)).append('\n');
+        sb.append("y: ").append(String.format("%.3f", d.pose.y)).append('\n');
+        sb.append("z: ").append(String.format("%.3f", d.pose.z));
+        return sb.toString();
+    }
+
     @Override
-    public Mat processFrame(Mat input)
-    {
+    public Mat processFrame(Mat input) {
         // Convert to greyscale
         Imgproc.cvtColor(input, grey, Imgproc.COLOR_RGBA2GRAY);
 
-        synchronized (decimationSync)
-        {
-            if(needToSetDecimation)
-            {
+        synchronized (decimationSync) {
+            if(needToSetDecimation) {
                 AprilTagDetectorJNI.setApriltagDetectorDecimation(nativeApriltagPtr, decimation);
                 needToSetDecimation = false;
             }
@@ -94,16 +104,14 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         // Run AprilTag
         detections = AprilTagDetectorJNI.runAprilTagDetectorSimple(nativeApriltagPtr, grey, tagsizeIn, fx, fy, cx, cy);
 
-        synchronized (detectionsUpdateSync)
-        {
+        synchronized (detectionsUpdateSync) {
             detectionsUpdate = detections;
         }
 
         if(!drawDebugOnFrame) return input;
 
         // For fun, use OpenCV to draw 6DOF markers on the image.
-        for(AprilTagDetection detection : detections)
-        {
+        for(AprilTagDetection detection : detections) {
             Pose pose = aprilTagPoseToOpenCvPose(detection.pose);
             drawAxisMarker(input, tagsizeIn/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
             draw3dCubeMarker(input, tagsizeIn, tagsizeIn, tagsizeIn, 5, pose.rvec, pose.tvec, cameraMatrix);
@@ -112,22 +120,18 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         return input;
     }
 
-    public void setDecimation(float decimation)
-    {
-        synchronized (decimationSync)
-        {
+    public void setDecimation(float decimation) {
+        synchronized (decimationSync) {
             this.decimation = decimation;
             needToSetDecimation = true;
         }
     }
 
-    public ArrayList<AprilTagDetection> getLatestDetections()
-    {
+    public ArrayList<AprilTagDetection> getLatestDetections() {
         return detections;
     }
 
-    public ArrayList<AprilTagDetection> getDetectionsUpdate()
-    {
+    public ArrayList<AprilTagDetection> getDetectionsUpdate() {
         synchronized (detectionsUpdateSync)
         {
             ArrayList<AprilTagDetection> ret = detectionsUpdate;
@@ -136,8 +140,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         }
     }
 
-    void constructMatrix()
-    {
+    void constructMatrix() {
         //     Construct the camera matrix.
         //
         //      --         --
@@ -171,8 +174,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
      * @param tvec the translation vector of the detection
      * @param cameraMatrix the camera matrix used when finding the detection
      */
-    void drawAxisMarker(Mat buf, double length, int thickness, Mat rvec, Mat tvec, Mat cameraMatrix)
-    {
+    void drawAxisMarker(Mat buf, double length, int thickness, Mat rvec, Mat tvec, Mat cameraMatrix) {
         // The points in 3D space we wish to project onto the 2D image plane.
         // The origin of the coordinate space is assumed to be in the center of the detection.
         MatOfPoint3f axis = new MatOfPoint3f(
@@ -195,8 +197,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         Imgproc.circle(buf, projectedPoints[0], thickness, white, -1);
     }
 
-    void draw3dCubeMarker(Mat buf, double length, double tagWidth, double tagHeight, int thickness, Mat rvec, Mat tvec, Mat cameraMatrix)
-    {
+    void draw3dCubeMarker(Mat buf, double length, double tagWidth, double tagHeight, int thickness, Mat rvec, Mat tvec, Mat cameraMatrix) {
         //axis = np.float32([[0,0,0], [0,3,0], [3,3,0], [3,0,0],
         //       [0,0,-3],[0,3,-3],[3,3,-3],[3,0,-3] ])
 
@@ -236,8 +237,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         Imgproc.line(buf, projectedPoints[4], projectedPoints[7], green, thickness);
     }
 
-    Pose aprilTagPoseToOpenCvPose(AprilTagPose aprilTagPose)
-    {
+    Pose aprilTagPoseToOpenCvPose(AprilTagPose aprilTagPose) {
         Pose pose = new Pose();
         pose.tvec.put(0,0, aprilTagPose.x);
         pose.tvec.put(1,0, aprilTagPose.y);
@@ -245,10 +245,8 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
 
         Mat R = new Mat(3, 3, CvType.CV_32F);
 
-        for (int i = 0; i < 3; i++)
-        {
-            for (int j = 0; j < 3; j++)
-            {
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
                 R.put(i,j, aprilTagPose.R.get(i,j));
             }
         }
@@ -268,8 +266,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
      * @param tagsizeY the original height of the tag
      * @return the 6DOF pose of the camera relative to the tag
      */
-    Pose poseFromTrapezoid(Point[] points, Mat cameraMatrix, double tagsizeX , double tagsizeY)
-    {
+    Pose poseFromTrapezoid(Point[] points, Mat cameraMatrix, double tagsizeX , double tagsizeY) {
         // The actual 2d points of the tag detected in the image
         MatOfPoint2f points2d = new MatOfPoint2f(points);
 
@@ -292,19 +289,16 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
      * A simple container to hold both rotation and translation
      * vectors, which together form a 6DOF pose.
      */
-    class Pose
-    {
+    class Pose {
         Mat rvec;
         Mat tvec;
 
-        public Pose()
-        {
+        public Pose() {
             rvec = new Mat(3, 1, CvType.CV_32F);
             tvec = new Mat(3, 1, CvType.CV_32F);
         }
 
-        public Pose(Mat rvec, Mat tvec)
-        {
+        public Pose(Mat rvec, Mat tvec) {
             this.rvec = rvec;
             this.tvec = tvec;
         }
