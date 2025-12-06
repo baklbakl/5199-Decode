@@ -9,10 +9,20 @@ import net.polarbub.ftc.auto.roadrunner.messages.ThreeDeadWheelInputsMessage;
 public final class ThreeDeadWheelLocalizer implements Localizer {
     public static class Params {
         //Total always seems to be 3977 ish, but the balance changes, so I just took that value and divied by two
-        public double par0YTicks = -1991; // y position of the first parallel encoder (in tick units)
-        public double par1YTicks = 1991; // y position of the second parallel encoder (in tick units)
-        public double perpXTicks = 850; // x position of the perpendicular encoder (in tick units) - very inconsistent. The robot runs out ... Need drive encoders
+        public double par0YTicks = -1241; // y position of the first parallel encoder (in tick units)
+        public double par1YTicks = 1241; // y position of the second parallel encoder (in tick units)
+        //174mm
+
+        public double perpXTicks = 112; // x position of the perpendicular encoder (in tick units) - very inconsistent. The robot runs out ... Need drive encoders
     }
+
+    //94 deg
+    //69 end
+    //-69294 and 87789
+
+    //69 deg
+    //74 end
+    //-70839 and 85239
 
     public static Params PARAMS = new Params();
 

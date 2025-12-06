@@ -39,12 +39,11 @@ public class MainTeleop extends FastIterativeOpMode {
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
     public static List<Pair<Double, Double>> launchSpeedMapping = Arrays.asList(
-                new MutablePair<>(24.5, 1470.0),
-                new MutablePair<>(28.5, 1480.0),
-                new MutablePair<>(36.5, 1500.0),
-                new MutablePair<>(42.0, 1540.0),
-                new MutablePair<>(50.0, 1620.0),
-                new MutablePair<>(57.7, 1620.0)
+                new MutablePair<>(29.0, 1410.0),
+                new MutablePair<>(36.0, 1420.0),
+                new MutablePair<>(46.0, 1480.0),
+                new MutablePair<>(53.0, 1540.0),
+                new MutablePair<>(60.0, 1600.0)
             );
 
 
@@ -144,6 +143,20 @@ public class MainTeleop extends FastIterativeOpMode {
 //                throw new IllegalStateException("Invalid launcher control method \"" + launcherControlMethod + "\" to get launcher stopped pattern");
 //        }
 //    }
+
+    // Running
+    //   When in vision control the launcher speed will be controlled by vision.
+
+    // Starting
+    //   Vision Control
+    //     Initial launcher target speed will be selected correctly
+    //     Led color will be left unchanged. The correct color will be set by the timed event or when entering the mode.
+    //   When in preset mode the launcher speed will be set to a predetermined value
+
+    // Stopping
+    //   Speed is set to zero
+    //   When in vision control mode led color is set to correct color
+    //   When in preset mode the led color is set to the wrongspeedpreset color
 
     private static double launchSpeedFromDist(double dist) {
         Pair<Double, Double> lowestPair = launchSpeedMapping.get(0);
@@ -266,6 +279,19 @@ public class MainTeleop extends FastIterativeOpMode {
                             hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
                         } else {
                             hardware.launchDrive.setVelocity(0);
+
+//                            switch(launcherControlMethod) {
+//                                case MANUAL:
+//                                    hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
+//                                    break;
+//                                case VISION:
+//                                    if(hardware.blinkin.setPattern();
+//
+//                                    break;
+//                                default:
+//                                    throw new IllegalStateException("Invalid launcher control method \"" + launcherControlMethod + "\"");
+//                            }
+
                             hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
                         }
                     }
@@ -364,7 +390,7 @@ public class MainTeleop extends FastIterativeOpMode {
                         visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
 
                         groundDist = AprilTagDetectionPipeline.getGroundDistance(targetDetection.pose);
-                        visionDebugSb.append("Ground distance: ").append(groundDist);
+                        visionDebugSb.append("Ground distance: ").append(groundDist).append("\n");
                         visionTargetSpeed = launchSpeedFromDist(groundDist);
                         visionDebugSb.append("Launcher Vision Target Velocity: ");
                         visionDebugSb.append(visionTargetSpeed).append("\n");
@@ -377,40 +403,41 @@ public class MainTeleop extends FastIterativeOpMode {
                     visionDebugSb.append("No detections\n");
                 }
 
-                visionDebugSb.append(pipeline.toString()).append('\n');
+                visionDebugSb.append(pipeline.getTimingTelemetry()).append('\n');
 
                 if(visionDebugInfo) {
                     visionTelemetry = visionDebugSb.toString();
                 }
             }
 
+            if(launcherControlMethod == LauncherControlMethod.VISION) {
+                double targetSpeed = 0;
+                if(Double.isNaN(groundDist)) {
+                    targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
+                    hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
 
+                } else if(Double.isNaN(visionTargetSpeed)){
+                    targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
+                    hardware.blinkin.setPattern(MainBotHardware.Patterns.outOfLaunchRange);
 
-            if(hardware.launchDrive.getTargetVelocity() != 0) {
-                if(launcherControlMethod == LauncherControlMethod.VISION) {
-                    if(Double.isNaN(groundDist)) {
-                        hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
-
-                    } else if(Double.isNaN(visionTargetSpeed)){
-                        hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.outOfLaunchRange);
-
+                } else {
+                    targetSpeed = visionTargetSpeed;
+                    if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
+                        hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
                     } else {
-                        hardware.launchDrive.setVelocity(visionTargetSpeed);
-                        if(hardware.launchDrive.isAtTargetVelocity()) {
-                            hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
-                        } else {
-                            hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
-                        }
+                        hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
                     }
+                }
 
-                } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
-                    if(hardware.launchDrive.isAtTargetVelocity()) {
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeedNoVision);
-                    } else {
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-                    }
+                if(hardware.launchDrive.getTargetVelocity() != 0) {
+                    hardware.launchDrive.setVelocity(targetSpeed);
+                }
+
+            } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
+                if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
+                    hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeedNoVision);
+                } else {
+                    hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
                 }
             }
         }));
@@ -480,11 +507,11 @@ public class MainTeleop extends FastIterativeOpMode {
             event.tick(thisNanos);
         }
 
+        telemetry.addData("Launcher Control Mode", launcherControlMethod);
+
         if(visionDebugInfo) {
             telemetry.addLine(visionTelemetry);
         }
-
-        telemetry.addData("Launcher Control Mode", launcherControlMethod);
 
         //Average the last five iterations of the loop to minimize jumping around
         loopTimes[loopTimesPos] = thisNanos - lastNanos;
