@@ -76,8 +76,8 @@ public class MainTeleop extends FastIterativeOpMode {
     //
     // Option Driver Options. MUST BE PUBLIC OR ELSE OPTION DRIVER CAN'T SEE IT.
     //
-    public Boolean runVision = false;
-    public Boolean visionDebugInfo = false;
+    public Boolean runVision = true;
+    public Boolean visionDebugInfo = true;
     public Alliance alliance = Alliance.lastAlliance;
 
 //    private enum VisionDetectionState {
@@ -195,6 +195,7 @@ public class MainTeleop extends FastIterativeOpMode {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
+        alliance = Alliance.lastAlliance;
 
         optionDriver = new OptionDriver();
         try {
@@ -300,7 +301,7 @@ public class MainTeleop extends FastIterativeOpMode {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
                 if(circle) {
-                    if(hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist
+                    if((hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist || hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist2)
                             && hardware.launchDrive.isAtTargetVelocity()
                             && hardware.launchDrive.getTargetVelocity() != 0
                     ) {
@@ -315,7 +316,7 @@ public class MainTeleop extends FastIterativeOpMode {
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
                 float power = left_trigger - right_trigger;
                 if(launcherControlMethod == LauncherControlMethod.MANUAL) {
-                    if(power > 0) {
+                    if(power < 0) {
                         power /= 2;
                     }
                     hardware.launchDrive.setPower(power);

@@ -20,13 +20,14 @@ public class MainBotHardware {
     //
     // Dashboard options
     //
-    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(30, 0, 0, 14.4);
+    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.4);
     public static int motorVelocityTolerance = 50;
     public static double restingServoPos = 0.5;
     public static double moverDrivePower = 0.85;
     public static double kickerServoUpPos = 0.7;
     public static double inIntakePower = 1;
     public static double ballInKickerDist = 2;
+    public static double ballInKickerDist2 = 1;
     public static long teleOpLauncherNoVisionVelocity = 1460;
 
     //
@@ -72,6 +73,7 @@ public class MainBotHardware {
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
     public static final int colorSensorI2CBus = 1;
+    public static final int colorSensor2I2CBus = 2;
 
     //
     // Actual hardware
@@ -91,6 +93,7 @@ public class MainBotHardware {
     public final Servo kickerServo;
 
     public final RevColorSensorV3 launcherColorDistSensor;
+    public final RevColorSensorV3 launcherColorDistSensor2;
 
     public final RevBlinkinLedDriver blinkin;
     public final LazyImu lazyImu;
@@ -183,6 +186,7 @@ public class MainBotHardware {
         }
 
         launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);
+        launcherColorDistSensor2 = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensor2I2CBus), true);
 
         SerialNumber webCamSerial = UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber;
 

@@ -13,11 +13,11 @@ public class SplitAuto {
     public static int distSensorStartWait = 100;
 
     public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(280));
-    public static Pose2d launchPos = new Pose2d(-53, 35, Math.toRadians(190));
-    public static double launch1TicksPerSecAuto = 1320;
-    public static double launch1TicksPerSecAutoBlue = 1280;
-    public static double launch2TicksPerSecAuto = 1320;
-    public static double launch2TicksPerSecAutoBlue = 1280;
+    public static Pose2d launchPos = new Pose2d(-45, 22, Math.toRadians(120));
+    public static double launch1TicksPerSecAuto = 1360;
+    public static double launch1TicksPerSecAutoBlue = 1360;
+    public static double launch2TicksPerSecAuto = 1360;
+    public static double launch2TicksPerSecAutoBlue = 1360;
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -63,6 +63,13 @@ public class SplitAuto {
 
         Pose2d autoStartPosition;
 
+        double audienceHeading = 0;
+        if(score) {
+            audienceHeading = 180;
+        } else {
+            audienceHeading = 90;
+        }
+
         switch (startPos) {
             case GOAL:
                 autoStartPosition = new Pose2d(-71 + 2.5 + MainBotConfig.robotChassisLength/2, 71 - 24 - MainBotConfig.robotChassisWidth / 2, Math.toRadians(180));
@@ -71,16 +78,10 @@ public class SplitAuto {
                 autoStartPosition = new Pose2d(-71 + 20 + MainBotConfig.robotChassisWidth/2, 71 - 7.5 - MainBotConfig.robotChassisLength / 2, Math.toRadians(90));
                 break;
             case AUDIENCE_IN:
-                if(score) {
-                    autoStartPosition = new Pose2d(71 - 1.5 - MainBotConfig.robotChassisLength / 2, MainBotConfig.robotChassisWidth / 2, Math.toRadians(180));
-                    break;
-                }
-                else {
-                    autoStartPosition = new Pose2d(71 - 1.5 - MainBotConfig.robotChassisLength / 2, MainBotConfig.robotChassisWidth / 2, Math.toRadians(90));
-                    break;
-                }
+                autoStartPosition = new Pose2d(71 - 1.5 - MainBotConfig.robotChassisLength / 2, MainBotConfig.robotChassisWidth / 2, Math.toRadians(audienceHeading));
+                break;
             case AUDIENCE_OUT:
-                autoStartPosition = new Pose2d(71 - 1.5 - MainBotConfig.robotChassisLength/2, 22 + MainBotConfig.robotChassisWidth / 2, Math.toRadians(180));
+                autoStartPosition = new Pose2d(71 - 1.5 - MainBotConfig.robotChassisLength/2, 22 + MainBotConfig.robotChassisWidth / 2, Math.toRadians(audienceHeading));
                 break;
             default:
                 throw new RuntimeException("Incomplete startPos switch");
@@ -88,9 +89,9 @@ public class SplitAuto {
 
         TrajectoryActionBuilder pathBuilder = createPathBuilder.apply(transformIfBlue(autoStartPosition));
 
-        Pose2d transformedLaunchPose = launchPos;
+        Pose2d transformedLaunchPose = transformIfBlue(launchPos);
 
-        if(alliance == Alliance.BLUE) {
+//        if(alliance == Alliance.BLUE) {
 //            try {
 //                Field beginEndVelField = pathBuilder.getClass().getDeclaredField("beginEndVel");
 //                beginEndVelField.setAccessible(true);
@@ -109,8 +110,8 @@ public class SplitAuto {
 //            } catch (IllegalAccessException | NoSuchFieldException e) {
 //                throw new RuntimeException(e);
 //            }
-            transformedLaunchPose = transformIfBlue(new Pose2d(launchPos.position, launchPos.heading.plus(Math.toRadians(200))));
-        }
+//            transformedLaunchPose = transformIfBlue(new Pose2d(launchPos.position, launchPos.heading.plus(Math.toRadians(200))));
+//        }
 
         if(delay == Delay.FIVE) {
             pathBuilder = pathBuilder.waitSeconds(5);
@@ -151,7 +152,7 @@ public class SplitAuto {
     else
     {
         pathBuilder = pathBuilder
-                .splineTo(transformIfBlue(new Vector2d(71-5 - MainBotConfig.robotChassisLength / 2, 35)), transformIfBlue(Math.toRadians(90)));
+                .splineToConstantHeading(transformIfBlue(new Vector2d(71-5 - MainBotConfig.robotChassisLength / 2, 35)), transformIfBlue(Math.toRadians(90)));
     }
         //
 
@@ -197,7 +198,7 @@ public class SplitAuto {
 
         if(alliance == Alliance.BLUE) {
             System.out.println("Transforming blue alliance");
-            transformedLaunchPose = transformIfBlue(new Pose2d(launchPos.position, launchPos.heading.plus(Math.toRadians(200))));
+            transformedLaunchPose = transformIfBlue(launchPos);
         }
 
         pathBuilder = pathBuilder
@@ -214,11 +215,11 @@ public class SplitAuto {
                     .splineToSplineHeading(transformIfBlue(new Pose2d(spikeX, 30, Math.toRadians(90))), transformIfBlue(Math.toRadians(90)));
         }
 
-        System.out.println(Math.toDegrees(transformIfBlue(Math.toRadians(320))));
+//        System.out.println(Math.toDegrees(transformIfBlue(Math.toRadians(320))));
 
         pathBuilder = pathBuilder
 
-                .splineTo(transformIfBlue(new Vector2d(spikeX, 50)), transformIfBlue(Math.toRadians(90)), new TranslationalVelConstraint(5))
+                .splineTo(transformIfBlue(new Vector2d(spikeX, 45)), transformIfBlue(Math.toRadians(90)), new TranslationalVelConstraint(5))
                             .afterTime(0.3, robot::stopIntake)
                             .setReversed(true)
 //                .splineTo(transformIfBlue(new Vector2d(spikeX+10, 23)), transformIfBlue(Math.toRadians(320)))
