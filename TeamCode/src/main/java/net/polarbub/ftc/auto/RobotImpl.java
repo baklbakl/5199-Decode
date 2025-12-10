@@ -9,7 +9,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import java.util.function.Supplier;
 
 public class RobotImpl implements RobotInterface {
-    public static int requiredAtSpeedSamples = 10;
+    public static int requiredAtSpeedSamples = 5;
     public static double launchTimeOut = 10;
 
     private final MainBotHardware hardware;
@@ -26,15 +26,26 @@ public class RobotImpl implements RobotInterface {
     public void launch(int numToLaunch, double speed) {
 //        hardware.moverServo.setPosition(MainBotHardware.outServoPos);
 //        hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
-        hardware.launchDrive.setVelocity(-200);
+//        hardware.launchDrive.setVelocity(-200);
 
-        try {
-            Thread.sleep(500);
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
+        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+        hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+        hardware.launchDrive.setVelocity(speed);
 
-        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist) {
+//        try {
+//            Thread.sleep(500);
+//        } catch (InterruptedException e) {
+//            throw new RuntimeException(e);
+//        }
+
+
+        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist && hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist2 && isOpModeActive.get()) {
+            RobotLog.ii("RobotImpl", "0: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
+            RobotLog.ii("RobotImpl", "0: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
+            RobotLog.ii("RobotImpl", "1: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
+            RobotLog.ii("RobotImpl", "1: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
+            RobotLog.ii("RobotImpl", "");
+
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -42,10 +53,9 @@ public class RobotImpl implements RobotInterface {
             }
         }
 
-//        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
-//        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
-        hardware.launchDrive.setVelocity(speed);
-        while (!hardware.launchDrive.isAtTargetVelocity(10)) {
+        hardware.moverDrive.setPower(0);
+        while (!hardware.launchDrive.isAtTargetVelocity(21) && isOpModeActive.get()) {
+            RobotLog.ii("RobotImpl", "Diff: " + Math.abs(hardware.launchDrive.getVelocity() - hardware.launchDrive.getTargetVelocity()));
             hardware.modules.clearBulkCache();
             try {
                 Thread.sleep(10);
@@ -62,9 +72,9 @@ public class RobotImpl implements RobotInterface {
             throw new RuntimeException(e);
         }
 
-//        hardware.moverServo.setPosition(MainBotHardware.moverDrivePower);
-//        hardware.moverServo2.setPosition(MainBotHardware.moverDrivePower);
-        hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+        hardware.moverDrive.setPower(0);
+        hardware.intakeDrive.setPower(0);
+        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
 
         int speedDips = 0;
         int atSpeedSamples = requiredAtSpeedSamples + 1;
@@ -88,15 +98,45 @@ public class RobotImpl implements RobotInterface {
                 if (atSpeedSamples == requiredAtSpeedSamples) {
                     atSpeedSamples++;
 
-                    if(underSpeedSamples == requiredAtSpeedSamples) {
+                    if(underSpeedSamples >= 2) {
                         //We were under speed
                         speedDips++;
+
+                        RobotLog.ii("RobotImpl", "speed dip logged # " + speedDips);
+
+                        if(speedDips >= numToLaunch) {
+                            break;
+                        }
+
+                        hardware.kickerServo.setPosition(0);
+                        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                        hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+
+                        try {
+                            Thread.sleep(400);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist && hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist2 && isOpModeActive.get()) {
+                            RobotLog.ii("RobotImpl", "0: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
+                            RobotLog.ii("RobotImpl", "0: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
+                            RobotLog.ii("RobotImpl", "1: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
+                            RobotLog.ii("RobotImpl", "1: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
+                            RobotLog.ii("RobotImpl", "");
+
+                            try {
+                                Thread.sleep(100);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
+
+                        hardware.moverDrive.setPower(0);
+                        hardware.intakeDrive.setPower(0);
+                        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
                     }
 
                     underSpeedSamples = 0;
-
-                    RobotLog.ii("RobotImpl", "speed dip logged # " + speedDips);
-
                 } else if (atSpeedSamples < requiredAtSpeedSamples) {
                     atSpeedSamples++;
                     RobotLog.ii("RobotImpl", "At speed");
@@ -116,8 +156,7 @@ public class RobotImpl implements RobotInterface {
                 hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
             }
 
-
-            RobotLog.ii("RobotImpl", "Velocity" + hardware.launchDrive.getVelocity());
+            RobotLog.ii("RobotImpl", "Velocity: " + hardware.launchDrive.getVelocity());
             try {
                 Thread.sleep(10);
             } catch (InterruptedException e) {
@@ -127,9 +166,9 @@ public class RobotImpl implements RobotInterface {
 
         hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
         hardware.launchDrive.setVelocity(0);
+        hardware.moverDrive.setPower(0);
         hardware.intakeDrive.setPower(0);
-//        hardware.moverServo.setPosition(MainBotHardware.restingServoPos);
-//        hardware.moverServo2.setPosition(MainBotHardware.restingServoPos);
+        hardware.kickerServo.setPosition(0);
 
     }
 
@@ -137,7 +176,6 @@ public class RobotImpl implements RobotInterface {
     public void intake() {
         hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
-        hardware.launchDrive.setVelocity(-200);
     }
 
     @Override

@@ -60,8 +60,8 @@ public class MeepMeepTesting {
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
         boolean useVision = false;
-        Alliance alliance = Alliance.RED;
-        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.AUDIENCE_IN, alliance, useVision, false);
+        Alliance alliance = Alliance.BLUE;
+        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, useVision, true);
 
         Action action = null;
 

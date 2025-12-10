@@ -33,6 +33,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     public StartPos startPos;
     public Delay delay;
     public boolean useVision;
+    public boolean score;
 
     @Override
     protected void init_internal() {
@@ -42,6 +43,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             optionDriver.add(new EnumOption<>("Start Pos", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
             optionDriver.add(new EnumOption<>("Delay", "cross", gamepad1, this.getClass().getField("delay"), this, Delay.class));
             optionDriver.add(new BooleanOption("Use Vision", "triangle", gamepad1, this.getClass().getField("useVision"), this));
+            optionDriver.add(new BooleanOption("Score", "circle", gamepad1, this.getClass().getField("score"), this));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -71,7 +73,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            builder = splitAuto.fillBuilder(delay, startPos, alliance, useVision);
+            builder = splitAuto.fillBuilder(delay, startPos, alliance, useVision, score);
             path = builder.build();
 
             telemetry.addLine(out);
