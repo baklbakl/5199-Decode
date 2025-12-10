@@ -6,8 +6,13 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.auto.RobotImpl;
 import net.polarbub.ftc.auto.SplitAuto;
+import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
+
+import org.openftc.apriltag.AprilTagDetection;
+
+import java.util.ArrayList;
 
 @TeleOp(name = "Test", group = MainBotConfig.opmodeGroupName)
 public class Test extends FastIterativeOpMode {
@@ -15,6 +20,8 @@ public class Test extends FastIterativeOpMode {
 
     private ElapsedTime runtime = new ElapsedTime();
     private MainBotHardware hardware;
+
+    private AprilTagDetectionPipeline pipeline;
 
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
@@ -24,12 +31,31 @@ public class Test extends FastIterativeOpMode {
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
         telemetry.update();
+
+        pipeline = new AprilTagDetectionPipeline(MainBotHardware.getOrCreate(hardwareMap));
+
     }
+
 
     /*
      * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
      */
     public void init_loop_internal() {
+        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
+
+        if (detections != null && !detections.isEmpty()) {
+            telemetry.addData("Detections", detections.size());
+            for (AprilTagDetection d : detections) {
+                telemetry.addLine("Target Found!");
+                telemetry.addLine(AprilTagDetectionPipeline.aprilTagDetectionToString(d));
+//                telemetry.addData("groundDistance (in)", Math.cos(Math.atan(d.pose.y / d.pose.z)) * d.pose.z);
+                telemetry.addData("groundDistance (in)", AprilTagDetectionPipeline.getGroundDistance(d.pose));
+            }
+        } else {
+            telemetry.addLine("No detections");
+        }
+        telemetry.addLine(pipeline.getTimingTelemetry());
+        telemetry.update();
     }
 
     /*
