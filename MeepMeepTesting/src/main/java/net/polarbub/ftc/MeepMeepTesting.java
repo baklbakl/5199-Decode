@@ -53,14 +53,14 @@ public class MeepMeepTesting {
         MeepMeep meepMeep = new MeepMeep(800);
         RoadRunnerBotEntity bot = new DefaultBotBuilder(meepMeep)
                 // Required: Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                .setConstraints(45, 45, 1.4, 1.5, 12.5)
+                .setConstraints(45, 55, 3, 3, 12.5)
                 .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
                 .build();
 
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
         boolean useVision = false;
-        Alliance alliance = Alliance.BLUE;
+        Alliance alliance = Alliance.RED;
         TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, useVision, true);
 
         Action action = null;
