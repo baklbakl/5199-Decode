@@ -26,9 +26,10 @@ public class MainBotHardware {
     public static double moverDrivePower = 0.85;
     public static double kickerServoUpPos = 0.7;
     public static double inIntakePower = 1;
-    public static double ballInKickerDist = 2;
-    public static double ballInKickerDist2 = 1;
     public static long teleOpLauncherNoVisionVelocity = 1460;
+
+    public static double launcherKV = 0.0056;
+    public static double launcherKP = 0.05;
 
     //
     // Options
@@ -59,21 +60,21 @@ public class MainBotHardware {
     public static final int leftRearDriveID = 2;
     public static final int rightRearDriveID = 3;
 
-    public static final int intakeDriveID = 2;
-    public static final int launchDriveID = 0;
-    public static final int moverDriveID = 3;
+    public static final int intakeDriveID = 0;
+    public static final int launchDriveID = 3;
+    public static final int moverDriveID = 1;
 
     public static final int paraEncoder0ID = 3;
     public static final int paraEncoder1ID = 0;
     public static final int perpEncoderID = 1;
 
-    public static final int kickerServoID = 0;
-    public static final int blinkinServoID = 1;
+    public static final int kickerServoID = 1;
+    public static final int blinkinServoID = 0;
 
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
-    public static final int colorSensorI2CBus = 1;
-    public static final int colorSensor2I2CBus = 2;
+//    public static final int colorSensorI2CBus = 1;
+//    public static final int colorSensor2I2CBus = 2;
 
     //
     // Actual hardware
@@ -92,8 +93,9 @@ public class MainBotHardware {
 
     public final Servo kickerServo;
 
-    public final RevColorSensorV3 launcherColorDistSensor;
-    public final RevColorSensorV3 launcherColorDistSensor2;
+//    public final RevColorSensorV3 launcherColorDistSensor;
+//    public final RevColorSensorV3 launcherColorDistSensor2;
+    public final DigitalChannel launcherSwitch;
 
     public final RevBlinkinLedDriver blinkin;
     public final LazyImu lazyImu;
@@ -139,11 +141,11 @@ public class MainBotHardware {
 
         launchDrive = child.createDcMotor(launchDriveID);
 //        launchDrive.setDirection(DcMotorSimple.Direction.REVERSE);
-        launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
+//        launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        launchDrive.setVelocity(0);
-        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
+//        launchDrive.setVelocity(0);
+//        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+//
         kickerServo = child.createServo(kickerServoID);
         kickerServo.setPosition(0);
 
@@ -185,8 +187,8 @@ public class MainBotHardware {
             throw new RuntimeException("Acceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
         }
 
-        launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);
-        launcherColorDistSensor2 = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensor2I2CBus), true);
+//        launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);
+//        launcherColorDistSensor2 = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensor2I2CBus), true);
 
         SerialNumber webCamSerial = UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber;
 
@@ -194,5 +196,7 @@ public class MainBotHardware {
             throw new RuntimeException("No webcam found and webcam is required for MainBotHardware");
         }
         webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
+
+        launcherSwitch = child.createDigitalChannel(0);
     }
 }

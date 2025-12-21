@@ -1,13 +1,10 @@
 package net.polarbub.ftc.hardware;
 
-import androidx.annotation.Nullable;
 import com.qualcomm.hardware.HardwareDeviceManager;
-import com.qualcomm.robotcore.eventloop.opmode.*;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.DeviceManager;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.ScannedDevices;
-import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.util.Device;
 import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.SerialNumber;
@@ -27,26 +24,47 @@ public class UsbScanner {
         SingletonHelper.refresh(UsbScanner.class, new UsbScanner(hardwareMap));
     }
 
-    public final SerialNumber lynxUsbSerialNumber;
+    public final SerialNumber lynxParentUsbSerialNumber;
+    public final SerialNumber lynxChildUsbSerialNumber;
     public final SerialNumber webCamSerialNumber;
 
     private UsbScanner(HardwareMap hardwareMap) {
         try {
-            SerialNumber localLynxUsbSerialNumber = null;
+            SerialNumber localLynxParentUsbSerialNumber = null;
+            SerialNumber localLynxChildUsbSerialNumber = null;
             SerialNumber localWebCamSerialNumber = null;
 
 //            if (Device.isRevControlHub()) {
-//                localLynxUsbSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;
+//                localLynxParentUsbSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;
 //            }
 
             ScannedDevices devices = new HardwareDeviceManager(hardwareMap.appContext, getEventLoopManger().get()).scanForUsbDevices();
             for (SerialNumber sn : devices.keySet()) {
                 DeviceManager.UsbDeviceType deviceType = devices.get(sn);
                 if (deviceType == DeviceManager.UsbDeviceType.LYNX_USB_DEVICE) {
-                    if (localLynxUsbSerialNumber != null) {
-                        throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
+                    if(sn.isEmbedded()) {
+                        if(Device.isRevControlHub()) {
+                            if (localLynxParentUsbSerialNumber != null) {
+                                throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
+                            }
+                        } else {
+                            throw new RuntimeException("Embedded Lynx Device (Control Hub) found in not a control hub");
+                        }
+
+                        localLynxParentUsbSerialNumber = sn;
+                    } else if(Device.isRevControlHub()) {
+                        if (localLynxChildUsbSerialNumber != null) {
+                            throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
+                        }
+                        localLynxChildUsbSerialNumber = sn;
+
+                    } else {
+                        if (localLynxParentUsbSerialNumber != null) {
+                            throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
+                        }
+                        localLynxParentUsbSerialNumber = sn;
                     }
-                    localLynxUsbSerialNumber = sn;
+
                 } else if (deviceType == DeviceManager.UsbDeviceType.WEBCAM) {
                     if (localWebCamSerialNumber != null) {
                         throw new RuntimeException("Multiple Cameras are connected at once. Please disconnect the extra one(s)");
@@ -55,12 +73,8 @@ public class UsbScanner {
                 }
             }
 
-            if (!Device.isRevControlHub()) {
-                if (localLynxUsbSerialNumber == null) {
-                    //TEST: Do these errors recheck when you rerun?
-                    //TEST: Do these errors get flagged again when something has come unplugged after working once?
-                    throw new RuntimeException("No Expansion Hub (Lynx USB device) found. Please check that there is a Expansion Hub connected");
-                }
+            if (localLynxParentUsbSerialNumber == null) {
+                throw new RuntimeException("No Parent Lynx Module USB Device (Expansion / Control Hub) found. Please check that there is one connected");
             }
 
             if (localWebCamSerialNumber == null) {
@@ -70,7 +84,8 @@ public class UsbScanner {
                 TeamCodeWarningSource.getInstance().clearWarning();
             }
 
-            lynxUsbSerialNumber = localLynxUsbSerialNumber;
+            lynxParentUsbSerialNumber = localLynxParentUsbSerialNumber;
+            lynxChildUsbSerialNumber = localLynxChildUsbSerialNumber;
             webCamSerialNumber = localWebCamSerialNumber;
         } catch (RobotCoreException e) {
             throw new RuntimeException(e);
@@ -81,7 +96,7 @@ public class UsbScanner {
     public boolean equals(Object obj) {
         if(obj instanceof UsbScanner) {
             UsbScanner other = (UsbScanner) obj;
-            return other.lynxUsbSerialNumber.equals(lynxUsbSerialNumber) && (other.webCamSerialNumber == webCamSerialNumber || (other.webCamSerialNumber != null && webCamSerialNumber != null &&  other.webCamSerialNumber.equals(webCamSerialNumber)));
+            return other.lynxParentUsbSerialNumber.equals(lynxParentUsbSerialNumber) && (other.webCamSerialNumber == webCamSerialNumber || (other.webCamSerialNumber != null && webCamSerialNumber != null &&  other.webCamSerialNumber.equals(webCamSerialNumber)));
         }
         return false;
     }

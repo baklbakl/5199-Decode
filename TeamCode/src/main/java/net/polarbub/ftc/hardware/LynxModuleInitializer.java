@@ -38,6 +38,7 @@ public class LynxModuleInitializer {
     public class LynxModuleControllers {
         public final LynxModule module;
         public final LynxDcMotorControllerEx motorController;
+        public final LynxDigitalChannelController digitalController;
         public final LynxServoController servoController;
         public final LynxAnalogInputController analogInputController;
         public final LynxVoltageSensor voltageSensor;
@@ -49,6 +50,7 @@ public class LynxModuleInitializer {
                 servoController = new LynxServoController(hardwareMap.appContext, module);
                 analogInputController = new LynxAnalogInputController(hardwareMap.appContext, module);
                 voltageSensor = new LynxVoltageSensor(hardwareMap.appContext, module);
+                digitalController = new LynxDigitalChannelController(hardwareMap.appContext, module);
             } catch (RobotCoreException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
@@ -68,6 +70,10 @@ public class LynxModuleInitializer {
 
         public AnalogInput createAnalogInput(int id) {
             return new AnalogInput(analogInputController, id);
+        }
+
+        public DigitalChannel createDigitalChannel(int id) {
+            return new DigitalChannelImpl(digitalController, id);
         }
 
         public Encoder createEncoder(int id) {
@@ -92,7 +98,7 @@ public class LynxModuleInitializer {
         try {
             scanner = UsbScanner.getOrCreate(hardwareMap);
 
-            LynxUsbDevice usbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
+            LynxUsbDevice parentUsbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxParentUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
             int parentModuleAddress;
             String errorString;
             if(Device.isRevControlHub()) {
@@ -104,7 +110,7 @@ public class LynxModuleInitializer {
             }
 
             try {
-                parentModule = new LynxModuleControllers(usbDevice.getOrAddModule((new LynxModuleDescription.Builder(parentModuleAddress, true)).build()));
+                parentModule = new LynxModuleControllers(parentUsbDevice.getOrAddModule((new LynxModuleDescription.Builder(parentModuleAddress, true)).build()));
                 parentModule.module.pingAndQueryKnownInterfacesAndEtc();
             } catch (RobotCoreException e) {
                 throw new RuntimeException(errorString, e);
@@ -117,10 +123,14 @@ public class LynxModuleInitializer {
 
             LynxModuleControllers localChildModule = null;
             if(Device.isRevControlHub()) {
+                LynxUsbDevice childUsbDevice = null;
                 try {
+                    childUsbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxChildUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
+
                     localChildModule = new LynxModuleControllers(
-                            usbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, false)).build())
+                            childUsbDevice.getOrAddModule((new LynxModuleDescription.Builder(1, true)).build())
                     );
+
                     localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
                     //Put the control hub back so that stopping when the opmode works right
                     hardwareMap.put("Expansion Hub " + localChildModule.module.toString(), localChildModule.module);
@@ -130,9 +140,13 @@ public class LynxModuleInitializer {
                         localChildModule.module.close();
                     }
 
+                    if(childUsbDevice != null) {
+                        childUsbDevice.close();
+                    }
+
                     localChildModule = null;
                     TeamCodeWarningSource.getInstance().setGlobalWarning(
-                            "Could not find RS485 connected Expansion Hub with address "
+                            "Could not find USB connected Expansion Hub with address "
                             + MainBotHardware.expansionHubAddress
                             + ". This may be expected if no Expansion Hub is present. Check that the hub is connected, " +
                             "powered up, and that the address is correct."

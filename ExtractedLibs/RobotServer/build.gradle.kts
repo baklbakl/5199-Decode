@@ -8,6 +8,14 @@ plugins {
 
 android {
     namespace = "org.firstinspires.ftc.robotcore.internal.webserver"
+
+    androidResources {
+        //Only leave .woff2 font files
+        ignoreAssetsPatterns.add("*.woff")
+        ignoreAssetsPatterns.add("*.eot")
+        ignoreAssetsPatterns.add("*.svg")
+        ignoreAssetsPatterns.add("*.ttf")
+    }
 }
 
 dependencies {

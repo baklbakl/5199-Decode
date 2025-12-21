@@ -301,13 +301,13 @@ public class MainTeleop extends FastIterativeOpMode {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
                 if(circle) {
-                    if((hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist || hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist2)
-                            && hardware.launchDrive.isAtTargetVelocity()
-                            && hardware.launchDrive.getTargetVelocity() != 0
-                    ) {
-                        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
-                        hardware.moverDrive.setPower(0);
-                    }
+//                    if((hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist || hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist2)
+//                            && hardware.launchDrive.isAtTargetVelocity()
+//                            && hardware.launchDrive.getTargetVelocity() != 0
+//                    ) {
+//                        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
+//                        hardware.moverDrive.setPower(0);
+//                    }
                 } else if(!gamepad1.options) {
                     hardware.kickerServo.setPosition(0);
                 }

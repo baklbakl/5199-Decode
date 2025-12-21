@@ -22,29 +22,43 @@ public class RobotImpl implements RobotInterface {
         this.isOpModeActive = isOpModeActive;
     }
 
+    private enum LaunchState {
+        STOPPED,
+        SPINNING_UP,
+
+    }
+
     @Override
     public void launch(int numToLaunch, double speed) {
-//        hardware.moverServo.setPosition(MainBotHardware.outServoPos);
-//        hardware.moverServo2.setPosition(MainBotHardware.outServoPos);
-//        hardware.launchDrive.setVelocity(-200);
-
         hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
-        hardware.launchDrive.setVelocity(speed);
 
-//        try {
-//            Thread.sleep(500);
-//        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-//        }
+        LaunchState launchState = LaunchState.SPINNING_UP;
+        double targetVelocity = 0;
+        while(true) {
+//            hardware.launcherSwitch.getState()
+            switch (launchState) {
+                case STOPPED:
+                    targetVelocity = speed;
+                    break;
+                case SPINNING_UP:
+
+                    break;
+            }
 
 
-        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist && hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist2 && isOpModeActive.get()) {
-            RobotLog.ii("RobotImpl", "0: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
-            RobotLog.ii("RobotImpl", "0: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
-            RobotLog.ii("RobotImpl", "1: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
-            RobotLog.ii("RobotImpl", "1: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
-            RobotLog.ii("RobotImpl", "");
+            if(false) {
+                break;
+            }
+        }
+
+//        hardware.
+//        hardware.launchDrive.setVelocity(speed);
+
+
+        while (hardware.launcherSwitch.getState()) {
+
+            RobotLog.ii("RobotImpl", "Waiting for launch switch");
 
             try {
                 Thread.sleep(100);
@@ -117,19 +131,19 @@ public class RobotImpl implements RobotInterface {
                         } catch (InterruptedException e) {
                             throw new RuntimeException(e);
                         }
-                        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist && hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist2 && isOpModeActive.get()) {
-                            RobotLog.ii("RobotImpl", "0: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
-                            RobotLog.ii("RobotImpl", "0: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
-                            RobotLog.ii("RobotImpl", "1: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
-                            RobotLog.ii("RobotImpl", "1: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
-                            RobotLog.ii("RobotImpl", "");
-
-                            try {
-                                Thread.sleep(100);
-                            } catch (InterruptedException e) {
-                                throw new RuntimeException(e);
-                            }
-                        }
+//                        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist && hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist2 && isOpModeActive.get()) {
+//                            RobotLog.ii("RobotImpl", "0: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
+//                            RobotLog.ii("RobotImpl", "0: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
+//                            RobotLog.ii("RobotImpl", "1: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
+//                            RobotLog.ii("RobotImpl", "1: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
+//                            RobotLog.ii("RobotImpl", "");
+//
+//                            try {
+//                                Thread.sleep(100);
+//                            } catch (InterruptedException e) {
+//                                throw new RuntimeException(e);
+//                            }
+//                        }
 
                         hardware.moverDrive.setPower(0);
                         hardware.intakeDrive.setPower(0);

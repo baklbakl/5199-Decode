@@ -8,6 +8,7 @@ import net.polarbub.ftc.auto.RobotImpl;
 import net.polarbub.ftc.auto.SplitAuto;
 import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
+import net.polarbub.ftc.tele.LauncherInternalControlTuner;
 import net.polarbub.ftc.tele.MainTeleop;
 import net.polarbub.ftc.tele.SensorReader;
 import net.polarbub.ftc.tele.Test;
@@ -21,7 +22,8 @@ public class RegisterConfigClasses {
             MainTeleop.class,
             RobotImpl.class,
             Test.class,
-            AprilTagDetectionPipeline.class
+            AprilTagDetectionPipeline.class,
+            LauncherInternalControlTuner.class
     };
 
     @OnCreate

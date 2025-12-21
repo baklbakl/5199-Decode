@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.AaptOptions
 import net.polarbub.PropertiesHelper
 import net.polarbub.PropertiesHelper.*
 import org.gradle.kotlin.dsl.support.kotlinCompilerOptions

@@ -20,6 +20,7 @@ import java.util.List;
 public class SensorReader extends FastIterativeOpMode {
     private final List<DcMotorEx> motors = new ArrayList<>();
     private final List<AnalogInput> analogInputs = new ArrayList<>();
+    private final List<DigitalChannel> digitalChannels = new ArrayList<>();
     private final ElapsedTime runtime = new ElapsedTime();
     private LynxModuleInitializer hardware;
     private final List<RevColorSensorV3> colorSensors = new ArrayList<>();
@@ -45,8 +46,20 @@ public class SensorReader extends FastIterativeOpMode {
             analogInputs.add(hardware.parentModule.createAnalogInput(i));
         }
 
-        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensorI2CBus), true));
-        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensor2I2CBus), true));
+        for(int i = 0; i < LynxConstants.NUMBER_OF_DIGITAL_IOS; i++) {
+            DigitalChannel channel = hardware.parentModule.createDigitalChannel(i);
+            channel.setMode(DigitalChannel.Mode.INPUT);
+            digitalChannels.add(channel);
+        }
+
+        for(int i = 0; i < LynxConstants.NUMBER_OF_DIGITAL_IOS; i++) {
+            DigitalChannel channel = hardware.childModule.createDigitalChannel(i);
+            channel.setMode(DigitalChannel.Mode.INPUT);
+            digitalChannels.add(channel);
+        }
+
+//        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensorI2CBus), true));
+//        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensor2I2CBus), true));
 
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
@@ -116,6 +129,14 @@ public class SensorReader extends FastIterativeOpMode {
             sb.append("\n");
             i++;
         }
+
+        if(!digitalChannels.isEmpty()) {
+            sb.append("Digital Channels: ");
+        }
+        for(DigitalChannel channel : digitalChannels) {
+            sb.append(channel.getState() ? "1" : "0");
+        }
+        sb.append("\n");
 
         telemetry.addLine(sb.toString());
         telemetry.update();
