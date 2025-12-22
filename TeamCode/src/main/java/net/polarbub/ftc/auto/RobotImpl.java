@@ -32,42 +32,21 @@ public class RobotImpl implements RobotInterface {
     public void launch(int numToLaunch, double speed) {
         hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+        hardware.launchDrive.setVelocity(speed);
 
-        LaunchState launchState = LaunchState.SPINNING_UP;
-        double targetVelocity = 0;
-        while(true) {
-//            hardware.launcherSwitch.getState()
-            switch (launchState) {
-                case STOPPED:
-                    targetVelocity = speed;
-                    break;
-                case SPINNING_UP:
-
-                    break;
-            }
-
-
-            if(false) {
-                break;
-            }
-        }
-
-//        hardware.
-//        hardware.launchDrive.setVelocity(speed);
-
-
-        while (hardware.launcherSwitch.getState()) {
-
+        while (hardware.launcherSwitch.getState() && isOpModeActive.get()) {
+            hardware.modules.childModule.module.clearBulkCache();
             RobotLog.ii("RobotImpl", "Waiting for launch switch");
 
             try {
-                Thread.sleep(100);
+                Thread.sleep(10);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
 
         hardware.moverDrive.setPower(0);
+        hardware.intakeDrive.setPower(0);
         while (!hardware.launchDrive.isAtTargetVelocity(21) && isOpModeActive.get()) {
             RobotLog.ii("RobotImpl", "Diff: " + Math.abs(hardware.launchDrive.getVelocity() - hardware.launchDrive.getTargetVelocity()));
             hardware.modules.clearBulkCache();
@@ -86,15 +65,12 @@ public class RobotImpl implements RobotInterface {
             throw new RuntimeException(e);
         }
 
-        hardware.moverDrive.setPower(0);
-        hardware.intakeDrive.setPower(0);
         hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
 
         int speedDips = 0;
         int atSpeedSamples = requiredAtSpeedSamples + 1;
         int underSpeedSamples = requiredAtSpeedSamples + 1;
 
-        //ADD: Timeout for launching
         ElapsedTime time = new ElapsedTime();
         time.reset();
         
@@ -116,34 +92,22 @@ public class RobotImpl implements RobotInterface {
                         //We were under speed
                         speedDips++;
 
-                        RobotLog.ii("RobotImpl", "speed dip logged # " + speedDips);
-
-                        if(speedDips >= numToLaunch) {
-                            break;
-                        }
-
-                        hardware.kickerServo.setPosition(0);
-                        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
-                        hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
-
-                        try {
-                            Thread.sleep(400);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-//                        while (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist && hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist2 && isOpModeActive.get()) {
-//                            RobotLog.ii("RobotImpl", "0: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
-//                            RobotLog.ii("RobotImpl", "0: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
-//                            RobotLog.ii("RobotImpl", "1: " + (hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) > MainBotHardware.ballInKickerDist));
-//                            RobotLog.ii("RobotImpl", "1: " + hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH));
-//                            RobotLog.ii("RobotImpl", "");
+                        RobotLog.ii("RobotImpl", "speed dip recovery logged # " + speedDips);
 //
-//                            try {
-//                                Thread.sleep(100);
-//                            } catch (InterruptedException e) {
-//                                throw new RuntimeException(e);
-//                            }
+//                        if(speedDips >= numToLaunch) {
+//                            break;
 //                        }
+
+                        while (hardware.launcherSwitch.getState()) {
+                            hardware.modules.clearBulkCache();
+                            RobotLog.ii("RobotImpl", "Polled launcher switch");
+
+                            try {
+                                Thread.sleep(10);
+                            } catch (InterruptedException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }
 
                         hardware.moverDrive.setPower(0);
                         hardware.intakeDrive.setPower(0);
@@ -164,7 +128,15 @@ public class RobotImpl implements RobotInterface {
                     underSpeedSamples++;
                     RobotLog.ii("RobotImpl", "Under speed inc to " + underSpeedSamples);
                 } else {
-                    RobotLog.ii("RobotImpl", "Under speed");
+                    RobotLog.ii("RobotImpl", "Under speed Detected");
+
+                    if(speedDips >= (numToLaunch - 1)) {
+                        break;
+                    }
+
+                    hardware.kickerServo.setPosition(0);
+                    hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                    hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
                 }
 
                 hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);

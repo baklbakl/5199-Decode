@@ -29,8 +29,8 @@ public abstract class PipelineStarter extends OpenCvPipeline {
         StringBuilder sb = new StringBuilder();
         sb.append("FPS: ").append(camera.getFps()).append('\n');
         sb.append("Ms per frame processing: ").append(camera.getPipelineTimeMs()).append('\n');
-        sb.append("Ms per frame overhead: ").append(camera.getPipelineTimeMs()).append('\n');
-        sb.append("Ms per frame total: ").append(camera.getPipelineTimeMs());
+        sb.append("Ms per frame overhead: ").append(camera.getOverheadTimeMs()).append('\n');
+        sb.append("Ms per frame total: ").append(camera.getTotalFrameTimeMs());
         return sb.toString();
     }
 }

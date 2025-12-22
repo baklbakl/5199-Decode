@@ -2,8 +2,10 @@ package net.polarbub.ftc.tele;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.acmerobotics.roadrunner.ftc.RollingThreeMedian;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
@@ -81,16 +83,18 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
         public final ThreadSafeTracker<Double> launcherVelocityTracker;
         public final ThreadSafeTracker<Float> triggerControlTracker;
 
+        private ArrayList<Pair<String, Object>> telemetryData = new ArrayList<>();
+        private final Object telemetryLock = new Object();
+
         private final AtomicBoolean stop = new AtomicBoolean(false);
         private final LoopTimeCalculator timer = new LoopTimeCalculator();
         private final ElapsedTime runtime = new ElapsedTime();
 
         private double triggerControl = Double.NaN;
-
-        private ArrayList<Pair<String, Object>> telemetryData = new ArrayList<>();
-        private final Object telemetryLock = new Object();
-
         private double launcherTargetVelocity = 0;
+        private long startTime = -1;
+        private boolean lastVelocityZero = false;
+        private double lastSpinUpTime = 0;
         
         public ChildModuleControlThread() {
             launcherVelocityTracker = new ThreadSafeTracker<>(0.0, (targetVelocity) -> {
@@ -127,6 +131,10 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
             timer.reset();
             runtime.reset();
 
+            RollingThreeMedian velocityMedian = new RollingThreeMedian();
+            ElapsedTime lastPosTime = new ElapsedTime();
+            double lastPos = hardware.launchDrive.getCurrentPosition();
+
             while(!stop.get()) {
                 hardware.modules.childModule.module.clearBulkCache();
                 ArrayList<Pair<String, Object>> tempTelemetryData = new ArrayList<>();
@@ -135,15 +143,15 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
                     t.tick();
                 }
 
-                //FIX: Calculate our own velocities from position
                 double velocity = hardware.launchDrive.getVelocity();
+
                 long thisNanos = runtime.nanoseconds();
 
                 if(Double.isNaN(triggerControl)) {
                     if(launcherTargetVelocity == 0) {
                         hardware.launchDrive.setPower(0);
                     } else {
-                        hardware.launchDrive.setPower(((launcherTargetVelocity - velocity) * kP + (launcherTargetVelocity) * kV) / hardware.modules.childModule.voltageSensor.getVoltage() );
+                        hardware.launchDrive.setPower(((launcherTargetVelocity - velocity) * kP + (launcherTargetVelocity) * kV) / hardware.childVoltageSensor.getVoltage() / MainBotHardware.childResistorMultiplier);
                     }
 
                     if(launcherTargetVelocity != 0 && lastVelocityZero && startTime == -1) {
@@ -172,6 +180,7 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
                 }
 
                 tempTelemetryData.add(new ImmutablePair<>("Vel", hardware.launchDrive.getVelocity()));
+                tempTelemetryData.add(new ImmutablePair<>("Vel Calc", velocity));
                 tempTelemetryData.add(new ImmutablePair<>("Child Thread Timing", timer.toString()));
 
                 synchronized (telemetryLock) {
@@ -206,6 +215,9 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
     protected void init_internal() {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
+
+        hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        hardware.launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
         childThread = new ChildModuleControlThread();
 
@@ -263,10 +275,6 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
         childThread.start();
     }
 
-    private long startTime = -1;
-    private boolean lastVelocityZero = false;
-    private double lastSpinUpTime = 0;
-
     @Override
     protected void loop_internal() {
         //Check for changes of watched variables and run the handler if they did
@@ -278,7 +286,6 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
         mt.addData("Main thread timing",
                 timer.toString()
         );
-
         childThread.addTelemetryData(mt);
 
         //These scale the graph window in the dashboard

@@ -3,6 +3,8 @@ package net.polarbub.ftc.hardware;
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.LazyImu;
 import com.qualcomm.hardware.bosch.BNO055IMUNew;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuadImpl;
 import com.qualcomm.hardware.lynx.LynxEmbeddedBNO055IMUNew;
 import com.qualcomm.hardware.lynx.commands.core.LynxFirmwareVersionManager;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
@@ -24,12 +26,14 @@ public class MainBotHardware {
     public static int motorVelocityTolerance = 50;
     public static double restingServoPos = 0.5;
     public static double moverDrivePower = 0.85;
-    public static double kickerServoUpPos = 0.7;
+    public static double kickerServoUpPos = 0.6;
     public static double inIntakePower = 1;
-    public static long teleOpLauncherNoVisionVelocity = 1460;
+    public static long teleOpLauncherNoVisionVelocity = -1460;
 
     public static double launcherKV = 0.0056;
     public static double launcherKP = 0.05;
+
+    public static double childResistorMultiplier = 3.19;
 
     //
     // Options
@@ -93,6 +97,8 @@ public class MainBotHardware {
 
     public final Servo kickerServo;
 
+    public final AnalogInput childVoltageSensor;
+
 //    public final RevColorSensorV3 launcherColorDistSensor;
 //    public final RevColorSensorV3 launcherColorDistSensor2;
     public final DigitalChannel launcherSwitch;
@@ -140,11 +146,11 @@ public class MainBotHardware {
         moverDrive = child.createDcMotor(moverDriveID);
 
         launchDrive = child.createDcMotor(launchDriveID);
-//        launchDrive.setDirection(DcMotorSimple.Direction.REVERSE);
-//        launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
+        launchDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+        launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-//        launchDrive.setVelocity(0);
-//        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        launchDrive.setVelocity(0);
+//        launchDrive.setMode(DcMotor.RunMode./RUN_USING_ENCODER);
 //
         kickerServo = child.createServo(kickerServoID);
         kickerServo.setPosition(0);
@@ -198,5 +204,6 @@ public class MainBotHardware {
         webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
 
         launcherSwitch = child.createDigitalChannel(0);
+        childVoltageSensor = child.createAnalogInput(0);
     }
 }

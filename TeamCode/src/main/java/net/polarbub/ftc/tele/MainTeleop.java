@@ -9,6 +9,7 @@ import net.polarbub.ftc.auto.vision.AprilTagDetectionPipeline;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.Alliance;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
+import net.polarbub.ftc.lib.LoopTimeCalculator;
 import net.polarbub.ftc.lib.TimedEvent;
 import net.polarbub.ftc.lib.optiondriver.BooleanOption;
 import net.polarbub.ftc.lib.optiondriver.EnumOption;
@@ -20,13 +21,11 @@ import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.openftc.apriltag.AprilTagDetection;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.Supplier;
 
 import static java.lang.Math.abs;
 
@@ -59,6 +58,7 @@ public class MainTeleop extends FastIterativeOpMode {
     private OptionDriver optionDriver;
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private List<TimedEvent> timedEvents = new ArrayList<>();
+    private LoopTimeCalculator timer = new LoopTimeCalculator();
 
     private AprilTagDetectionPipeline pipeline;
 
@@ -79,70 +79,6 @@ public class MainTeleop extends FastIterativeOpMode {
     public Boolean runVision = true;
     public Boolean visionDebugInfo = true;
     public Alliance alliance = Alliance.lastAlliance;
-
-//    private enum VisionDetectionState {
-//        TAG_NOT_FOUND,
-//        OUT_OF_RANGE,
-//        IN_RANGE
-//    }
-//
-//    private class VisionDetectorResult {
-//        RevBlinkinLedDriver.BlinkinPattern
-//    }
-//
-//    private void processAprilTagResults() {
-//        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
-//
-//        StringBuilder visionDebugSb = new StringBuilder();
-//
-//        visionDebugSb.append("Target ID: ");
-//        visionDebugSb.append(aprilTagID).append('\n');
-//
-//        AprilTagDetection targetDetection = null;
-//        if (detections != null && !detections.isEmpty()) {
-//            for (AprilTagDetection d : detections) {
-//                if (d.id == aprilTagID) {
-//                    targetDetection = d;
-//                    break;
-//                }
-//            }
-//
-//            visionDebugSb.append("Detected ").append(detections.size()).append("april tags\n");
-//            if (targetDetection != null) {
-//                visionDebugSb.append("Target Found!\n");
-//                visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
-//
-//                double groundDist = AprilTagDetectionPipeline.getGroundDistance(targetDetection.pose);
-//                visionDebugSb.append("Ground distance: ").append(groundDist);
-//                double visionTargetSpeed = launchSpeedFromDist(groundDist);
-//                visionDebugSb.append("Launcher Vision Target Velocity: ");
-//                visionDebugSb.append(visionTargetSpeed).append("\n");
-//
-//            } else {
-//                visionDebugSb.append("Target not found in frame\n");
-//            }
-//
-//        } else {
-//            visionDebugSb.append("No detections\n");
-//        }
-//
-//        visionDebugSb.append(pipeline.toString()).append('\n');
-//
-//        if(visionDebugInfo) {
-//            visionTelemetry = visionDebugSb.toString();
-//        }
-//    }
-//
-//    private RevBlinkinLedDriver.BlinkinPattern getLauncherStoppedPattern() {
-//        switch(launcherControlMethod) {
-//            case MANUAL:
-//                return MainBotHardware.Patterns.wrongSpeedNoVisionPattern;
-//            case VISION:
-//                return MainBotHardware.Patterns.wrongSpeedNoVisionPattern;
-//            default:
-//                throw new IllegalStateException("Invalid launcher control method \"" + launcherControlMethod + "\" to get launcher stopped pattern");
-//        }
-//    }
 
     // Running
     //   When in vision control the launcher speed will be controlled by vision.
@@ -190,6 +126,116 @@ public class MainTeleop extends FastIterativeOpMode {
     /*
      * Code to run ONCE when the driver hits INIT
      */
+
+    public enum VisionComputationResultState {
+        NO_TAG_FOUND,
+        OUT_OF_RANGE,
+        IN_RANGE
+    }
+
+    private class VisionComputationResult {
+         public final VisionComputationResultState state;
+         public final double speed;
+
+        private VisionComputationResult(VisionComputationResultState state, double speed) {
+            this.state = state;
+            this.speed = speed;
+        }
+    }
+
+    private VisionComputationResult computeLauncherSpeed() {
+        if(!runVision) {
+            return null;
+        }
+
+        double visionTargetSpeed = 0;
+        VisionComputationResultState state = VisionComputationResultState.NO_TAG_FOUND;
+
+        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
+
+        StringBuilder visionDebugSb = new StringBuilder();
+
+        visionDebugSb.append("Target ID: ");
+        visionDebugSb.append(aprilTagID).append('\n');
+
+        AprilTagDetection targetDetection = null;
+        if (detections != null && !detections.isEmpty()) {
+            for (AprilTagDetection d : detections) {
+                if (d.id == aprilTagID) {
+                    targetDetection = d;
+                    break;
+                }
+            }
+
+            visionDebugSb.append("Detected ").append(detections.size()).append("april tags\n");
+            if (targetDetection != null) {
+                visionDebugSb.append("Target Found!\n");
+                visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
+
+                double groundDist = AprilTagDetectionPipeline.getGroundDistance(targetDetection.pose);
+                visionDebugSb.append("Ground distance: ").append(groundDist).append("\n");
+                visionTargetSpeed = launchSpeedFromDist(groundDist);
+                visionDebugSb.append("Launcher Vision Target Velocity: ");
+                visionDebugSb.append(visionTargetSpeed).append("\n");
+
+                if (Double.isNaN(visionTargetSpeed)) {
+                    state = VisionComputationResultState.OUT_OF_RANGE;
+                } else {
+                    state = VisionComputationResultState.IN_RANGE;
+                }
+
+            } else {
+                visionDebugSb.append("Target not found in frame\n");
+            }
+
+        } else {
+            visionDebugSb.append("No detections\n");
+        }
+
+        visionDebugSb.append(pipeline.getTimingTelemetry()).append('\n');
+
+        if(visionDebugInfo) {
+            visionTelemetry = visionDebugSb.toString();
+        }
+
+        return new VisionComputationResult(state, visionTargetSpeed);
+    }
+
+    private void updateLaunchSpeedAndBlinkinVision(VisionComputationResult result) {
+        updateLaunchSpeedAndBlinkinVision(result, false);
+    }
+
+    private void updateLaunchSpeedAndBlinkinVision(VisionComputationResult result, boolean forceStart) {
+        if(launcherControlMethod != LauncherControlMethod.VISION) {
+            throw new RuntimeException("Tried to run a vision only function in non vision control mode");
+        }
+
+        double targetSpeed = 0;
+        switch (result.state) {
+            case NO_TAG_FOUND:
+                targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
+                hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
+
+                break;
+            case OUT_OF_RANGE:
+                targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
+                hardware.blinkin.setPattern(MainBotHardware.Patterns.outOfLaunchRange);
+
+                break;
+            case IN_RANGE:
+                targetSpeed = result.speed;
+                if((hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) || forceStart) {
+                    hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
+                } else {
+                    hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
+                }
+                break;
+        }
+
+        if(hardware.launchDrive.getTargetVelocity() != 0) {
+            hardware.launchDrive.setVelocity(targetSpeed);
+        }
+    }
 
     public void init_internal() {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
@@ -247,19 +293,16 @@ public class MainTeleop extends FastIterativeOpMode {
             ));
 
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
-                double power;
                 if(left_bumper == right_bumper) {
-                    power = 0;
+                    hardware.moverDrive.setPower(0);
                 } else if(left_bumper) {
-                    power = MainBotHardware.moverDrivePower;
+                    if(hardware.kickerServo.getPosition() == 0) {
+                        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                    }
                 } else if(right_bumper) {
-                    power = -MainBotHardware.moverDrivePower;
+                    hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
                 } else {
                     throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
-                }
-
-                if(hardware.kickerServo.getPosition() == 0 || power == 0) {
-                    hardware.moverDrive.setPower(power);
                 }
             }));
 
@@ -277,22 +320,26 @@ public class MainTeleop extends FastIterativeOpMode {
                     if(launcherControlMethod != LauncherControlMethod.MANUAL) {
                         //FIX: Make this properly deal with being in vision mode
                         if(hardware.launchDrive.getTargetVelocity() == 0) {
-                            hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
+                            if(launcherControlMethod == LauncherControlMethod.VISION) {
+                                updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed(), true);
+                            } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
+                                hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
+                            } else {
+                                throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
+                            }
+
+
                         } else {
                             hardware.launchDrive.setVelocity(0);
+                            if(launcherControlMethod == LauncherControlMethod.VISION) {
+                                updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
+                            } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
+                                hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
+                            } else {
+                                throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
+                            }
 
-//                            switch(launcherControlMethod) {
-//                                case MANUAL:
-//                                    hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-//                                    break;
-//                                case VISION:
-//                                    if(hardware.blinkin.setPattern();
-//
-//                                    break;
-//                                default:
-//                                    throw new IllegalStateException("Invalid launcher control method \"" + launcherControlMethod + "\"");
-//                            }
-
+                            updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
                             hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
                         }
                     }
@@ -301,13 +348,13 @@ public class MainTeleop extends FastIterativeOpMode {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
                 if(circle) {
-//                    if((hardware.launcherColorDistSensor.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist || hardware.launcherColorDistSensor2.getDistance(DistanceUnit.INCH) < MainBotHardware.ballInKickerDist2)
-//                            && hardware.launchDrive.isAtTargetVelocity()
-//                            && hardware.launchDrive.getTargetVelocity() != 0
-//                    ) {
-//                        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
-//                        hardware.moverDrive.setPower(0);
-//                    }
+                    if(!hardware.launcherSwitch.getState()
+                            && hardware.launchDrive.isAtTargetVelocity()
+                            && hardware.launchDrive.getTargetVelocity() != 0
+                    ) {
+                        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
+                        hardware.moverDrive.setPower(0);
+                    }
                 } else if(!gamepad1.options) {
                     hardware.kickerServo.setPosition(0);
                 }
@@ -334,8 +381,8 @@ public class MainTeleop extends FastIterativeOpMode {
                         hardware.launchDrive.setVelocity(0);
                     } else if(runVision) {
                         launcherControlMethod = LauncherControlMethod.VISION;
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
                         hardware.launchDrive.setVelocity(0);
+                        updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
                     }
                 }
             }));
@@ -366,73 +413,10 @@ public class MainTeleop extends FastIterativeOpMode {
 //            System.out.println("Run vision: " + runVision);
 //            System.out.println("Run vision deb info: " + visionDebugInfo);
 
-            double visionTargetSpeed = Double.NaN;
-            double groundDist = Double.NaN;
-            if(runVision) {
-                ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
-
-                StringBuilder visionDebugSb = new StringBuilder();
-
-                visionDebugSb.append("Target ID: ");
-                visionDebugSb.append(aprilTagID).append('\n');
-
-                AprilTagDetection targetDetection = null;
-                if (detections != null && !detections.isEmpty()) {
-                    for (AprilTagDetection d : detections) {
-                        if (d.id == aprilTagID) {
-                            targetDetection = d;
-                            break;
-                        }
-                    }
-
-                    visionDebugSb.append("Detected ").append(detections.size()).append("april tags\n");
-                    if (targetDetection != null) {
-                        visionDebugSb.append("Target Found!\n");
-                        visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
-
-                        groundDist = AprilTagDetectionPipeline.getGroundDistance(targetDetection.pose);
-                        visionDebugSb.append("Ground distance: ").append(groundDist).append("\n");
-                        visionTargetSpeed = launchSpeedFromDist(groundDist);
-                        visionDebugSb.append("Launcher Vision Target Velocity: ");
-                        visionDebugSb.append(visionTargetSpeed).append("\n");
-
-                    } else {
-                        visionDebugSb.append("Target not found in frame\n");
-                    }
-
-                } else {
-                    visionDebugSb.append("No detections\n");
-                }
-
-                visionDebugSb.append(pipeline.getTimingTelemetry()).append('\n');
-
-                if(visionDebugInfo) {
-                    visionTelemetry = visionDebugSb.toString();
-                }
-            }
+            VisionComputationResult result = computeLauncherSpeed();
 
             if(launcherControlMethod == LauncherControlMethod.VISION) {
-                double targetSpeed = 0;
-                if(Double.isNaN(groundDist)) {
-                    targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
-                    hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
-
-                } else if(Double.isNaN(visionTargetSpeed)){
-                    targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
-                    hardware.blinkin.setPattern(MainBotHardware.Patterns.outOfLaunchRange);
-
-                } else {
-                    targetSpeed = visionTargetSpeed;
-                    if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
-                    } else {
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
-                    }
-                }
-
-                if(hardware.launchDrive.getTargetVelocity() != 0) {
-                    hardware.launchDrive.setVelocity(targetSpeed);
-                }
+                updateLaunchSpeedAndBlinkinVision(result);
 
             } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
                 if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
@@ -484,15 +468,13 @@ public class MainTeleop extends FastIterativeOpMode {
         }
 
         runtime.reset();
+        timer.reset();
     }
 
     /*
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
 
-    private long lastNanos = 0;
-    private final long[] loopTimes = new long[5];
-    private int loopTimesPos = 0;
     private String visionTelemetry = "";
 
     public void loop_internal() {
@@ -514,21 +496,8 @@ public class MainTeleop extends FastIterativeOpMode {
             telemetry.addLine(visionTelemetry);
         }
 
-        //Average the last five iterations of the loop to minimize jumping around
-        loopTimes[loopTimesPos] = thisNanos - lastNanos;
-        loopTimesPos++;
-        loopTimesPos %= loopTimes.length;
-        long averageNanos = 0;
-        for(long time : loopTimes) {
-            averageNanos += time;
-        }
-        averageNanos /= loopTimes.length;
-        lastNanos = thisNanos;
-
-        telemetry.addData("Status",
-                "Loop Speed: " + 1.0d/(averageNanos/1000000000.0d) + " Hz\n" +
-                        "Loop Time: " + averageNanos / 1000000000.0d + "s\n"
-        );
+        timer.tick();
+        telemetry.addData("Loop Timings", timer);
         telemetry.update();
     }
 

@@ -24,6 +24,7 @@ public class SensorReader extends FastIterativeOpMode {
     private final ElapsedTime runtime = new ElapsedTime();
     private LynxModuleInitializer hardware;
     private final List<RevColorSensorV3> colorSensors = new ArrayList<>();
+    private final List<VoltageSensor> voltageSensors = new ArrayList<>();
 
     protected void init_internal() {
         hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
@@ -46,6 +47,10 @@ public class SensorReader extends FastIterativeOpMode {
             analogInputs.add(hardware.parentModule.createAnalogInput(i));
         }
 
+        for(int i = 0; i < LynxConstants.NUMBER_OF_ANALOG_INPUTS; i++) {
+            analogInputs.add(hardware.childModule.createAnalogInput(i));
+        }
+
         for(int i = 0; i < LynxConstants.NUMBER_OF_DIGITAL_IOS; i++) {
             DigitalChannel channel = hardware.parentModule.createDigitalChannel(i);
             channel.setMode(DigitalChannel.Mode.INPUT);
@@ -57,6 +62,9 @@ public class SensorReader extends FastIterativeOpMode {
             channel.setMode(DigitalChannel.Mode.INPUT);
             digitalChannels.add(channel);
         }
+
+        voltageSensors.add(hardware.parentModule.voltageSensor);
+        voltageSensors.add(hardware.childModule.voltageSensor);
 
 //        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensorI2CBus), true));
 //        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensor2I2CBus), true));
@@ -104,6 +112,16 @@ public class SensorReader extends FastIterativeOpMode {
         i = 0;
         for(AnalogInput input : analogInputs) {
             sb.append("Analog ");
+            sb.append(i);
+            sb.append(": ");
+            sb.append(input.getVoltage());
+            sb.append("V\n");
+            i++;
+        }
+
+        i = 0;
+        for(VoltageSensor input : voltageSensors) {
+            sb.append("Voltage ");
             sb.append(i);
             sb.append(": ");
             sb.append(input.getVoltage());

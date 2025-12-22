@@ -9,15 +9,12 @@ import java.lang.Math;
 import java.util.function.Function;
 
 public class SplitAuto {
-    public static int distSensorPollInterval = 50;
-    public static int distSensorStartWait = 100;
-
     public static Pose2d obeliskPose = new Pose2d(-48, 30, Math.toRadians(280));
     public static Pose2d launchPos = new Pose2d(-25, 22, Math.toRadians(132));
-    public static double launch1TicksPerSecAuto = 1400;
-    public static double launch1TicksPerSecAutoBlue = 1400;
-    public static double launch2TicksPerSecAuto = 1400;
-    public static double launch2TicksPerSecAutoBlue = 1400;
+    public static double launch1TicksPerSecAuto = -1400;
+    public static double launch1TicksPerSecAutoBlue = -1400;
+    public static double launch2TicksPerSecAuto = -1400;
+    public static double launch2TicksPerSecAutoBlue = -1400;
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
