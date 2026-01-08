@@ -5,7 +5,7 @@ and modified, but modifications are not allowed to be used in comp, so please do
 To be able to use the extracted libraries instead of the aar ones the TeamCode and FTCRobotController subprojects have an aarLibs and an extractedLibs flavor. The build flavor can be changed by changing the build variant by going to Build -> Select build variant. The debug build type should be used along with whatever flavor.
 
 OnBotJava and Blocks were disabled to save space. As well, all the unnecessary .wav files have been removed to save space. 
-In total the extracted libs flavor is about 22 MB while the aar one is about 56 MB. The aar one without 32-bit libraries is about 46 MB.
+In total the extracted libs flavor is about 19.7 MB while the aar one is about 56 MB. The aar one without 32-bit libraries is about 46 MB.
 This cuts upload time in at least half. See the main `README.md` for how to make a 32-bit build
 
 [//]: # (ADD: Change the extracted libs to be a git submodule of OpenFTC extracted RC)

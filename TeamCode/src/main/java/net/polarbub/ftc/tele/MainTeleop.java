@@ -1,3 +1,4 @@
+//FIX: Move all the code out of net.polarbub to org.ducktapeandaprayer
 package net.polarbub.ftc.tele;
 
 import com.qualcomm.hardware.lynx.LynxModule;
@@ -25,6 +26,7 @@ import org.openftc.apriltag.AprilTagDetection;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static java.lang.Math.abs;
@@ -37,14 +39,14 @@ public class MainTeleop extends FastIterativeOpMode {
     public static long launcherVelocityCheckInterval = 200;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
-    public static List<Pair<Double, Double>> launchSpeedMapping = Arrays.asList(
+    //MAKE SURE TO SYNCHRONIZE WHEN USING!
+    public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
                 new MutablePair<>(29.0, 1410.0),
                 new MutablePair<>(36.0, 1420.0),
                 new MutablePair<>(46.0, 1480.0),
                 new MutablePair<>(53.0, 1540.0),
                 new MutablePair<>(60.0, 1600.0)
-            );
-
+            ));
 
     //
     // Options
@@ -62,7 +64,6 @@ public class MainTeleop extends FastIterativeOpMode {
 
     private AprilTagDetectionPipeline pipeline;
 
-    private Boolean runLauncher = false;
     private int aprilTagID;
 
     private enum LauncherControlMethod {
@@ -95,31 +96,35 @@ public class MainTeleop extends FastIterativeOpMode {
     //   When in preset mode the led color is set to the wrongspeedpreset color
 
     private static double launchSpeedFromDist(double dist) {
-        Pair<Double, Double> lowestPair = launchSpeedMapping.get(0);
-        if(dist < lowestPair.getKey()) {
-            return Double.NaN;
+        synchronized (launchSpeedMapping) {
+            Pair<Double, Double> lowestPair = launchSpeedMapping.get(0);
+            if(dist < lowestPair.getKey()) {
+                return Double.NaN;
+            }
+
+
+            for(int i = 0; i < launchSpeedMapping.size(); i++) {
+                Pair<Double, Double> p = launchSpeedMapping.get(i);
+                if(dist == p.getKey()) {
+                    return p.getValue();
+                }
+
+                if(dist < p.getKey()) {
+                    //Previous one must have been greater, so we know we are between the two closest points,
+                    // so we interpolate with a weighted average
+                    Pair<Double, Double> last = launchSpeedMapping.get(i-1);
+                    double deltaDist = p.getKey() - last.getKey();
+                    double offset = dist - last.getKey();
+                    double weightLast = (deltaDist - offset) / deltaDist;
+                    double weightThis = offset / deltaDist;
+
+
+                    return weightLast * last.getValue() + weightThis * p.getValue();
+                }
+            }
         }
 
 
-        for(int i = 0; i < launchSpeedMapping.size(); i++) {
-            Pair<Double, Double> p = launchSpeedMapping.get(i);
-            if(dist == p.getKey()) {
-                return p.getValue();
-            }
-
-            if(dist < p.getKey()) {
-                //Previous one must have been greater, so we know we are between the two closest points,
-                // so we interpolate with a weighted average
-                Pair<Double, Double> last = launchSpeedMapping.get(i-1);
-                double deltaDist = p.getKey() - last.getKey();
-                double offset = dist - last.getKey();
-                double weightLast = (deltaDist - offset) / deltaDist;
-                double weightThis = offset / deltaDist;
-
-
-                return weightLast * last.getValue() + weightThis * p.getValue();
-            }
-        }
         return Double.NaN;
     }
 
@@ -318,7 +323,6 @@ public class MainTeleop extends FastIterativeOpMode {
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean cross) -> {
                 if(cross) {
                     if(launcherControlMethod != LauncherControlMethod.MANUAL) {
-                        //FIX: Make this properly deal with being in vision mode
                         if(hardware.launchDrive.getTargetVelocity() == 0) {
                             if(launcherControlMethod == LauncherControlMethod.VISION) {
                                 updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed(), true);

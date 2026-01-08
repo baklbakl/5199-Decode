@@ -15,6 +15,7 @@ android {
         ignoreAssetsPatterns.add("*.eot")
         ignoreAssetsPatterns.add("*.svg")
         ignoreAssetsPatterns.add("*.ttf")
+        ignoreAssetsPatterns.add("*.map")
     }
 }
 
