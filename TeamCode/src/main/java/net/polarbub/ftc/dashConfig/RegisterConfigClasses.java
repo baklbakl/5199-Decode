@@ -23,8 +23,6 @@ import org.apache.commons.lang3.tuple.MutablePair;
 import org.firstinspires.ftc.ftccommon.external.OnCreate;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
 
 public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
@@ -37,7 +35,8 @@ public class RegisterConfigClasses {
             LauncherInternalControlTuner.class
     };
 
-    private static List<Double> testList = null;
+//    private static List<Double> testList = null;
+//    private static List<MutablePair<MutablePair<Double, Boolean>, Integer>> testList2 = null;
 
     @OnCreate
     public static void start(Context context) {
@@ -62,8 +61,6 @@ public class RegisterConfigClasses {
             throw new RuntimeException(e);
         }
 
-
-//        FtcDashboard.suppressOpMode();
         FtcDashboard.start(context);
         FtcDashboard dash = FtcDashboard.getInstance();
         dash.withConfigRoot(customVariable -> {
@@ -72,27 +69,35 @@ public class RegisterConfigClasses {
                     customVariable.putVariable(clazz.getSimpleName(), ReflectionConfig.createVariableFromClass(clazz));
                 }
 
-//                CustomVariable teleOpVariable = ReflectionConfig.createVariableFromClass(MainTeleop.class);
+                CustomVariable teleOpVariable = ReflectionConfig.createVariableFromClass(MainTeleop.class);
                 ListConfigVariable<MutablePair<Double, Double>> listConfigVar = new ListConfigVariable<>(
-                        MainTeleop.launchSpeedMapping,
+                        MainBotHardware.launchSpeedMapping,
                         () -> new MutablePair<>(0.0, 0.0),
                         new MutablePair<>(0.0, 0.0));
-                customVariable.putVariable("launchSpeedMapping", listConfigVar);
+                teleOpVariable.putVariable("launchSpeedMapping", listConfigVar);
+                customVariable.putVariable("MainTeleop", teleOpVariable);
 
-                testList = new ArrayList<>();
-                testList.add(1.0);
-                testList.add(2.0);
-                testList.add(3.0);
-
-                ListConfigVariable<Double> testVar = new ListConfigVariable<>(
-                        testList,
-                        () -> 0.0,
-                        0.0);
-                customVariable.putVariable("testList", testVar);
-
-//                CustomVariable teleOpVariable = new CustomVariable();
-//                teleOpVariable.putVariable("launchSpeedMapping", listConfigVar);
-//                customVariable.putVariable(MainTeleop.class.getSimpleName(), teleOpVariable);
+//                testList = new ArrayList<>();
+//                testList.add(1.0);
+//                testList.add(2.0);
+//                testList.add(3.0);
+//
+//                ListConfigVariable<Double> testVar = new ListConfigVariable<>(
+//                        testList,
+//                        () -> 0.0,
+//                        0.0);
+//                customVariable.putVariable("testList", testVar);
+//
+//                testList2 = new ArrayList<>();
+//                testList2.add(new MutablePair<>(new MutablePair<>(0.0, false), 0));
+//                testList2.add(new MutablePair<>(new MutablePair<>(1.0, true), 1));
+//                testList2.add(new MutablePair<>(new MutablePair<>(2.0, false), 2));
+//
+//                ListConfigVariable<MutablePair<MutablePair<Double, Boolean>, Integer>> testVar2 = new ListConfigVariable<>(
+//                        testList2,
+//                        () -> new MutablePair<>(new MutablePair<>(0.0, false), 0),
+//                        new MutablePair<>(new MutablePair<>(0.0, false), 0));
+//                customVariable.putVariable("testVar2", testVar2);
 
                 dash.updateConfig();
             } catch (NoClassDefFoundError ignored) {

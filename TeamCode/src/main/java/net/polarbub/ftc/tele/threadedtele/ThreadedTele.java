@@ -4,11 +4,13 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import net.polarbub.ftc.MainBotConfig;
 import net.polarbub.ftc.hardware.MainBotHardware;
 import net.polarbub.ftc.lib.FastIterativeOpMode;
+import net.polarbub.ftc.lib.LoopTimeCalculator;
 
 @TeleOp(group = MainBotConfig.opmodeGroupName)
 public class ThreadedTele extends FastIterativeOpMode {
     public MainBotHardware hardware = null;
     private ControlHubThread controlHubThread = null;
+    private LoopTimeCalculator timer = new LoopTimeCalculator();
 
     @Override
     protected void init_internal() {
@@ -24,12 +26,17 @@ public class ThreadedTele extends FastIterativeOpMode {
     @Override
     protected void start_internal() {
         controlHubThread.start();
+        timer.reset();
     }
 
     @Override
     protected void loop_internal() {
+        controlHubThread.addTelemetryTo(telemetry);
+        telemetry.addData("Main Loop Timings", timer.toString());
         telemetry.addData("Control Hub Loop Timings", controlHubThread.loopTimes);
-        telemetry.addLine(controlHubThread.getAndClearTelemetry());
+
+        timer.tick();
+
         try {
             Thread.sleep(1);
         } catch (InterruptedException e) {

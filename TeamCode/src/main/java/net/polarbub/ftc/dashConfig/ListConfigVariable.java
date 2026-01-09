@@ -1,5 +1,6 @@
 package net.polarbub.ftc.dashConfig;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.ValueProvider;
 import com.acmerobotics.dashboard.config.reflection.FieldProvider;
 import com.acmerobotics.dashboard.config.variable.BasicVariable;
@@ -7,19 +8,18 @@ import com.acmerobotics.dashboard.config.variable.ConfigVariable;
 import com.acmerobotics.dashboard.config.variable.CustomVariable;
 import com.acmerobotics.dashboard.config.variable.VariableType;
 import com.qualcomm.robotcore.util.RobotLog;
-import org.apache.commons.lang3.tuple.MutablePair;
 
 import java.lang.reflect.*;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 public class ListConfigVariable<T> extends CustomVariable {
     private final transient List<T> list;
     private final transient T nonNullT;
     private int lastListLen = 0;
 
-    private static <TT> ConfigVariable<?> createVariableGeneric(Class<TT> klass, TT value, TT nonNullObj, ValueProvider<TT> basicProvider) {
+    private static <TT> ConfigVariable<?> createVariableGeneric(TT value, TT nonNullObj, ValueProvider<TT> basicProvider) {
+        Class<TT> klass = (Class<TT>) nonNullObj.getClass();
         VariableType type = VariableType.fromClass(klass);
         switch (type) {
             case BOOLEAN:
@@ -36,6 +36,8 @@ public class ListConfigVariable<T> extends CustomVariable {
                 }
 
                 CustomVariableEx<TT> customVariable = new CustomVariableEx<>(value, nonNullObj);
+
+                //ADD: Array support to list config variable
                 /*if (fieldClass.isArray()) {
                     for (int i = 0; i < Array.getLength(value); i++) {
                         customVariable.putVariable(Integer.toString(i),
@@ -59,7 +61,7 @@ public class ListConfigVariable<T> extends CustomVariable {
                                 throw new NullPointerException("No component of the non null object may be null");
                             }
 
-                            customVariable.putVariable(name, createVariableGeneric((Class<Object>) nonNullNestedValue.getClass(), nestedField.get(value), nonNullNestedValue, new FieldProvider<>(nestedField, value)));
+                            customVariable.putVariable(name, createVariableGeneric(nestedField.get(value), nonNullNestedValue, new FieldProvider<>(nestedField, value)));
 
                         } catch (IllegalAccessException e) {
                             throw new RuntimeException(e);
@@ -74,16 +76,16 @@ public class ListConfigVariable<T> extends CustomVariable {
         }
     }
 
-    public static ConfigVariable<?> createVariableFromFieldKnownType(Field field, Class<?> fieldClass, Object parent, Object nonNullParent) {
+    public static ConfigVariable<?> createVariableFromFieldKnownType(Field field, Object parent, Object nonNullParent) {
         try {
-            return createVariableGeneric((Class<Object>) fieldClass, field.get(parent), field.get(nonNullParent), new FieldProvider<Object>(field, parent));
+            return createVariableGeneric(field.get(parent), field.get(nonNullParent), new FieldProvider<>(field, parent));
         } catch (IllegalAccessException e) {
             throw new RuntimeException(e);
         }
     }
 
     private ConfigVariable<?> createVariableFromListIndex(int i) {
-        return createVariableGeneric((Class<T>) nonNullT.getClass(), list.get(i), nonNullT, new ValueProvider<T>() {
+        return createVariableGeneric(list.get(i), nonNullT, new ValueProvider<T>() {
             @Override
             public T get() {
                 return list.get(i);
@@ -109,18 +111,6 @@ public class ListConfigVariable<T> extends CustomVariable {
 
     private void refresh() {
         synchronized (list) {
-//            try {
-//                    Field variablesField = super.getClass().getDeclaredField("variables");
-//                    variablesField.setAccessible(true);
-//                    Map<String, ConfigVariable> variables = (Map<String, ConfigVariable>) variablesField.get((CustomVariable) this);
-//                    variables.clear();
-//
-//                    createVariables();
-//            } catch (NoSuchFieldException | IllegalAccessException e) {
-//                throw new RuntimeException(e);
-//            }
-
-
             if (lastListLen > list.size()) {
                 for (int i = list.size(); i < lastListLen; i++) {
                     super.removeVariable(String.valueOf(i));
@@ -132,22 +122,14 @@ public class ListConfigVariable<T> extends CustomVariable {
                 }
             }
 
-            //Now we have correct number of vars
-
-//                Map<String, ConfigVariable> variables = ((Map<String, ConfigVariable>) super.getValue());
-//
-//                for (String key : variables.keySet()) {
-//
-//                }
-
             for(int i = 0; i < list.size(); i++) {
-                ConfigVariable variable = super.getVariable(String.valueOf(i));
+                ConfigVariable<?> variable = super.getVariable(String.valueOf(i));
                 if(variable.getType() == VariableType.CUSTOM) {
                     if(!(variable instanceof CustomVariableEx)) {
                         throw new RuntimeException("Nested Custom Variables must be of type CustomVariableEx");
                     }
 
-                    CustomVariableEx customVar = (CustomVariableEx) variable;
+                    CustomVariableEx<?> customVar = (CustomVariableEx<?>) variable;
 
                     if(customVar.objectReference != list.get(i)) {
                         super.removeVariable(String.valueOf(i));
@@ -158,6 +140,8 @@ public class ListConfigVariable<T> extends CustomVariable {
                     }
                 }
             }
+
+            lastListLen = list.size();
         }
     }
 
@@ -165,116 +149,71 @@ public class ListConfigVariable<T> extends CustomVariable {
         list = l;
         this.nonNullT = nonNullTArg;
 
+        //TEST: Does change element count get reset back to zero correctly
         putVariable("Change element count", new BasicVariable<>(new ValueProvider<Integer>() {
+            private int resultToSend = 0;
+
             @Override
             public Integer get() {
-                return 0;
+                return resultToSend;
             }
 
             @Override
             public void set(Integer value) {
                 RobotLog.ii("ListConfigVariable", "Change element count: " + value);
-//                if(value < 0) {
-//                    value = -value;
-//                    if(list.size() < value) {
-//                        value = list.size();
-//                    }
-//
-//                    for(int i = 0; i < value; i++) {
-//                        list.remove(list.size() - 1);
-//                        //ADD: Remove variables
-//                    }
-//
-//                } else if(value > 0) {
-//                    for(int i = 0; i < value; i++) {
-//                        list.add(newElementSupplier.get());
-//                        //ADD: Put variables
-//                    }
-//                }
+                if(value < 0) {
+                    int absValue = -value;
+                    if(list.size() < absValue) {
+                        absValue = list.size();
+
+                    }
+
+                    for(int i = 0; i < absValue; i++) {
+                        list.remove(list.size() - 1);
+                    }
+
+                } else if(value > 0) {
+                    for(int i = 0; i < value; i++) {
+                        list.add(newElementSupplier.get());
+                    }
+                }
+
+                refresh();
+
+                resultToSend = value;
+                FtcDashboard.getInstance().updateConfig();
+                resultToSend = 0;
 
             }
         }));
 
-        putVariable("Log", new BasicVariable<>(new ButtonValueProvider(() -> {
-            synchronized (list) {
-                RobotLog.ii("ListConfigVariable", "{" + list.stream().map(Object::toString).collect(Collectors.joining(", ")) + "}");
-            }
-        })));
+        putVariable("Refresh", new BasicVariable<>(new ButtonValueProvider(this::refresh)));
 
-        putVariable("Add Element", new BasicVariable<>(new ButtonValueProvider(() -> {
-            synchronized (list) {
-                list.add(newElementSupplier.get());
-            }
-        })));
-
-        putVariable("Clear Element", new BasicVariable<>(new ButtonValueProvider(() -> {
-            synchronized (list) {
-                list.set(0, newElementSupplier.get());
-            }
-        })));
-
-        putVariable("Clear Field", new BasicVariable<>(new ButtonValueProvider(() -> {
-            synchronized (list) {
-                ((MutablePair<Double,Double>) list.get(0)).setLeft(0.0);
-            }
-        })));
-
-        putVariable("Refresh", new BasicVariable<>(new ButtonValueProvider(() -> {
-            synchronized (list) {
-//            try {
-//                    Field variablesField = super.getClass().getDeclaredField("variables");
-//                    variablesField.setAccessible(true);
-//                    Map<String, ConfigVariable> variables = (Map<String, ConfigVariable>) variablesField.get((CustomVariable) this);
-//                    variables.clear();
-//
-//                    createVariables();
-//            } catch (NoSuchFieldException | IllegalAccessException e) {
-//                throw new RuntimeException(e);
+//        putVariable("Log", new BasicVariable<>(new ButtonValueProvider(() -> {
+//            synchronized (list) {
+//                RobotLog.ii("ListConfigVariable", "{" + list.stream().map(Object::toString).collect(Collectors.joining(", ")) + "}");
 //            }
-
-
-                if (lastListLen > list.size()) {
-                    for (int i = list.size(); i < lastListLen; i++) {
-                        super.removeVariable(String.valueOf(i));
-                    }
-
-                } else if (lastListLen < list.size()) {
-                    for (int i = lastListLen; i < list.size(); i++) {
-                        super.putVariable(String.valueOf(i), createVariableFromListIndex(i));
-                    }
-                }
-
-                //Now we have correct number of vars
-
-//                Map<String, ConfigVariable> variables = ((Map<String, ConfigVariable>) super.getValue());
+//        })));
 //
-//                for (String key : variables.keySet()) {
+//        putVariable("Add Element", new BasicVariable<>(new ButtonValueProvider(() -> {
+//            synchronized (list) {
+//                list.add(newElementSupplier.get());
+//            }
+//        })));
 //
-//                }
-
-                for(int i = 0; i < list.size(); i++) {
-                    ConfigVariable variable = super.getVariable(String.valueOf(i));
-                    if(variable.getType() == VariableType.CUSTOM) {
-                        if(!(variable instanceof CustomVariableEx)) {
-                            throw new RuntimeException("Nested Custom Variables must be of type CustomVariableEx");
-                        }
-
-                        CustomVariableEx customVar = (CustomVariableEx) variable;
-
-                        if(customVar.objectReference != list.get(i)) {
-                            super.removeVariable(String.valueOf(i));
-                            super.putVariable(String.valueOf(i), createVariableFromListIndex(i));
-
-                        } else {
-                            customVar.checkChildrenUpToDate();
-                        }
-                    }
-                }
-            }
-        })));
+//        putVariable("Clear Element", new BasicVariable<>(new ButtonValueProvider(() -> {
+//            synchronized (list) {
+//                list.set(0, newElementSupplier.get());
+//            }
+//        })));
+//
+//        putVariable("Clear Field", new BasicVariable<>(new ButtonValueProvider(() -> {
+//            synchronized (list) {
+//                ((MutablePair<MutablePair<Double, Boolean>,Integer>) list.get(0)).setRight(0);
+//                ((MutablePair<MutablePair<Double, Boolean>,Integer>) list.get(0)).setLeft(new MutablePair<>(0.0, true));
+//            }
+//        })));
 
         createVariables();
     }
-
-    //TEST: Does update need to be overridden here?
 }

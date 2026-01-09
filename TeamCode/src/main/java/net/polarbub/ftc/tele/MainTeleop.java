@@ -20,13 +20,10 @@ import net.polarbub.ftc.lib.variablewatcher.SingleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.TripleVariableWatcher;
 import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
-import org.apache.commons.lang3.tuple.MutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 import org.openftc.apriltag.AprilTagDetection;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 import static java.lang.Math.abs;
@@ -37,16 +34,6 @@ public class MainTeleop extends FastIterativeOpMode {
     // Dashboard options
     //
     public static long launcherVelocityCheckInterval = 200;
-
-    //MUST BE IN ORDER OF DISTANCE!!!!!
-    //MAKE SURE TO SYNCHRONIZE WHEN USING!
-    public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-                new MutablePair<>(29.0, 1410.0),
-                new MutablePair<>(36.0, 1420.0),
-                new MutablePair<>(46.0, 1480.0),
-                new MutablePair<>(53.0, 1540.0),
-                new MutablePair<>(60.0, 1600.0)
-            ));
 
     //
     // Options
@@ -96,15 +83,15 @@ public class MainTeleop extends FastIterativeOpMode {
     //   When in preset mode the led color is set to the wrongspeedpreset color
 
     private static double launchSpeedFromDist(double dist) {
-        synchronized (launchSpeedMapping) {
-            Pair<Double, Double> lowestPair = launchSpeedMapping.get(0);
+        synchronized (MainBotHardware.launchSpeedMapping) {
+            Pair<Double, Double> lowestPair = MainBotHardware.launchSpeedMapping.get(0);
             if(dist < lowestPair.getKey()) {
                 return Double.NaN;
             }
 
 
-            for(int i = 0; i < launchSpeedMapping.size(); i++) {
-                Pair<Double, Double> p = launchSpeedMapping.get(i);
+            for(int i = 0; i < MainBotHardware.launchSpeedMapping.size(); i++) {
+                Pair<Double, Double> p = MainBotHardware.launchSpeedMapping.get(i);
                 if(dist == p.getKey()) {
                     return p.getValue();
                 }
@@ -112,7 +99,7 @@ public class MainTeleop extends FastIterativeOpMode {
                 if(dist < p.getKey()) {
                     //Previous one must have been greater, so we know we are between the two closest points,
                     // so we interpolate with a weighted average
-                    Pair<Double, Double> last = launchSpeedMapping.get(i-1);
+                    Pair<Double, Double> last = MainBotHardware.launchSpeedMapping.get(i-1);
                     double deltaDist = p.getKey() - last.getKey();
                     double offset = dist - last.getKey();
                     double weightLast = (deltaDist - offset) / deltaDist;

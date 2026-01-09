@@ -2,6 +2,7 @@ package net.polarbub.ftc.lib;
 
 import com.qualcomm.robotcore.util.RobotLog;
 import net.polarbub.ftc.lib.variablewatcher.VariableWatcher;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,12 +12,13 @@ public abstract class ThreadEx extends Thread {
     private final AtomicBoolean stop = new AtomicBoolean(false);
     public final LoopTimeCalculator loopTimes = new LoopTimeCalculator();
     protected final List<VariableWatcher> variablesWatched;
-    protected final StringBuffer telemetry;
-    private final StringBuffer[] telemetryBuffers = new StringBuffer[2];
+
+    protected StringBuilder telemetry = new StringBuilder();
+    private String compiledTelemetry = "";
+    private final Object compiledTelemetryLock = new Object();
 
     public ThreadEx() {
         this.variablesWatched = new ArrayList<>();
-        telemetry = new StringBuffer();
     }
 
     //Only call this from another thread, not this one
@@ -52,10 +54,24 @@ public abstract class ThreadEx extends Thread {
         }
     }
 
-    public String getAndClearTelemetry() {
-        String out = telemetry.toString();
-        telemetry.setLength(0);
-        return out;
+    protected void updateTelemetry() {
+        synchronized (compiledTelemetryLock) {
+            compiledTelemetry = telemetry.toString();
+            telemetry = new StringBuilder();
+
+            //Remove trailing newline to make sure that telemetry.addline doesn't have extra newlines in its
+            if(compiledTelemetry.charAt(compiledTelemetry.length() - 1) == '\n') {
+                compiledTelemetry = compiledTelemetry.substring(0, compiledTelemetry.length() - 1);
+            }
+
+        }
+    }
+
+    public void addTelemetryTo(Telemetry telemetry) {
+        synchronized (compiledTelemetryLock) {
+            telemetry.addLine(compiledTelemetry);
+            compiledTelemetry = "";
+        }
     }
 
     public abstract void tick();

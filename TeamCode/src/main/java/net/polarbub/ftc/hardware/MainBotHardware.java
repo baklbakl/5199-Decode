@@ -14,9 +14,14 @@ import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.SerialNumber;
 import net.polarbub.ftc.lib.OnCreateHandlers;
 import net.polarbub.ftc.lib.SingletonHelper;
+import org.apache.commons.lang3.tuple.MutablePair;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
 import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class MainBotHardware {
     //
@@ -30,10 +35,17 @@ public class MainBotHardware {
     public static double inIntakePower = 1;
     public static long teleOpLauncherNoVisionVelocity = -1460;
 
-    public static double launcherKV = 0.0056;
-    public static double launcherKP = 0.05;
-
     public static double childResistorMultiplier = 3.19;
+
+    //MUST BE IN ORDER OF DISTANCE!!!!!
+    //MAKE SURE TO SYNCHRONIZE WHEN USING!
+    public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
+            new MutablePair<>(29.0, 1410.0),
+            new MutablePair<>(36.0, 1420.0),
+            new MutablePair<>(46.0, 1480.0),
+            new MutablePair<>(53.0, 1540.0),
+            new MutablePair<>(60.0, 1600.0)
+    ));
 
     //
     // Options
@@ -150,7 +162,7 @@ public class MainBotHardware {
         launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launchDrive.setVelocity(0);
-//        launchDrive.setMode(DcMotor.RunMode./RUN_USING_ENCODER);
+//        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 //
         kickerServo = child.createServo(kickerServoID);
         kickerServo.setPosition(0);

@@ -40,10 +40,9 @@ public class CustomVariableEx<T> extends CustomVariable {
 
                     if(customVar.objectReference != field.get(objectReference)) {
                         super.removeVariable(key);
-                        super.putVariable(key, ListConfigVariable.createVariableFromFieldKnownType(field, field.get(nonNullT).getClass(), objectReference, nonNullT));
+                        super.putVariable(key, ListConfigVariable.createVariableFromFieldKnownType(field, objectReference, nonNullT));
                     } else {
                         customVar.checkChildrenUpToDate();
-                        //Decend into the custom variable
                     }
                 } catch (IllegalAccessException | NoSuchFieldException e) {
                     throw new RuntimeException(e);
