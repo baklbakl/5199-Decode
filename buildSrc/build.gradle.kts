@@ -7,27 +7,27 @@ gradlePlugin {
     plugins {
         create("java8plugin") {
             id = name
-            implementationClass = "net.polarbub.Java8Plugin"
+            implementationClass = "org.ducktapeandaprayer.Java8Plugin"
         }
 
         create("androidDefaultSetup") {
             id = name
-            implementationClass = "net.polarbub.AndroidDefaultSetupPlugin"
+            implementationClass = "org.ducktapeandaprayer.AndroidDefaultSetupPlugin"
         }
 
         create("FTCLibFlavor") {
             id = name
-            implementationClass = "net.polarbub.FTCLibFlavorPlugin"
+            implementationClass = "org.ducktapeandaprayer.FTCLibFlavorPlugin"
         }
 
         create("stubPlugin") {
             id = name
-            implementationClass = "net.polarbub.StubPlugin"
+            implementationClass = "org.ducktapeandaprayer.StubPlugin"
         }
 
         create("repositories") {
             id = name
-            implementationClass = "net.polarbub.RepositoriesPlugin"
+            implementationClass = "org.ducktapeandaprayer.RepositoriesPlugin"
         }
     }
 }

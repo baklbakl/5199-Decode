@@ -1,4 +1,4 @@
-package net.polarbub.ftc.auto.tuning
+package org.ducktapeandaprayer.ftc.auto.tuning
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry

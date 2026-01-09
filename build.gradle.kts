@@ -1,4 +1,4 @@
-import net.polarbub.PropertiesHelper.getStringProperty
+import org.ducktapeandaprayer.PropertiesHelper.getStringProperty
 
 buildscript {
     repositories {

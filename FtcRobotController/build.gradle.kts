@@ -1,6 +1,6 @@
 import java.text.SimpleDateFormat
 import java.util.*
-import net.polarbub.PropertiesHelper.*;
+import org.ducktapeandaprayer.PropertiesHelper.*;
 
 plugins {
     id("com.android.library")

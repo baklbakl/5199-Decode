@@ -1,8 +1,4 @@
-import com.android.build.api.dsl.AaptOptions
-import net.polarbub.PropertiesHelper
-import net.polarbub.PropertiesHelper.*
-import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.ducktapeandaprayer.PropertiesHelper.*
 
 plugins {
     id("com.android.application")
@@ -13,7 +9,7 @@ plugins {
 }
 
 android {
-    namespace = "net.polarbub.ftc"
+    namespace = "org.ducktapeandaprayer.ftc"
     buildFeatures.buildConfig = true
 
     packaging {

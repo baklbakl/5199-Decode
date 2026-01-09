@@ -1,4 +1,4 @@
-import net.polarbub.PropertiesHelper
+import org.ducktapeandaprayer.PropertiesHelper
 
 plugins {
     id("java-library")

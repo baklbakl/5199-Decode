@@ -1,6 +1,6 @@
-import com.android.build.gradle.internal.tasks.projectHasAnnotationProcessors
+import com.android.build.gradle.internal.packaging.defaultExcludes
 import com.github.gradle.node.yarn.task.YarnTask
-import net.polarbub.PropertiesHelper.getStringProperty
+import org.ducktapeandaprayer.PropertiesHelper.getStringProperty
 
 plugins {
     id("com.github.node-gradle.node") version "7.1.0"
@@ -23,7 +23,6 @@ android {
         preBuildProvider.get().dependsOn("yarn_build")
     }
 }
-
 val webDir = file("${project.projectDir}/web")
 
 node {

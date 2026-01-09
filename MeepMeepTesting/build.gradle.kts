@@ -8,7 +8,7 @@ plugins {
 
 
 
-val mainClassPath: String = "net.polarbub.ftc.MeepMeepTesting"
+val mainClassPath: String = "org.ducktapeandaprayer.ftc.MeepMeepTesting"
 
 application {
     mainClass = mainClassPath
