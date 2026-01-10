@@ -84,7 +84,7 @@ public class LynxModuleInitializer {
     private LynxModuleInitializer(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         // Empty the hardware map so no one tries to use it except for LynxModules and LynxUsbDevices because the
-        // FTC Libs uses the hardware map the close those.
+        // FTC Libs uses the hardware map the close them.
         for(HardwareDevice device : hardwareMap.getAll(HardwareDevice.class)) {
             String name = String.valueOf(hardwareMap.getNamesOf(device));
             if(device instanceof LynxUsbDevice) {
@@ -92,6 +92,12 @@ public class LynxModuleInitializer {
             } else {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
                 hardwareMap.remove(name, device);
+                //TEST: Does removing the voltage monitor from the device specific devicemappings fix the requests from random threads?
+                for(HardwareMap.DeviceMapping<? extends HardwareDevice> mapping : hardwareMap.allDeviceMappings) {
+                    if(mapping.getDeviceTypeClass() == device.getClass() && !mapping.remove("name")) {
+                        throw new RuntimeException("Couldn't remove device called \"" + name + "\" from type specific devicemapping");
+                    }
+                }
             }
         }
 

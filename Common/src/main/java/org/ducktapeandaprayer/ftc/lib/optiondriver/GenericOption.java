@@ -1,7 +1,7 @@
 package org.ducktapeandaprayer.ftc.lib.optiondriver;
 import java.lang.reflect.Field;
 
-abstract class GenericOption {
+public abstract class GenericOption {
     abstract String getCurrentString();
     abstract void buttonPressed();
 

@@ -1,4 +1,3 @@
-//FIX: Move all the code out of net.polarbub to org.ducktapeandaprayer
 package org.ducktapeandaprayer.ftc.tele;
 
 import com.qualcomm.hardware.lynx.LynxModule;

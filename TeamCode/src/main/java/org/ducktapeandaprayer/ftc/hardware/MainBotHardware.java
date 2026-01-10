@@ -26,12 +26,11 @@ public class MainBotHardware {
     //
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.4);
     public static int motorVelocityTolerance = 50;
-    public static double restingServoPos = 0.5;
     public static double moverDrivePower = 0.85;
-    public static double kickerServoUpPos = 0.6;
+    public static double kickerServoUpPos = 0.58;
     public static double inIntakePower = 1;
     public static long teleOpLauncherNoVisionVelocity = -1460;
-
+    public static int launchRequiredSpeedSamples = 5;
     public static double childResistorMultiplier = 3.19;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
@@ -110,6 +109,8 @@ public class MainBotHardware {
 
 //    public final RevColorSensorV3 launcherColorDistSensor;
 //    public final RevColorSensorV3 launcherColorDistSensor2;
+
+    //True is not pressed, false is
     public final DigitalChannel launcherSwitch;
 
     public final RevBlinkinLedDriver blinkin;

@@ -8,13 +8,10 @@ import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import java.util.function.Supplier;
 
 public class RobotImpl implements RobotInterface {
-    public static int requiredAtSpeedSamples = 5;
     public static double launchTimeOut = 10;
 
     private final MainBotHardware hardware;
     private final Supplier<Boolean> isOpModeActive;
-
-
 
     public RobotImpl(MainBotHardware hardware, Supplier<Boolean> isOpModeActive) {
         this.hardware = hardware;
@@ -67,8 +64,8 @@ public class RobotImpl implements RobotInterface {
         hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
 
         int speedDips = 0;
-        int atSpeedSamples = requiredAtSpeedSamples + 1;
-        int underSpeedSamples = requiredAtSpeedSamples + 1;
+        int atSpeedSamples = MainBotHardware.launchRequiredSpeedSamples + 1;
+        int underSpeedSamples = MainBotHardware.launchRequiredSpeedSamples + 1;
 
         ElapsedTime time = new ElapsedTime();
         time.reset();
@@ -80,11 +77,11 @@ public class RobotImpl implements RobotInterface {
             }
             hardware.modules.clearBulkCache();
             if (hardware.launchDrive.isAtTargetVelocity()) {
-                if(underSpeedSamples != requiredAtSpeedSamples) {
+                if(underSpeedSamples != MainBotHardware.launchRequiredSpeedSamples) {
                     underSpeedSamples = 0;
                 }
 
-                if (atSpeedSamples == requiredAtSpeedSamples) {
+                if (atSpeedSamples == MainBotHardware.launchRequiredSpeedSamples) {
                     atSpeedSamples++;
 
                     if(underSpeedSamples >= 2) {
@@ -114,7 +111,7 @@ public class RobotImpl implements RobotInterface {
                     }
 
                     underSpeedSamples = 0;
-                } else if (atSpeedSamples < requiredAtSpeedSamples) {
+                } else if (atSpeedSamples < MainBotHardware.launchRequiredSpeedSamples) {
                     atSpeedSamples++;
                     RobotLog.ii("RobotImpl", "At speed");
                 }
@@ -123,7 +120,7 @@ public class RobotImpl implements RobotInterface {
             } else {
                 atSpeedSamples = 0;
 
-                if(underSpeedSamples < requiredAtSpeedSamples) {
+                if(underSpeedSamples < MainBotHardware.launchRequiredSpeedSamples) {
                     underSpeedSamples++;
                     RobotLog.ii("RobotImpl", "Under speed inc to " + underSpeedSamples);
                 } else {

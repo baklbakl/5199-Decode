@@ -6,7 +6,7 @@ aruneoz=Haasini
 Annakhg=Anna  
 cj-saez=CJ
 
-After cloning to get the rest of the code in submodules run `git submodule update`
+After cloning to get the rest of the code in submodules run `git submodule update`. This won't work on the school wifi. Either do it at home or use a hotspot
 
 ## Folder Layout
 - `TeamCode` is our code that runs on the robot. It depends on `FtcRobotController` actually makes the Android app that we upload to RC.

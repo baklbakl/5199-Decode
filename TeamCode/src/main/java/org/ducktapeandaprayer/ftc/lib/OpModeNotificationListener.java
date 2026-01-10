@@ -26,6 +26,6 @@ public class OpModeNotificationListener implements OpModeManagerNotifier.Notific
 
     @Override
     public void onOpModePostStop(OpMode opMode) {
-
+        RobotLog.ii("ThreadedTele", "onOpModePostStop called");
     }
 }

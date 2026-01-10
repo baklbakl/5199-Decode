@@ -20,6 +20,7 @@ import org.ducktapeandaprayer.ftc.tele.LauncherInternalControlTuner;
 import org.ducktapeandaprayer.ftc.tele.MainTeleop;
 import org.ducktapeandaprayer.ftc.tele.Test;
 import org.apache.commons.lang3.tuple.MutablePair;
+import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
 import org.firstinspires.ftc.ftccommon.external.OnCreate;
 
 import java.lang.reflect.Field;
@@ -27,10 +28,11 @@ import java.lang.reflect.Field;
 public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
             MainBotConfig.class,
-            MainBotHardware.class,
+            MainTeleop.class,
             SplitAuto.class,
             RobotImpl.class,
             Test.class,
+            ExpansionHubThread.class,
             AprilTagDetectionPipeline.class,
             LauncherInternalControlTuner.class
     };
@@ -69,13 +71,13 @@ public class RegisterConfigClasses {
                     customVariable.putVariable(clazz.getSimpleName(), ReflectionConfig.createVariableFromClass(clazz));
                 }
 
-                CustomVariable teleOpVariable = ReflectionConfig.createVariableFromClass(MainTeleop.class);
+                CustomVariable mainBotHardwareVariable = ReflectionConfig.createVariableFromClass(MainBotHardware.class);
                 ListConfigVariable<MutablePair<Double, Double>> listConfigVar = new ListConfigVariable<>(
                         MainBotHardware.launchSpeedMapping,
                         () -> new MutablePair<>(0.0, 0.0),
                         new MutablePair<>(0.0, 0.0));
-                teleOpVariable.putVariable("launchSpeedMapping", listConfigVar);
-                customVariable.putVariable("MainTeleop", teleOpVariable);
+                mainBotHardwareVariable.putVariable("launchSpeedMapping", listConfigVar);
+                customVariable.putVariable("MainBotHardware", mainBotHardwareVariable);
 
 //                testList = new ArrayList<>();
 //                testList.add(1.0);
