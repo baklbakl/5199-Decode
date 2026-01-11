@@ -22,7 +22,7 @@ public abstract class PipelineStarter extends OpenCvPipeline {
     }
 
     public PipelineStarter(MainBotHardware hardware) {
-        this(hardware, 1280, 720);
+        this(hardware, 800, 448);
     }
 
     public String getTimingTelemetry() {

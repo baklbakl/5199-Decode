@@ -28,13 +28,21 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     public static double tagsizeIn = 6.5;
     //Camera calibration. These are in pixels
     // See https://ftc-docs.firstinspires.org/en/latest/programming_resources/vision/camera_calibration/camera-calibration.html
-    public static double fx = 1381.21;
-    public static double fy = 1381.21;
-    public static double cx = 663.802;
-    public static double cy = 351.276;
+    //logitech c270
+//    public static double fx = 1381.21;
+//    public static double fy = 1381.21;
+//    public static double cx = 663.802;
+//    public static double cy = 351.276;
+
+    //Logitech C920
+    public static double fx = 588.586;
+    public static double fy = 588.586;
+    public static double cx = 418.17;
+    public static double cy = 225.314;
 
     private long nativeApriltagPtr;
     private Mat grey = new Mat();
+    private final Object detectionsSync = new Object();
     private ArrayList<AprilTagDetection> detections = new ArrayList<>();
 
     private ArrayList<AprilTagDetection> detectionsUpdate = new ArrayList<>();
@@ -102,19 +110,21 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         }
 
         // Run AprilTag
-        detections = AprilTagDetectorJNI.runAprilTagDetectorSimple(nativeApriltagPtr, grey, tagsizeIn, fx, fy, cx, cy);
+        ArrayList<AprilTagDetection> detectionsTemp = AprilTagDetectorJNI.runAprilTagDetectorSimple(nativeApriltagPtr, grey, tagsizeIn, fx, fy, cx, cy);
+        synchronized (detectionsSync) {
+            detections = detectionsTemp;
+            synchronized (detectionsUpdateSync) {
+                detectionsUpdate = detections;
+            }
 
-        synchronized (detectionsUpdateSync) {
-            detectionsUpdate = detections;
-        }
+            if(!drawDebugOnFrame) return input;
 
-        if(!drawDebugOnFrame) return input;
-
-        // For fun, use OpenCV to draw 6DOF markers on the image.
-        for(AprilTagDetection detection : detections) {
-            Pose pose = aprilTagPoseToOpenCvPose(detection.pose);
-            drawAxisMarker(input, tagsizeIn/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
-            draw3dCubeMarker(input, tagsizeIn, tagsizeIn, tagsizeIn, 5, pose.rvec, pose.tvec, cameraMatrix);
+            // For fun, use OpenCV to draw 6DOF markers on the image.
+            for(AprilTagDetection detection : detections) {
+                Pose pose = aprilTagPoseToOpenCvPose(detection.pose);
+                drawAxisMarker(input, tagsizeIn/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
+                draw3dCubeMarker(input, tagsizeIn, tagsizeIn, tagsizeIn, 5, pose.rvec, pose.tvec, cameraMatrix);
+            }
         }
 
         return input;
@@ -128,7 +138,9 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     }
 
     public ArrayList<AprilTagDetection> getLatestDetections() {
-        return detections;
+        synchronized (detectionsSync) {
+            return detections;
+        }
     }
 
     public ArrayList<AprilTagDetection> getDetectionsUpdate() {

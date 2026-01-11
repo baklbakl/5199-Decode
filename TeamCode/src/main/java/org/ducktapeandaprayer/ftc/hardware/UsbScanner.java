@@ -20,8 +20,8 @@ public class UsbScanner {
         return SingletonHelper.getOrCreate(UsbScanner.class, () -> new UsbScanner(hardwareMap));
     }
 
-    public static void rescan(HardwareMap hardwareMap) {
-        SingletonHelper.refresh(UsbScanner.class, new UsbScanner(hardwareMap));
+    public static void clearInstance() {
+        SingletonHelper.clear(UsbScanner.class);
     }
 
     public final SerialNumber lynxParentUsbSerialNumber;
@@ -33,6 +33,7 @@ public class UsbScanner {
             SerialNumber localLynxParentUsbSerialNumber = null;
             SerialNumber localLynxChildUsbSerialNumber = null;
             SerialNumber localWebCamSerialNumber = null;
+            RobotLog.ii("UsbScanner", "Scanning!");
 
 //            if (Device.isRevControlHub()) {
 //                localLynxParentUsbSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;

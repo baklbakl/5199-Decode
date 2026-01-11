@@ -11,10 +11,13 @@ import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
+import com.qualcomm.robotcore.hardware.usb.RobotUsbDevice;
 import com.qualcomm.robotcore.util.Device;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.lib.SingletonHelper;
 import org.ducktapeandaprayer.ftc.lib.TeamCodeWarningSource;
+
+import java.util.Map;
 
 import static org.ducktapeandaprayer.ftc.lib.OnCreateHandlers.*;
 
@@ -23,11 +26,14 @@ public class LynxModuleInitializer {
         LynxModuleInitializer ts = SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
 
         if(!ts.scanner.equals(UsbScanner.getOrCreate(hardwareMap))) {
-            ts = new LynxModuleInitializer(hardwareMap);
-            SingletonHelper.refresh(LynxModuleInitializer.class, ts);
+            SingletonHelper.clear(LynxModuleInitializer.class);
         }
 
-        return ts;
+        return SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
+    }
+
+    public static void clearInstance() {
+        SingletonHelper.clear(LynxModuleInitializer.class);
     }
 
     public final HardwareMap hardwareMap;
@@ -83,6 +89,7 @@ public class LynxModuleInitializer {
 
     private LynxModuleInitializer(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
+        RobotLog.ii("LynxModuleInitializer", "Initializing modules");
         // Empty the hardware map so no one tries to use it except for LynxModules and LynxUsbDevices because the
         // FTC Libs uses the hardware map the close them.
         for(HardwareDevice device : hardwareMap.getAll(HardwareDevice.class)) {
@@ -93,11 +100,13 @@ public class LynxModuleInitializer {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
                 hardwareMap.remove(name, device);
                 //TEST: Does removing the voltage monitor from the device specific devicemappings fix the requests from random threads?
-                for(HardwareMap.DeviceMapping<? extends HardwareDevice> mapping : hardwareMap.allDeviceMappings) {
-                    if(mapping.getDeviceTypeClass() == device.getClass() && !mapping.remove("name")) {
-                        throw new RuntimeException("Couldn't remove device called \"" + name + "\" from type specific devicemapping");
-                    }
-                }
+            }
+        }
+
+        //Empty out device specific map
+        for(HardwareMap.DeviceMapping<? extends HardwareDevice> mapping : hardwareMap.allDeviceMappings) {
+            for(Map.Entry<String, ? extends HardwareDevice> device : mapping.entrySet()) {
+                mapping.remove(device.getKey());
             }
         }
 
@@ -128,7 +137,7 @@ public class LynxModuleInitializer {
             TeamCodeWarningSource.getInstance().clearGlobalWarning();
 
             LynxModuleControllers localChildModule = null;
-            if(Device.isRevControlHub()) {
+            if(Device.isRevControlHub() && scanner.lynxChildUsbSerialNumber != null) {
                 LynxUsbDevice childUsbDevice = null;
                 try {
                     childUsbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxChildUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
@@ -140,7 +149,8 @@ public class LynxModuleInitializer {
                     localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
                     //Put the control hub back so that stopping when the opmode works right
                     hardwareMap.put("Expansion Hub " + localChildModule.module.toString(), localChildModule.module);
-                    
+                    hardwareMap.put("Expansion Hub Portal Created" + childUsbDevice.toString(), childUsbDevice);
+
                 } catch (RobotCoreException e) {
                     if(localChildModule != null) {
                         localChildModule.module.close();

@@ -67,36 +67,43 @@ public class ThreadedTele extends FastIterativeOpMode {
 
     @Override
     protected void loop_internal() {
-        for(Map.Entry<String, ThreadEx> t : threads.entrySet()) {
-            Throwable err = t.getValue().getErr();
-            if(err != null) {
-                //Clean up after ourselves
-                stop_internal();
-                RobotLog.ii("ThreadedTele", "Stopping due to error");
-                throw new RuntimeException("Error in " + t.getKey(), err);
+        try {
+            for(Map.Entry<String, ThreadEx> t : threads.entrySet()) {
+                Throwable err = t.getValue().getErr();
+                if(err != null) {
+                    //Clean up after ourselves
+                    stop_internal();
+                    RobotLog.ii("ThreadedTele", "Stopping due to error");
+                    throw new RuntimeException("Error in " + t.getKey(), err);
+                }
+
+                t.getValue().addTelemetryTo(telemetry);
             }
 
-            t.getValue().addTelemetryTo(telemetry);
-        }
+            telemetry.addLine();
 
-        for(Map.Entry<String, ThreadEx> t : threads.entrySet()) {
-            telemetry.addData("Timings for " + t.getKey(), t.getValue().loopTimes);
+            for(Map.Entry<String, ThreadEx> t : threads.entrySet()) {
+                telemetry.addData("Timings for " + t.getKey(), t.getValue().loopTimes);
 
-            t.getValue().feedWatchdog();
-        }
+                t.getValue().feedWatchdog();
+            }
 
-        telemetry.addData("Main Loop Timings", timer.toString());
-        telemetry.update();
-        timer.tick();
+            telemetry.addData("Main Loop Timings", timer.toString());
+            telemetry.update();
+            timer.tick();
 
-        if(gamepad1.dpadUpWasPressed()) {
-            RobotLog.ii("ThreadeTele", hardwareMap.voltageSensor.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList()).toString());
-        }
+            if(gamepad1.dpadUpWasPressed()) {
+                RobotLog.ii("ThreadeTele", hardwareMap.voltageSensor.entrySet().stream().map(Map.Entry::getKey).collect(Collectors.toList()).toString());
+            }
 
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (Exception e) {
+            stop_internal();
+            throw e;
         }
     }
 

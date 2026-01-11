@@ -34,14 +34,7 @@ public class OnCreateHandlers {
         opModeManager.registerListener(OpModeNotificationListener.instance);
         opModeManagerRef = new WeakReference<>(opModeManager);
 
-        try {
-            Field loopHandlerField = FtcEventLoopBase.class.getDeclaredField("ftcEventLoopHandler");
-            loopHandlerField.setAccessible(true);
-            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(loop);
-            eventLoopManger = new WeakReference<>(loopHandler.getEventLoopManager());
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("MainBotHardware HardwareMap oopsy", e);
-        }
+
     }
 
     public static WeakReference<FtcEventLoop> getEventLoop() {
@@ -49,6 +42,13 @@ public class OnCreateHandlers {
     }
 
     public static WeakReference<EventLoopManager> getEventLoopManger() {
-        return eventLoopManger;
+        try {
+            Field loopHandlerField = FtcEventLoopBase.class.getDeclaredField("ftcEventLoopHandler");
+            loopHandlerField.setAccessible(true);
+            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(eventLoop.get());
+            return new WeakReference<>(loopHandler.getEventLoopManager());
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException("getEventLoopManger oopsy", e);
+        }
     }
 }

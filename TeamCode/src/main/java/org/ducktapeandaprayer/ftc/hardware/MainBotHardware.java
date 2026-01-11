@@ -8,6 +8,7 @@ import com.qualcomm.hardware.lynx.commands.core.LynxFirmwareVersionManager;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.*;
+import com.qualcomm.robotcore.util.RobotLog;
 import com.qualcomm.robotcore.util.SerialNumber;
 import org.ducktapeandaprayer.ftc.lib.OnCreateHandlers;
 import org.ducktapeandaprayer.ftc.lib.SingletonHelper;
@@ -26,12 +27,12 @@ public class MainBotHardware {
     //
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.4);
     public static int motorVelocityTolerance = 50;
-    public static double moverDrivePower = 0.85;
+    public static double moverDrivePower = 1; //Was 0.85
     public static double kickerServoUpPos = 0.58;
     public static double inIntakePower = 1;
     public static long teleOpLauncherNoVisionVelocity = -1460;
-    public static int launchRequiredSpeedSamples = 5;
-    public static double childResistorMultiplier = 3.19;
+    public static int launchRequiredSpeedSamples = 4;
+    public static double parentResistorMultiplier = 3.19;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
@@ -105,7 +106,7 @@ public class MainBotHardware {
 
     public final Servo kickerServo;
 
-    public final AnalogInput childVoltageSensor;
+    public final AnalogInput parentVoltageSensor;
 
 //    public final RevColorSensorV3 launcherColorDistSensor;
 //    public final RevColorSensorV3 launcherColorDistSensor2;
@@ -123,14 +124,20 @@ public class MainBotHardware {
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
         MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
         if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap)) {
-            ts = new MainBotHardware(hardwareMap);
-            SingletonHelper.refresh(MainBotHardware.class, ts);
+//            ts = new MainBotHardware(hardwareMap);
+            SingletonHelper.clear(MainBotHardware.class);
         }
-        return ts;
+        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+    }
+
+    public static void clearInstance() {
+        SingletonHelper.clear(MainBotHardware.class);
     }
 
     private MainBotHardware(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
+        RobotLog.ii("MainBotHardware", "Initializing mainbothardware");
+
         modules = LynxModuleInitializer.getOrCreate(hardwareMap);
         if(modules.childModule == null) {
             throw new RuntimeException("No child module found. A child module is required for MainBotHardware");
@@ -156,12 +163,13 @@ public class MainBotHardware {
         moverDrive = child.createDcMotor(moverDriveID);
 
         launchDrive = child.createDcMotor(launchDriveID);
+        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         launchDrive.setDirection(DcMotorSimple.Direction.REVERSE);
         launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launchDrive.setVelocity(0);
-//        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-//
+        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
         kickerServo = child.createServo(kickerServoID);
         kickerServo.setPosition(0);
 
@@ -214,6 +222,6 @@ public class MainBotHardware {
         webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
 
         launcherSwitch = child.createDigitalChannel(0);
-        childVoltageSensor = child.createAnalogInput(0);
+        parentVoltageSensor = parent.createAnalogInput(0);
     }
 }

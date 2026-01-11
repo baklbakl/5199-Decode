@@ -22,7 +22,13 @@ public class SingletonHelper {
         }
     }
 
-    public static <T> void refresh(Class<T> clazz, T t) {
-        instances.put(clazz, new WeakReference<>(t));
+    public static <T> T get(Class<T> clazz) {
+        WeakReference<T> reference = (WeakReference<T>) instances.get(clazz);
+        if(reference == null) return null;
+        return reference.get();
+    }
+
+    public static <T> void clear(Class<T> clazz) {
+        instances.put(clazz, new WeakReference<>(null));
     }
 }

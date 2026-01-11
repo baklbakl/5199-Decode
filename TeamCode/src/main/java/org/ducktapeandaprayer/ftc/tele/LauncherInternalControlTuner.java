@@ -150,7 +150,7 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
                     if(launcherTargetVelocity == 0) {
                         hardware.launchDrive.setPower(0);
                     } else {
-                        hardware.launchDrive.setPower(((launcherTargetVelocity - velocity) * kP + (launcherTargetVelocity) * kV) / hardware.childVoltageSensor.getVoltage() / MainBotHardware.childResistorMultiplier);
+                        hardware.launchDrive.setPower(((launcherTargetVelocity - velocity) * kP + (launcherTargetVelocity) * kV) / hardware.parentVoltageSensor.getVoltage() / MainBotHardware.parentResistorMultiplier);
                     }
 
                     if(launcherTargetVelocity != 0 && lastVelocityZero && startTime == -1) {

@@ -115,7 +115,6 @@ public abstract class ThreadEx extends Thread {
     public void addTelemetryTo(Telemetry telemetry) {
         synchronized (compiledTelemetryLock) {
             telemetry.addLine(compiledTelemetry);
-            compiledTelemetry = "";
         }
     }
 

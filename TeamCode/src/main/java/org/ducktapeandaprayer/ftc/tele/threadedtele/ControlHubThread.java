@@ -2,7 +2,6 @@ package org.ducktapeandaprayer.ftc.tele.threadedtele;
 
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
@@ -54,7 +53,13 @@ public class ControlHubThread extends ThreadEx {
 
     public void tick() {
 //        RobotLog.ii("ControlHubThread", "Running!");
+        telemetry.append("Battery voltage: ");
+        telemetry.append(hardware.parentVoltageSensor.getVoltage() * MainBotHardware.parentResistorMultiplier);
+        telemetry.append("V\n");
+        updateTelemetry();
 
+        hardware.modules.parentModule.module.clearBulkCache();
 
+        //ADD: Report voltage from the analog input
     }
 }

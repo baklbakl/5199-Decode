@@ -4,6 +4,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerImpl;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManagerNotifier;
 import com.qualcomm.robotcore.util.RobotLog;
+import org.ducktapeandaprayer.ftc.hardware.LynxModuleInitializer;
+import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.hardware.UsbScanner;
 
 public class OpModeNotificationListener implements OpModeManagerNotifier.Notifications {
@@ -15,7 +17,9 @@ public class OpModeNotificationListener implements OpModeManagerNotifier.Notific
         //Force a rescan of the usb devices on opmode init
         if(!(opMode instanceof  OpModeManagerImpl.DefaultOpMode)) {
             RobotLog.ii("OpModeNotificationListener", "Rescanning for opmode: " + opMode);
-            UsbScanner.rescan(opMode.hardwareMap);
+            UsbScanner.clearInstance();
+            LynxModuleInitializer.clearInstance();
+            MainBotHardware.clearInstance();
         }
     }
 

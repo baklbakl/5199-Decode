@@ -25,7 +25,6 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.messages.DriveCommandMessage;
@@ -102,7 +101,7 @@ public final class MecanumDrive {
 
     public final DcMotorEx leftFront, leftBack, rightBack, rightFront;
 
-    public final VoltageSensor voltageSensor;
+//    public final VoltageSensor voltageSensor;
 
 //    public final LazyImu lazyImu;
 
@@ -131,7 +130,7 @@ public final class MecanumDrive {
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        voltageSensor = hardware.modules.parentModule.voltageSensor;
+//        voltageSensor = hardware.modules.parentModule.voltageSensor;
 
         localizer = new ThreeDeadWheelLocalizer(hardware, PARAMS.inPerTick, pose);
 
@@ -211,7 +210,7 @@ public final class MecanumDrive {
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
 
-            double voltage = voltageSensor.getVoltage();
+            double voltage = hardware.parentVoltageSensor.getVoltage() * MainBotHardware.parentResistorMultiplier;
 
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
@@ -305,7 +304,7 @@ public final class MecanumDrive {
             driveCommandWriter.write(new DriveCommandMessage(command));
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
-            double voltage = voltageSensor.getVoltage();
+            double voltage = hardware.parentVoltageSensor.getVoltage() * MainBotHardware.parentResistorMultiplier;
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
             final FeedForward feedforward = feedForwardFactory.make();

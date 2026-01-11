@@ -25,7 +25,7 @@ public class ExpansionHubThread extends ThreadEx {
     //
 
     public static long launcherVelocityCheckInterval = 200;
-    public static double autoLaunchTimeout = 5.0;
+    public static double autoLaunchTimeout = 3.0;
 
     //
     // Globals
@@ -266,6 +266,10 @@ public class ExpansionHubThread extends ThreadEx {
 
             //Movement
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
+                if(autoLaunchState != AutoLaunchState.STOPPED) {
+                    return;
+                }
+
                 if(left_bumper == right_bumper) {
                     hardware.moverDrive.setPower(0);
                 } else if(left_bumper) {
@@ -289,7 +293,7 @@ public class ExpansionHubThread extends ThreadEx {
             }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
-                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
+                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL && autoLaunchState == AutoLaunchState.STOPPED) {
                     if(hardware.launchDrive.getTargetVelocity() == 0) {
                         startLauncher();
                     } else {
@@ -299,6 +303,10 @@ public class ExpansionHubThread extends ThreadEx {
             }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
+                if(autoLaunchState != AutoLaunchState.STOPPED) {
+                    return;
+                }
+
                 if(circle) {
                     if(!hardware.launcherSwitch.getState()
                             && hardware.launchDrive.isAtTargetVelocity()
@@ -315,11 +323,11 @@ public class ExpansionHubThread extends ThreadEx {
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
                 float power = left_trigger - right_trigger;
                 if(launcherControlMethod == LauncherControlMethod.MANUAL) {
-                    if(power < 0) {
+                    if(power > 0) {
                         power /= 2;
                     }
                     hardware.launchDrive.setPower(power);
-                } else {
+                } else if(autoLaunchState == AutoLaunchState.STOPPED) {
                     hardware.intakeDrive.setPower(power);
                 }
 
@@ -347,7 +355,7 @@ public class ExpansionHubThread extends ThreadEx {
                         hardware.launchDrive.setVelocity(0);
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                         hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-                    } else {
+                    } else if(autoLaunchState == AutoLaunchState.STOPPED) {
                         launcherControlMethod = LauncherControlMethod.MANUAL;
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                         hardware.launchDrive.setPower(hardware.intakeDrive.getPower());
@@ -358,8 +366,8 @@ public class ExpansionHubThread extends ThreadEx {
             }));
 
             //Shoot three with autolaunch
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), Boolean::equals, (Boolean circle) -> {
-                if(!circle) {
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("cross"), Boolean::equals, (Boolean cross) -> {
+                if(!cross) {
                     return;
                 }
 
@@ -377,8 +385,7 @@ public class ExpansionHubThread extends ThreadEx {
                 }
 
                 startLauncher();
-
-                //ADD: Lock out the rest of the controls while trying to auto launch
+                artifactsToLaunch = 3;
 
                 //We check here because we don't want to start the mover if there is already and artifact in position and waiting
                 if(hardware.launcherSwitch.getState()) {
@@ -386,8 +393,11 @@ public class ExpansionHubThread extends ThreadEx {
                     hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
                     autoLaunchState = AutoLaunchState.WAITING_ARTIFACT;
                 } else {
+                    hardware.moverDrive.setPower(0);
+                    hardware.intakeDrive.setPower(0);
                     autoLaunchState = AutoLaunchState.SPINNING_UP;
                 }
+                hardware.kickerServo.setPosition(0);
 
                 autoLaunchStartedWatingTime = runtime.seconds();
             }));
@@ -432,7 +442,7 @@ public class ExpansionHubThread extends ThreadEx {
 
     private double autoLaunchStartedWatingTime = Double.NaN;
     private int speedSamplesSeen = 0;
-    private int samplesToLaunch = 0;
+    private int artifactsToLaunch = 0;
 
     public void tick() {
 //        RobotLog.ii("ExpansionHubThread", "Running!");
@@ -489,10 +499,11 @@ public class ExpansionHubThread extends ThreadEx {
                     break;
                 }
 
-                samplesToLaunch--;
-                if(samplesToLaunch > 0 && autoLaunchState == AutoLaunchState.LAUNCHING) {
+                artifactsToLaunch--;
+                if(artifactsToLaunch > 0 && autoLaunchState == AutoLaunchState.LAUNCHING) {
                     hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
                     hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+                    hardware.kickerServo.setPosition(0);
                     autoLaunchStartedWatingTime = runtime.seconds();
                     autoLaunchState = AutoLaunchState.WAITING_ARTIFACT;
                     speedSamplesSeen = 0;
@@ -500,8 +511,6 @@ public class ExpansionHubThread extends ThreadEx {
                     stopAutoLaunch();
                 }
                 break;
-
-
         }
 
         if(autoLaunchState != AutoLaunchState.STOPPED) {
