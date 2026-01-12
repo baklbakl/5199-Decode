@@ -56,23 +56,10 @@ public class MeepMeepTesting {
 
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
-        boolean useVision = false;
         Alliance alliance = Alliance.RED;
-        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, useVision, true);
+        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, true, 3);
 
-        Action action = null;
-
-        if(useVision) {
-            action = new SequentialAction(
-                    builder.build(),
-                    splitAuto.fillBuilderPostVision(builder.fresh(), useVision, 3, alliance).build()
-            );
-        } else {
-            action = builder.build();
-        }
-
-
-
+        Action action = builder.build();
         bot.runAction(
 //              new TrajectoryActionStub(newTT)
 

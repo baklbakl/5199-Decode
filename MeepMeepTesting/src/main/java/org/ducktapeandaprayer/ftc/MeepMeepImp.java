@@ -11,6 +11,11 @@ public class MeepMeepImp implements RobotInterface {
     }
 
     @Override
+    public void startLauncher(double speed) {
+        System.out.println("launcher start");
+    }
+
+    @Override
     public void intake() {
         System.out.println("intaking");
 
@@ -18,6 +23,6 @@ public class MeepMeepImp implements RobotInterface {
 
     @Override
     public void stopIntake() {
-
+        System.out.println("intake stop");
     }
 }

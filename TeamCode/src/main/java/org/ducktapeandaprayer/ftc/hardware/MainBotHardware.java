@@ -28,7 +28,8 @@ public class MainBotHardware {
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.4);
     public static int motorVelocityTolerance = 50;
     public static double moverDrivePower = 1; //Was 0.85
-    public static double kickerServoUpPos = 0.58;
+    public static double kickerServoUpPos = 0.5;
+    public static double kickerServoDownPos = 0.32;
     public static double inIntakePower = 1;
     public static long teleOpLauncherNoVisionVelocity = -1460;
     public static int launchRequiredSpeedSamples = 4;
@@ -77,8 +78,8 @@ public class MainBotHardware {
     public static final int launchDriveID = 3;
     public static final int moverDriveID = 1;
 
-    public static final int paraEncoder0ID = 3;
-    public static final int paraEncoder1ID = 0;
+    public static final int paraEncoder0ID = 0;
+    public static final int paraEncoder1ID = 3;
     public static final int perpEncoderID = 1;
 
     public static final int kickerServoID = 1;
@@ -106,10 +107,7 @@ public class MainBotHardware {
 
     public final Servo kickerServo;
 
-    public final AnalogInput parentVoltageSensor;
-
-//    public final RevColorSensorV3 launcherColorDistSensor;
-//    public final RevColorSensorV3 launcherColorDistSensor2;
+    public final VoltageSensor parentVoltageSensor;
 
     //True is not pressed, false is
     public final DigitalChannel launcherSwitch;
@@ -171,7 +169,7 @@ public class MainBotHardware {
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
         kickerServo = child.createServo(kickerServoID);
-        kickerServo.setPosition(0);
+        kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
 
         blinkin = new RevBlinkinLedDriver(modules.childModule.servoController, blinkinServoID);
         modules.childModule.servoController.setServoPwmRange(blinkinServoID, new PwmControl.PwmRange(500, 2500));
@@ -222,6 +220,8 @@ public class MainBotHardware {
         webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
 
         launcherSwitch = child.createDigitalChannel(0);
-        parentVoltageSensor = parent.createAnalogInput(0);
+        parentVoltageSensor = new ProxyVoltageSensor(parent.createAnalogInput(0), parentResistorMultiplier);
+        hardwareMap.put("ProxyVoltageSensor", parentVoltageSensor);
+        hardwareMap.voltageSensor.put("ProxyVoltageSensor", parentVoltageSensor);
     }
 }

@@ -9,7 +9,6 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeRegistrar;
 
-import com.qualcomm.robotcore.hardware.VoltageSensor;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.firstinspires.ftc.robotcore.internal.opmode.OpModeMeta;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.MecanumDrive;
@@ -29,11 +28,14 @@ public final class TuningOpModes {
     private TuningOpModes() {}
 
     private static OpModeMeta metaForClass(Class<? extends OpMode> cls) {
-        return new OpModeMeta.Builder()
+        OpModeMeta meta = new OpModeMeta.Builder()
                 .setName(cls.getSimpleName())
                 .setGroup(GROUP)
                 .setFlavor(OpModeMeta.Flavor.TELEOP)
+                .setSource(OpModeMeta.Source.ANDROID_STUDIO)
                 .build();
+
+        return meta;
     }
 
     @OpModeRegistrar
@@ -91,42 +93,7 @@ public final class TuningOpModes {
                         return new DualNum<>(Arrays.asList(dl.getPose().heading.toDouble(), dl.getPoseVelocity().angVel));
 
                     },
-                    new VoltageSensor() {
-                        @Override
-                        public double getVoltage() {
-                            return hardware.parentVoltageSensor.getVoltage() * MainBotHardware.parentResistorMultiplier;
-                        }
-
-                        @Override
-                        public Manufacturer getManufacturer() {
-                            return null;
-                        }
-
-                        @Override
-                        public String getDeviceName() {
-                            return "";
-                        }
-
-                        @Override
-                        public String getConnectionInfo() {
-                            return "";
-                        }
-
-                        @Override
-                        public int getVersion() {
-                            return 0;
-                        }
-
-                        @Override
-                        public void resetDeviceConfigurationForOpMode() {
-
-                        }
-
-                        @Override
-                        public void close() {
-
-                        }
-                    },
+                    hardware.parentVoltageSensor,
                     MecanumDrive.feedForwardFactory,
                     0
             );
@@ -144,11 +111,12 @@ public final class TuningOpModes {
         manager.register(metaForClass(MecanumMotorDirectionDebugger.class), new MecanumMotorDirectionDebugger(dvf));
         manager.register(metaForClass(DeadWheelDirectionDebugger.class), new DeadWheelDirectionDebugger(dvf));
 
-        manager.register(metaForClass(ManualFeedbackTuner.class), ManualFeedbackTuner.class);
-        manager.register(metaForClass(ManualStrafeFeedbackTuner.class), ManualStrafeFeedbackTuner.class);
-        manager.register(metaForClass(SplineTest.class), SplineTest.class);
-        manager.register(metaForClass(TurnTest.class), TurnTest.class);
-        manager.register(metaForClass(LocalizationTest.class), LocalizationTest.class);
+        //Using the .class ones erases the group name from the meta for some reason
+        manager.register(metaForClass(ManualFeedbackTuner.class), new ManualFeedbackTuner());
+        manager.register(metaForClass(ManualStrafeFeedbackTuner.class), new ManualFeedbackTuner());
+        manager.register(metaForClass(SplineTest.class), new SplineTest());
+        manager.register(metaForClass(TurnTest.class), new TurnTest());
+        manager.register(metaForClass(LocalizationTest.class), new LocalizationTest());
 
         FtcDashboard.getInstance().withConfigRoot(configRoot -> {
             for (Class<?> c : Arrays.asList(

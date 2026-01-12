@@ -147,8 +147,9 @@ public class LynxModuleInitializer {
                     );
 
                     localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
-                    //Put the control hub back so that stopping when the opmode works right
+                    //Put the module in the hardware map that stopping when the opmode works right
                     hardwareMap.put("Expansion Hub " + localChildModule.module.toString(), localChildModule.module);
+                    //Put the usb device in the hardware that disconnections and reconnections work right. This means that there will be issues if a new eh it installed without a power cycle.
                     hardwareMap.put("Expansion Hub Portal Created" + childUsbDevice.toString(), childUsbDevice);
 
                 } catch (RobotCoreException e) {

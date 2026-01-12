@@ -15,9 +15,9 @@ import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.vision.AprilTagDetectionPipeline;
+import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.tele.LauncherInternalControlTuner;
-import org.ducktapeandaprayer.ftc.tele.MainTeleop;
 import org.ducktapeandaprayer.ftc.tele.Test;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
@@ -28,10 +28,10 @@ import java.lang.reflect.Field;
 public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
             MainBotConfig.class,
-            MainTeleop.class,
             SplitAuto.class,
             RobotImpl.class,
             Test.class,
+            AutoLaunch.class,
             ExpansionHubThread.class,
             AprilTagDetectionPipeline.class,
             LauncherInternalControlTuner.class

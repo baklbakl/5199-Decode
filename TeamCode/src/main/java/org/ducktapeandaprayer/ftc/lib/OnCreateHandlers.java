@@ -13,7 +13,7 @@ import java.lang.reflect.Field;
 
 public class OnCreateHandlers {
     private static WeakReference<FtcEventLoop> eventLoop = null;
-    private static WeakReference<EventLoopManager> eventLoopManger = null;
+    private static WeakReference<FtcEventLoopHandler> eventLoopHandler = null;
     private static WeakReference<OpModeManagerImpl> opModeManagerRef = null;
 
     @org.firstinspires.ftc.ftccommon.external.OnCreate
@@ -34,7 +34,20 @@ public class OnCreateHandlers {
         opModeManager.registerListener(OpModeNotificationListener.instance);
         opModeManagerRef = new WeakReference<>(opModeManager);
 
+        try {
+            Field loopHandlerField = FtcEventLoopBase.class.getDeclaredField("ftcEventLoopHandler");
+            loopHandlerField.setAccessible(true);
+            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(eventLoop.get());
 
+            //Change the robot battery level send interval to be once per second from once per three seconds, but it is a protected field, so use reflection
+            Field robotBatteryIntervalField = loopHandler.getClass().getDeclaredField("robotBatteryInterval");
+            robotBatteryIntervalField.setAccessible(true);
+            robotBatteryIntervalField.set(loopHandler, 0.75);
+
+            eventLoopHandler = new WeakReference<>(loopHandler);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new RuntimeException("getEventLoop reflection oopsy", e);
+        }
     }
 
     public static WeakReference<FtcEventLoop> getEventLoop() {
@@ -42,13 +55,6 @@ public class OnCreateHandlers {
     }
 
     public static WeakReference<EventLoopManager> getEventLoopManger() {
-        try {
-            Field loopHandlerField = FtcEventLoopBase.class.getDeclaredField("ftcEventLoopHandler");
-            loopHandlerField.setAccessible(true);
-            FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(eventLoop.get());
-            return new WeakReference<>(loopHandler.getEventLoopManager());
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("getEventLoopManger oopsy", e);
-        }
+        return new WeakReference<>(eventLoopHandler.get().getEventLoopManager());
     }
 }

@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.apache.commons.lang3.tuple.Pair;
 import org.ducktapeandaprayer.ftc.auto.vision.AprilTagDetectionPipeline;
+import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
@@ -25,7 +26,6 @@ public class ExpansionHubThread extends ThreadEx {
     //
 
     public static long launcherVelocityCheckInterval = 200;
-    public static double autoLaunchTimeout = 3.0;
 
     //
     // Globals
@@ -39,17 +39,7 @@ public class ExpansionHubThread extends ThreadEx {
 
     private AprilTagDetectionPipeline pipeline;
     private String visionTelemetry = "";
-
-    private enum AutoLaunchState {
-        STOPPED,
-        WAITING_ARTIFACT,
-        SPINNING_UP,
-        LAUNCHING,
-        //For when we can't stop right now because we need to make sure that the ball exits the launcher successfully
-        LAUNCHING_STOP_REQUESTED
-    }
-
-    private AutoLaunchState autoLaunchState = AutoLaunchState.STOPPED;
+    private AutoLaunch autoLaunch;
 
     private enum LauncherControlMethod {
         MANUAL,
@@ -223,40 +213,11 @@ public class ExpansionHubThread extends ThreadEx {
         } else {
             throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
         }
-
-//                            updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
-//                            hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-    }
-
-    private void stopAutoLaunch() {
-        switch (autoLaunchState) {
-            case STOPPED:
-                throw new RuntimeException("Trying to stop auto launch while auto launch is already stopped");
-            case WAITING_ARTIFACT:
-                hardware.moverDrive.setPower(0);
-                hardware.intakeDrive.setPower(0);
-                break;
-            case SPINNING_UP:
-                //Nothing special needs to happen here
-                break;
-            case LAUNCHING:
-                //Wait for speed dip instead of stopping the launcher right now to prevent any artifacts from getting stuck mid launch.
-                RobotLog.ii("ExpansionHubThread", "Auto launch requested while waiting for speed dip");
-                autoLaunchState = AutoLaunchState.LAUNCHING_STOP_REQUESTED;
-                return;
-
-            //Stop requested a second time while waiting for speed dip. We will e-stop
-            case LAUNCHING_STOP_REQUESTED:
-                hardware.kickerServo.setPosition(0);
-                break;
-        }
-
-        stopLauncher();
-        autoLaunchState = AutoLaunchState.STOPPED;
     }
 
     public ExpansionHubThread(MainBotHardware hardwareArg, Gamepad gamepad1, OptionDriver optionDriver) {
         this.hardware = hardwareArg;
+        this.autoLaunch = new AutoLaunch(hardware, this::startLauncher, this::stopLauncher);
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         try {
@@ -266,14 +227,14 @@ public class ExpansionHubThread extends ThreadEx {
 
             //Movement
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
-                if(autoLaunchState != AutoLaunchState.STOPPED) {
+                if(autoLaunch.isLaunching()) {
                     return;
                 }
 
                 if(left_bumper == right_bumper) {
                     hardware.moverDrive.setPower(0);
                 } else if(left_bumper) {
-                    if(hardware.kickerServo.getPosition() == 0) {
+                    if(hardware.kickerServo.getPosition() == MainBotHardware.kickerServoDownPos) {
                         hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
                     }
                 } else if(right_bumper) {
@@ -288,12 +249,12 @@ public class ExpansionHubThread extends ThreadEx {
                     hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
                     hardware.moverDrive.setPower(0);
                 } else if (!gamepad1.circle){
-                    hardware.kickerServo.setPosition(0);
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
                 }
             }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
-                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL && autoLaunchState == AutoLaunchState.STOPPED) {
+                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL && !autoLaunch.isLaunching()) {
                     if(hardware.launchDrive.getTargetVelocity() == 0) {
                         startLauncher();
                     } else {
@@ -303,7 +264,7 @@ public class ExpansionHubThread extends ThreadEx {
             }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
-                if(autoLaunchState != AutoLaunchState.STOPPED) {
+                if(autoLaunch.isLaunching()) {
                     return;
                 }
 
@@ -316,7 +277,7 @@ public class ExpansionHubThread extends ThreadEx {
                         hardware.moverDrive.setPower(0);
                     }
                 } else if(!gamepad1.options) {
-                    hardware.kickerServo.setPosition(0);
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
                 }
             }));
 
@@ -327,7 +288,7 @@ public class ExpansionHubThread extends ThreadEx {
                         power /= 2;
                     }
                     hardware.launchDrive.setPower(power);
-                } else if(autoLaunchState == AutoLaunchState.STOPPED) {
+                } else if(!autoLaunch.isLaunching()) {
                     hardware.intakeDrive.setPower(power);
                 }
 
@@ -355,7 +316,7 @@ public class ExpansionHubThread extends ThreadEx {
                         hardware.launchDrive.setVelocity(0);
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                         hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-                    } else if(autoLaunchState == AutoLaunchState.STOPPED) {
+                    } else if(!autoLaunch.isLaunching()) {
                         launcherControlMethod = LauncherControlMethod.MANUAL;
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                         hardware.launchDrive.setPower(hardware.intakeDrive.getPower());
@@ -375,8 +336,8 @@ public class ExpansionHubThread extends ThreadEx {
                     return;
                 }
 
-                if(autoLaunchState != AutoLaunchState.STOPPED) {
-                    stopAutoLaunch();
+                if(autoLaunch.isLaunching()) {
+                    autoLaunch.stopAutoLaunch();
                     return;
                 }
 
@@ -384,22 +345,7 @@ public class ExpansionHubThread extends ThreadEx {
                     return;
                 }
 
-                startLauncher();
-                artifactsToLaunch = 3;
-
-                //We check here because we don't want to start the mover if there is already and artifact in position and waiting
-                if(hardware.launcherSwitch.getState()) {
-                    hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
-                    hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
-                    autoLaunchState = AutoLaunchState.WAITING_ARTIFACT;
-                } else {
-                    hardware.moverDrive.setPower(0);
-                    hardware.intakeDrive.setPower(0);
-                    autoLaunchState = AutoLaunchState.SPINNING_UP;
-                }
-                hardware.kickerServo.setPosition(0);
-
-                autoLaunchStartedWatingTime = runtime.seconds();
+                autoLaunch.startAutoLaunching(3);
             }));
 
 
@@ -440,84 +386,13 @@ public class ExpansionHubThread extends ThreadEx {
         super.run();
     }
 
-    private double autoLaunchStartedWatingTime = Double.NaN;
-    private int speedSamplesSeen = 0;
-    private int artifactsToLaunch = 0;
-
     public void tick() {
 //        RobotLog.ii("ExpansionHubThread", "Running!");
 
         hardware.modules.childModule.module.clearBulkCache();
+
+
         telemetry.append(visionTelemetry);
         updateTelemetry();
-
-        switch (autoLaunchState) {
-            case STOPPED:
-                break;
-
-            case WAITING_ARTIFACT:
-                if(hardware.launchDrive.isAtTargetVelocity()) {
-                    speedSamplesSeen++;
-                } else {
-                    speedSamplesSeen = 0;
-                }
-
-                if(hardware.launcherSwitch.getState()) {
-                    break;
-                }
-
-                hardware.moverDrive.setPower(0);
-                hardware.intakeDrive.setPower(0);
-                autoLaunchStartedWatingTime = runtime.seconds();
-                autoLaunchState = AutoLaunchState.SPINNING_UP;
-
-            case SPINNING_UP:
-                if(hardware.launchDrive.isAtTargetVelocity()) {
-                    speedSamplesSeen++;
-                } else {
-                    speedSamplesSeen = 0;
-                }
-
-                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples) {
-                    break;
-                }
-
-                hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
-                speedSamplesSeen = 0;
-                autoLaunchStartedWatingTime = runtime.seconds();
-                autoLaunchState = AutoLaunchState.LAUNCHING;
-
-            case LAUNCHING:
-            case LAUNCHING_STOP_REQUESTED:
-                if(hardware.launchDrive.isAtTargetVelocity()) {
-                    speedSamplesSeen = 0;
-                } else {
-                    speedSamplesSeen++;
-                }
-
-                if(speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples) {
-                    break;
-                }
-
-                artifactsToLaunch--;
-                if(artifactsToLaunch > 0 && autoLaunchState == AutoLaunchState.LAUNCHING) {
-                    hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
-                    hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
-                    hardware.kickerServo.setPosition(0);
-                    autoLaunchStartedWatingTime = runtime.seconds();
-                    autoLaunchState = AutoLaunchState.WAITING_ARTIFACT;
-                    speedSamplesSeen = 0;
-                } else {
-                    stopAutoLaunch();
-                }
-                break;
-        }
-
-        if(autoLaunchState != AutoLaunchState.STOPPED) {
-            if(runtime.seconds() - autoLaunchStartedWatingTime > autoLaunchTimeout) {
-                //We timed out, stop trying to autolaunch
-                stopAutoLaunch();
-            }
-        }
     }
 }

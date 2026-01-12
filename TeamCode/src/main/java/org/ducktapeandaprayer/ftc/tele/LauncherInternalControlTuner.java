@@ -31,6 +31,8 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
     public static double kV = 0.0056;
     public static double kP = 0.05;
 
+    //FIX: Make launcher internal control tuner be merged into the pidf one and dethread it
+
     private MainBotHardware hardware = null;
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private MultipleTelemetry mt = null;
@@ -150,7 +152,7 @@ public class LauncherInternalControlTuner extends FastIterativeOpMode {
                     if(launcherTargetVelocity == 0) {
                         hardware.launchDrive.setPower(0);
                     } else {
-                        hardware.launchDrive.setPower(((launcherTargetVelocity - velocity) * kP + (launcherTargetVelocity) * kV) / hardware.parentVoltageSensor.getVoltage() / MainBotHardware.parentResistorMultiplier);
+                        hardware.launchDrive.setPower(((launcherTargetVelocity - velocity) * kP + (launcherTargetVelocity) * kV) / hardware.parentVoltageSensor.getVoltage());
                     }
 
                     if(launcherTargetVelocity != 0 && lastVelocityZero && startTime == -1) {

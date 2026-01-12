@@ -53,9 +53,9 @@ public class ControlHubThread extends ThreadEx {
 
     public void tick() {
 //        RobotLog.ii("ControlHubThread", "Running!");
-        telemetry.append("Battery voltage: ");
-        telemetry.append(hardware.parentVoltageSensor.getVoltage() * MainBotHardware.parentResistorMultiplier);
-        telemetry.append("V\n");
+//        telemetry.append("Battery voltage: ");
+//        telemetry.append(hardware.parentVoltageSensorReal.getVoltage());
+//        telemetry.append("V\n");
         updateTelemetry();
 
         hardware.modules.parentModule.module.clearBulkCache();

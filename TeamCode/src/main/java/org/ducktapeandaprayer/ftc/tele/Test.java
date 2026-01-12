@@ -64,7 +64,7 @@ public class Test extends FastIterativeOpMode {
     public void start_internal() {
         runtime.reset();
         RobotImpl robot = new RobotImpl(hardware, this::opModeIsActive);
-        robot.launch(3, SplitAuto.launch1TicksPerSecAuto);
+        robot.launch(3, SplitAuto.launchVelocity);
     }
 
     /*

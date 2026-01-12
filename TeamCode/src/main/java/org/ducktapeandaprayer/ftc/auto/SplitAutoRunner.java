@@ -14,6 +14,7 @@ import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.IntOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.openftc.apriltag.AprilTagDetection;
 
@@ -26,15 +27,14 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     private MainBotHardware hardware;
     private SplitAuto splitAuto;
     private Action path = null;
-    private AprilTagDetectionPipeline pipeline;
     private TrajectoryActionBuilder builder = null;
     private MecanumDrive mecanumDrive;
 
     public Alliance alliance;
     public StartPos startPos;
     public Delay delay;
-    public boolean useVision;
     public boolean score;
+    public int spikeCount;
 
     @Override
     protected void init_internal() {
@@ -43,8 +43,8 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             optionDriver.add(new EnumOption<>("Alliance", "dpad_up", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
             optionDriver.add(new EnumOption<>("Start Pos", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
             optionDriver.add(new EnumOption<>("Delay", "cross", gamepad1, this.getClass().getField("delay"), this, Delay.class));
-            optionDriver.add(new BooleanOption("Use Vision", "triangle", gamepad1, this.getClass().getField("useVision"), this));
             optionDriver.add(new BooleanOption("Score", "circle", gamepad1, this.getClass().getField("score"), this));
+            optionDriver.add(new IntOption("Spike Count", "square", gamepad1, this.getClass().getField("spikeCount"), this, 0, 3));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -57,7 +57,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                     mecanumDrive = new MecanumDrive(hardware, startPose);
                     return mecanumDrive.actionBuilder(startPose);
                 },
-                new RobotImpl(hardware, () -> true)
+                new RobotImpl(hardware, this::opModeIsActive)
         );
     }
 
@@ -74,7 +74,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            builder = splitAuto.fillBuilder(delay, startPos, alliance, useVision, score);
+            builder = splitAuto.fillBuilder(delay, startPos, alliance, score, spikeCount);
             path = builder.build();
 
             telemetry.addLine(out);
@@ -89,46 +89,11 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     @Override
     protected void start_internal() {
         Alliance.lastAlliance = alliance;
-        if(useVision) {
-            pipeline = new AprilTagDetectionPipeline(hardware);
-        }
-
         AtomicBoolean pathDone = new AtomicBoolean(false);
         Actions.runBlocking(
                 new ParallelAction(
                         new SequentialAction(
                                 path,
-                                new InstantAction(() -> {
-                                   if(useVision) {
-                                       int spike = 0;
-
-                                       if (pipeline.getLatestDetections() != null && !pipeline.getLatestDetections().isEmpty()) {
-                                           for (AprilTagDetection d : pipeline.getLatestDetections()) {
-                                               if(spike != 0) {
-                                                   telemetry.addData("Duplicate tag", d.id);
-                                                   continue;
-                                               }
-
-                                               if (d.id == 21) {
-                                                   spike = 1;
-                                               } else if (d.id == 22) {
-                                                   spike = 2;
-                                               } else if (d.id == 23) {
-                                                   spike = 3;
-                                               }
-                                           }
-                                       }
-
-                                       if (spike == 0) {
-                                           telemetry.addLine("No obelisk tag found. Going to spike 1");
-                                           spike = 1;
-                                       } else {
-                                           telemetry.addData("Spike", spike);
-                                       }
-
-                                       Actions.runBlocking(splitAuto.fillBuilderPostVision(builder.fresh(), useVision, spike, alliance).build());
-                                   }
-                                }),
                                 new InstantAction(() -> {
                                     pathDone.set(true);
                                 })
