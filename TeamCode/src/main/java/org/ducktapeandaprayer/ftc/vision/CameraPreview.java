@@ -1,4 +1,4 @@
-package org.ducktapeandaprayer.ftc.auto.vision;
+package org.ducktapeandaprayer.ftc.vision;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;

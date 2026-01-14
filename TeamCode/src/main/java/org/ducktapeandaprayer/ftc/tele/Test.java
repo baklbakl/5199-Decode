@@ -6,7 +6,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
-import org.ducktapeandaprayer.ftc.auto.vision.AprilTagDetectionPipeline;
+import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
 

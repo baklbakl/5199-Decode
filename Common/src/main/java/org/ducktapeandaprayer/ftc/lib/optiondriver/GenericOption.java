@@ -5,7 +5,7 @@ public abstract class GenericOption {
     abstract String getCurrentString();
     abstract void buttonPressed();
 
-    public  String getDescription() {
+    public String getDescription() {
         return description;
     }
 

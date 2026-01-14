@@ -39,14 +39,14 @@ public class OnCreateHandlers {
             loopHandlerField.setAccessible(true);
             FtcEventLoopHandler loopHandler = (FtcEventLoopHandler) loopHandlerField.get(eventLoop.get());
 
-            //Change the robot battery level send interval to be once per second from once per three seconds, but it is a protected field, so use reflection
+            //Change the robot battery level send interval to be every 750ms from once per three seconds, but it is a protected field, so use reflection
             Field robotBatteryIntervalField = loopHandler.getClass().getDeclaredField("robotBatteryInterval");
             robotBatteryIntervalField.setAccessible(true);
             robotBatteryIntervalField.set(loopHandler, 0.2);
 
             eventLoopHandler = new WeakReference<>(loopHandler);
         } catch (NoSuchFieldException | IllegalAccessException e) {
-            throw new RuntimeException("getEventLoop reflection oopsy", e);
+            throw new RuntimeException("collectEventLoop reflection oopsy", e);
         }
     }
 

@@ -1,4 +1,4 @@
-package org.ducktapeandaprayer.ftc.auto.vision;
+package org.ducktapeandaprayer.ftc.vision;
 
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.opencv.calib3d.Calib3d;
@@ -42,7 +42,6 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
 
     private long nativeApriltagPtr;
     private Mat grey = new Mat();
-    private final Object detectionsSync = new Object();
     private ArrayList<AprilTagDetection> detections = new ArrayList<>();
 
     private ArrayList<AprilTagDetection> detectionsUpdate = new ArrayList<>();
@@ -111,21 +110,21 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
 
         // Run AprilTag
         ArrayList<AprilTagDetection> detectionsTemp = AprilTagDetectorJNI.runAprilTagDetectorSimple(nativeApriltagPtr, grey, tagsizeIn, fx, fy, cx, cy);
-        synchronized (detectionsSync) {
-            detections = detectionsTemp;
-            synchronized (detectionsUpdateSync) {
-                detectionsUpdate = detections;
-            }
 
-            if(!drawDebugOnFrame) return input;
-
-            // For fun, use OpenCV to draw 6DOF markers on the image.
-            for(AprilTagDetection detection : detections) {
-                Pose pose = aprilTagPoseToOpenCvPose(detection.pose);
-                drawAxisMarker(input, tagsizeIn/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
-                draw3dCubeMarker(input, tagsizeIn, tagsizeIn, tagsizeIn, 5, pose.rvec, pose.tvec, cameraMatrix);
-            }
+        detections = detectionsTemp;
+        synchronized (detectionsUpdateSync) {
+            detectionsUpdate = detections;
         }
+
+        if(!drawDebugOnFrame) return input;
+
+        // For fun, use OpenCV to draw 6DOF markers on the image.
+        for(AprilTagDetection detection : detections) {
+            Pose pose = aprilTagPoseToOpenCvPose(detection.pose);
+            drawAxisMarker(input, tagsizeIn/2.0, 6, pose.rvec, pose.tvec, cameraMatrix);
+            draw3dCubeMarker(input, tagsizeIn, tagsizeIn, tagsizeIn, 5, pose.rvec, pose.tvec, cameraMatrix);
+        }
+
 
         return input;
     }
@@ -137,15 +136,13 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         }
     }
 
-    public ArrayList<AprilTagDetection> getLatestDetections() {
-        synchronized (detectionsSync) {
-            return detections;
-        }
+    //This isn't thread safe, so we don't use it.
+    private ArrayList<AprilTagDetection> getLatestDetections() {
+        return detections;
     }
 
     public ArrayList<AprilTagDetection> getDetectionsUpdate() {
-        synchronized (detectionsUpdateSync)
-        {
+        synchronized (detectionsUpdateSync) {
             ArrayList<AprilTagDetection> ret = detectionsUpdate;
             detectionsUpdate = null;
             return ret;

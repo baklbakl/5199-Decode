@@ -2,7 +2,7 @@ package org.ducktapeandaprayer.ftc.lib;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 
-//ADD: Some way of hot swapping opmodes
+//Some way of hot swapping opmodes - no longer necessary, we have sub 10 second usb install times
 public abstract class FastIterativeOpMode extends LinearOpMode {
     @Override
     public void runOpMode() {

@@ -1,4 +1,4 @@
-package org.ducktapeandaprayer.ftc.auto.vision;
+package org.ducktapeandaprayer.ftc.vision;
 
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.openftc.easyopencv.*;
