@@ -60,7 +60,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     private final Object decimationSync = new Object();
 
     public AprilTagDetectionPipeline(MainBotHardware hardware) {
-        super(hardware, 1280, 720);
+        super(hardware, 800, 448);
         constructMatrix();
 
         // Allocate a native context object. See the corresponding deletion in the finalizer

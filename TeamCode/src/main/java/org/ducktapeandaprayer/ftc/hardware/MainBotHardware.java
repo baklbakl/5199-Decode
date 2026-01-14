@@ -38,11 +38,8 @@ public class MainBotHardware {
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
     public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-            new MutablePair<>(29.0, 1410.0),
-            new MutablePair<>(36.0, 1420.0),
-            new MutablePair<>(46.0, 1480.0),
-            new MutablePair<>(53.0, 1540.0),
-            new MutablePair<>(60.0, 1600.0)
+            new MutablePair<>(25.0, 1370.0),
+            new MutablePair<>(33.0, 1400.0)
     ));
 
     //
