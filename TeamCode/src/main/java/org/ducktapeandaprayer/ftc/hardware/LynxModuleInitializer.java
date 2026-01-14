@@ -99,7 +99,6 @@ public class LynxModuleInitializer {
             } else {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
                 hardwareMap.remove(name, device);
-                //TEST: Does removing the voltage monitor from the device specific devicemappings fix the requests from random threads?
             }
         }
 

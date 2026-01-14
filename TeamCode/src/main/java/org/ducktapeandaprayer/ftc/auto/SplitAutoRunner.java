@@ -7,7 +7,6 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
-import org.ducktapeandaprayer.ftc.auto.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.MecanumDrive;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
@@ -16,7 +15,6 @@ import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.IntOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
-import org.openftc.apriltag.AprilTagDetection;
 
 import java.lang.Math;
 import java.util.concurrent.atomic.AtomicBoolean;

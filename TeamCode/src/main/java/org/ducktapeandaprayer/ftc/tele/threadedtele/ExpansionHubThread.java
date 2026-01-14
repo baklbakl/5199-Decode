@@ -3,22 +3,16 @@ package org.ducktapeandaprayer.ftc.tele.threadedtele;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.util.RobotLog;
 import org.apache.commons.lang3.tuple.Pair;
-import org.ducktapeandaprayer.ftc.auto.vision.AprilTagDetectionPipeline;
+import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
-import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 import org.ducktapeandaprayer.ftc.lib.TimedEvent;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
-import org.openftc.apriltag.AprilTagDetection;
-
-import java.util.ArrayList;
+import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
+import org.openftc.apriltag.AprilTagPose;
 
 public class ExpansionHubThread extends ThreadEx {
     //
@@ -32,14 +26,10 @@ public class ExpansionHubThread extends ThreadEx {
     //
 
     private final MainBotHardware hardware;
+    private final ThreadedTele threadedTele;
+    private final AutoLaunch autoLaunch;
 
-    public Boolean runVision = true;
-    public Boolean visionDebugInfo = true;
-    public Alliance alliance = Alliance.lastAlliance;
-
-    private AprilTagDetectionPipeline pipeline;
     private String visionTelemetry = "";
-    private AutoLaunch autoLaunch;
 
     private enum LauncherControlMethod {
         MANUAL,
@@ -82,7 +72,7 @@ public class ExpansionHubThread extends ThreadEx {
         return Double.NaN;
     }
 
-    public enum VisionComputationResultState {
+    private enum VisionComputationResultState {
         NO_TAG_FOUND,
         OUT_OF_RANGE,
         IN_RANGE
@@ -98,60 +88,40 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
 
+    //This could realize when it has seen this pose before and skip its processing, but that would add complexity and recomputing is easier.
     private VisionComputationResult computeLauncherSpeed() {
-        if(!runVision) {
+        if(!threadedTele.runVision) {
             return null;
         }
 
-        double visionTargetSpeed = 0;
-        VisionComputationResultState state = VisionComputationResultState.NO_TAG_FOUND;
-
-        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
-
         StringBuilder visionDebugSb = new StringBuilder();
 
-        int aprilTagID = alliance.toAprilTagID();
+        VisionComputationResultState state = null;
+        double groundDist = Double.NaN;
 
-        visionDebugSb.append("Target ID: ");
-        visionDebugSb.append(aprilTagID).append('\n');
+        synchronized (threadedTele.tagPoseLock) {
+            AprilTagPoseEx pose = threadedTele.getTagPose();
 
-        AprilTagDetection targetDetection = null;
-        if (detections != null && !detections.isEmpty()) {
-            for (AprilTagDetection d : detections) {
-                if (d.id == aprilTagID) {
-                    targetDetection = d;
-                    break;
-                }
-            }
-
-            visionDebugSb.append("Detected ").append(detections.size()).append("april tags\n");
-            if (targetDetection != null) {
-                visionDebugSb.append("Target Found!\n");
-                visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
-
-                double groundDist = AprilTagDetectionPipeline.getGroundDistance(targetDetection.pose);
-                visionDebugSb.append("Ground distance: ").append(groundDist).append("\n");
-                visionTargetSpeed = launchSpeedFromDist(groundDist);
-                visionDebugSb.append("Launcher Vision Target Velocity: ");
-                visionDebugSb.append(visionTargetSpeed).append("\n");
-
-                if (Double.isNaN(visionTargetSpeed)) {
-                    state = VisionComputationResultState.OUT_OF_RANGE;
-                } else {
-                    state = VisionComputationResultState.IN_RANGE;
-                }
-
+            if(pose == null) {
+                state = VisionComputationResultState.NO_TAG_FOUND;
             } else {
-                visionDebugSb.append("Target not found in frame\n");
+                groundDist = pose.groundDistance;
             }
-
-        } else {
-            visionDebugSb.append("No detections\n");
         }
 
-        visionDebugSb.append(pipeline.getTimingTelemetry()).append('\n');
+        double visionTargetSpeed = launchSpeedFromDist(groundDist);
+        visionDebugSb.append("Launcher Vision Target Velocity: ");
+        visionDebugSb.append(visionTargetSpeed).append("\n");
 
-        if(visionDebugInfo) {
+        if(state != VisionComputationResultState.NO_TAG_FOUND) {
+            if (Double.isNaN(visionTargetSpeed)) {
+                state = VisionComputationResultState.OUT_OF_RANGE;
+            } else {
+                state = VisionComputationResultState.IN_RANGE;
+            }
+        }
+
+        if(threadedTele.visionDebugInfo) {
             visionTelemetry = visionDebugSb.toString();
         }
 
@@ -215,16 +185,14 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
 
-    public ExpansionHubThread(MainBotHardware hardwareArg, Gamepad gamepad1, OptionDriver optionDriver) {
+    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, Gamepad gamepad1) {
         this.hardware = hardwareArg;
+        this.threadedTele = threadedTele;
+
         this.autoLaunch = new AutoLaunch(hardware, this::startLauncher, this::stopLauncher);
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         try {
-            optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("runVision"), this));
-            optionDriver.add(new BooleanOption("Vision debug info", "dpad_up", gamepad1, this.getClass().getField("visionDebugInfo"), this));
-            optionDriver.add(new EnumOption<>("Alliance", "cross", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
-
             //Movement
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
                 if(autoLaunch.isLaunching()) {
@@ -300,7 +268,7 @@ public class ExpansionHubThread extends ThreadEx {
                         launcherControlMethod = LauncherControlMethod.PRESET;
                         hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
                         hardware.launchDrive.setVelocity(0);
-                    } else if(runVision) {
+                    } else if(this.threadedTele.runVision) {
                         launcherControlMethod = LauncherControlMethod.VISION;
                         hardware.launchDrive.setVelocity(0);
                         updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
@@ -374,8 +342,7 @@ public class ExpansionHubThread extends ThreadEx {
 
     @Override
     public void run() {
-        if(runVision) {
-            pipeline = new AprilTagDetectionPipeline(hardware);
+        if(threadedTele.runVision) {
             hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
             launcherControlMethod = LauncherControlMethod.VISION;
         } else {
@@ -390,7 +357,6 @@ public class ExpansionHubThread extends ThreadEx {
 //        RobotLog.ii("ExpansionHubThread", "Running!");
 
         hardware.modules.childModule.module.clearBulkCache();
-
 
         telemetry.append(visionTelemetry);
         updateTelemetry();

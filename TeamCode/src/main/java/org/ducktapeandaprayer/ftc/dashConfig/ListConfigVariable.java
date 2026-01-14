@@ -149,7 +149,6 @@ public class ListConfigVariable<T> extends CustomVariable {
         list = l;
         this.nonNullT = nonNullTArg;
 
-        //TEST: Does change element count get reset back to zero correctly
         putVariable("Change element count", new BasicVariable<>(new ValueProvider<Integer>() {
             private int resultToSend = 0;
 
