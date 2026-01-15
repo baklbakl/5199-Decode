@@ -26,14 +26,14 @@ public class MainBotHardware {
     // Dashboard options
     //
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 15);
-    public static int motorVelocityTolerance = 50;
-    public static double moverDrivePower = 1; //Was 0.85
+    public static int motorVelocityTolerance = 30;
+    public static double moverDrivePower = 1;
     public static double moverDriveBallInPower = 0.7; //Was 0.85
     public static double kickerServoUpPos = 0.5;
     public static double kickerServoDownPos = 0.32;
     public static double inIntakePower = 1;
     public static long teleOpLauncherNoVisionVelocity = -1380;
-    public static int launchRequiredSpeedSamples = 4;
+    public static int launchRequiredSpeedSamples = 10;
     public static double parentResistorMultiplier = 3.19;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
