@@ -40,7 +40,7 @@ public class AutoLaunch {
     }
 
     private void internalStartAutolaunching(int count, Runnable startLauncherReal) {
-        if(artifactsToLaunch != 0) {
+        if(state != State.STOPPED) {
             throw new IllegalStateException("Not allowed to start launching while launching is in progress");
         }
 

@@ -25,21 +25,28 @@ public class MainBotHardware {
     //
     // Dashboard options
     //
-    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.4);
+    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 15);
     public static int motorVelocityTolerance = 50;
     public static double moverDrivePower = 1; //Was 0.85
+    public static double moverDriveBallInPower = 0.7; //Was 0.85
     public static double kickerServoUpPos = 0.5;
     public static double kickerServoDownPos = 0.32;
     public static double inIntakePower = 1;
-    public static long teleOpLauncherNoVisionVelocity = -1460;
+    public static long teleOpLauncherNoVisionVelocity = -1380;
     public static int launchRequiredSpeedSamples = 4;
     public static double parentResistorMultiplier = 3.19;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
     public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-            new MutablePair<>(25.0, 1370.0),
-            new MutablePair<>(33.0, 1400.0)
+            new MutablePair<>(25.0, -1320.0),
+            new MutablePair<>(33.0, -1340.0),
+            new MutablePair<>(40.0, -1370.0),
+            new MutablePair<>(47.0, -1420.0),
+            new MutablePair<>(55.0, -1460.0),
+            new MutablePair<>(60.0, -1500.0),
+            new MutablePair<>(70.0, -1550.0),
+            new MutablePair<>(78.0, -1630.0)
     ));
 
     //

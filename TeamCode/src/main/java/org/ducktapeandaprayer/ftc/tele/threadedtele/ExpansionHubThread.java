@@ -181,7 +181,7 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
             case IN_RANGE:
                 targetSpeed = result.speed;
-                if((hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) || forceStart) {
+                if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
                     hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
                 } else {
                     hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
@@ -189,7 +189,7 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
         }
 
-        if(hardware.launchDrive.getTargetVelocity() != 0) {
+        if(hardware.launchDrive.getTargetVelocity() != 0 || forceStart) {
             hardware.launchDrive.setVelocity(targetSpeed);
         }
     }
@@ -235,7 +235,7 @@ public class ExpansionHubThread extends ThreadEx {
                     hardware.moverDrive.setPower(0);
                 } else if(left_bumper) {
                     if(hardware.kickerServo.getPosition() == MainBotHardware.kickerServoDownPos) {
-                        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                        hardware.moverDrive.setPower(hardware.launcherSwitch.getState() ? MainBotHardware.moverDrivePower : MainBotHardware.moverDriveBallInPower);
                     }
                 } else if(right_bumper) {
                     hardware.moverDrive.setPower(-MainBotHardware.moverDrivePower);
@@ -388,11 +388,24 @@ public class ExpansionHubThread extends ThreadEx {
 
     public void tick() {
 //        RobotLog.ii("ExpansionHubThread", "Running!");
+        autoLaunch.tick();
+
+        if(hardware.moverDrive.getPower() > 0) {
+            if(hardware.launcherSwitch.getState()) {
+                hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+            } else {
+                hardware.moverDrive.setPower(MainBotHardware.moverDriveBallInPower);
+            }
+        }
 
         hardware.modules.childModule.module.clearBulkCache();
 
-
         telemetry.append(visionTelemetry);
+
+        telemetry.append("Launcher Target Speed: ");
+        telemetry.append(hardware.launchDrive.getTargetVelocity());
+        telemetry.append("\nLauncher Current Speed: ");
+        telemetry.append(hardware.launchDrive.getVelocity());
         updateTelemetry();
     }
 }
