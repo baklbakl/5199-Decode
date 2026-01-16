@@ -16,7 +16,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@TeleOp(group = MainBotConfig.opmodeGroupName)
+@TeleOp(name = "1ThreadedTele", group = MainBotConfig.opmodeGroupName)
 public class ThreadedTele extends FastIterativeOpMode {
     public MainBotHardware hardware = null;
     private ControlHubThread controlHubThread = null;

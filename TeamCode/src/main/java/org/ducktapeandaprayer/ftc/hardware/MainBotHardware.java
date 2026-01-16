@@ -29,6 +29,7 @@ public class MainBotHardware {
     public static int motorVelocityTolerance = 30;
     public static double moverDrivePower = 1;
     public static double moverDriveBallInPower = 0.7; //Was 0.85
+    public static double moverDriveAutoPower = 0.85; //Was 0.85
     public static double kickerServoUpPos = 0.5;
     public static double kickerServoDownPos = 0.32;
     public static double inIntakePower = 1;

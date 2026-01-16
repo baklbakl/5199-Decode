@@ -7,7 +7,7 @@ import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
 import java.util.function.Consumer;
 
 public class AutoLaunch {
-    public static double autoLaunchTimeout = 3.0;
+    public static double autoLaunchTimeout = 2.0;
 
     private enum State {
         STOPPED,
@@ -78,26 +78,23 @@ public class AutoLaunch {
         switch (state) {
             case STOPPED:
                 throw new RuntimeException("Trying to stop auto launch while auto launch is already stopped");
-            case WAITING_ARTIFACT:
-                hardware.moverDrive.setPower(0);
-                hardware.intakeDrive.setPower(0);
-                break;
-            case SPINNING_UP:
-                //Nothing special needs to happen here
-                break;
+
             case LAUNCHING:
                 //Wait for speed dip instead of stopping the launcher right now to prevent any artifacts from getting stuck mid launch.
                 RobotLog.ii("AutoLaunch", "Auto launch stop requested while waiting for speed dip");
                 state = State.LAUNCHING_STOP_REQUESTED;
                 return;
-
             //Stop requested a second time while waiting for speed dip. We will e-stop
             case LAUNCHING_STOP_REQUESTED:
                 hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
+            case SPINNING_UP:
+            case WAITING_ARTIFACT:
+                hardware.moverDrive.setPower(0);
+                hardware.intakeDrive.setPower(0);
+                stopLauncher.run();
                 break;
         }
 
-        stopLauncher.run();
         state = State.STOPPED;
     }
 
@@ -159,6 +156,7 @@ public class AutoLaunch {
                     state = State.WAITING_ARTIFACT;
                     speedSamplesSeen = 0;
                 } else {
+                    state = State.LAUNCHING_STOP_REQUESTED;
                     stopAutoLaunch();
                 }
                 break;

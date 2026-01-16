@@ -12,12 +12,16 @@ import java.util.Collections;
 import java.util.function.Function;
 
 public class SplitAuto {
-    public static Pose2d launchPos = new Pose2d(-35, 22, Math.toRadians(130));
-    public static double launchVelocity = -1400;
-    public static double intakeSpeed = 10;
+    //FIX: Launchpos doesn't show up as editable in the dashboard
+//    public static Pose2d launchPos = new Pose2d(-45, 22, Math.toRadians(110));
+    public static double launchPosX = -48;
+    public static double launchPosY = 22;
+    public static double launchPosHeading = 110;
+    public static double launchVelocity = -1340;
+    public static double intakeSpeed = 9;
     public static double intakeStartY = 35;
-    public static double intakeEndY = 45;
-    public static double[] spikeXs = new double[] {-13, 11, 35};
+    public static double intakeEndY = 47;
+    public static double[] spikeXs = new double[] {-15, 7, 29};
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -104,9 +108,9 @@ public class SplitAuto {
             pathBuilder = pathBuilder.waitSeconds(10);
         }
 
+        Pose2d launchPos = new Pose2d(launchPosX, launchPosY, Math.toRadians(launchPosHeading));
+
         if(score) {
-
-
             if (startPos == StartPos.GOAL) {
                 pathBuilder = pathBuilder.setTangent(Math.toRadians(315));
             } else if (startPos == StartPos.CLASSIFIER) {
@@ -128,7 +132,6 @@ public class SplitAuto {
             pathBuilder = pathBuilder
                     .stopAndAdd(() -> {
                         robot.launch(3, launchVelocity);
-                        robot.intake();
                     });
 
             int count = 0;
@@ -140,7 +143,7 @@ public class SplitAuto {
                 pathBuilder = pathBuilder
                         .stopAndAdd(robot::intake);
 
-                if(count <= 1) {
+                if(count < 1) {
                     pathBuilder = pathBuilder
                             .setTangent(Math.toRadians(45));
                 } else {
@@ -148,16 +151,17 @@ public class SplitAuto {
                             .setTangent(Math.toRadians(0));
                 }
 
-                if(count == 1) {
-                    pathBuilder = pathBuilder
-                            .splineTo(new Vector2d(-8, 25), Math.toRadians(0));
-                }
+//                if(count == 1) {
+//                    pathBuilder = pathBuilder
+//                            .splineTo(new Vector2d(-8, 25), Math.toRadians(0));
+//                }
 
                 pathBuilder = pathBuilder
                         .splineToSplineHeading(new Pose2d(spikeX, intakeStartY, Math.toRadians(90)), Math.toRadians(90))
                         .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed))
 
                         .afterTime(0.3, () -> {
+                            //ADD: Don't nearly stall out the intake motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
                             robot.stopIntake();
                             robot.startLauncher(launchVelocity);
                         })
@@ -172,6 +176,7 @@ public class SplitAuto {
 
                 count++;
             }
+
 //            pathBuilder = pathBuilder
 //                    .setTangent(Math.toRadians(45))
 //                    .splineToSplineHeading(new Pose2d(-13, 35, Math.toRadians(90)), Math.toRadians(90))

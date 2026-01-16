@@ -42,7 +42,7 @@ public class OnCreateHandlers {
             //Change the robot battery level send interval to be once per second from once per three seconds, but it is a protected field, so use reflection
             Field robotBatteryIntervalField = loopHandler.getClass().getDeclaredField("robotBatteryInterval");
             robotBatteryIntervalField.setAccessible(true);
-            robotBatteryIntervalField.set(loopHandler, 0.75);
+            robotBatteryIntervalField.set(loopHandler, 0.2);
 
             eventLoopHandler = new WeakReference<>(loopHandler);
         } catch (NoSuchFieldException | IllegalAccessException e) {
