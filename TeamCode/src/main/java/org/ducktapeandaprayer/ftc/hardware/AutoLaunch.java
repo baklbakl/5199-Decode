@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class AutoLaunch {
     public static double autoLaunchTimeout = 2.0;
@@ -21,22 +22,26 @@ public class AutoLaunch {
     private final MainBotHardware hardware;
     private final Runnable stopLauncher;
     private final Runnable startLauncher;
+    private final Supplier<Boolean> launchReady;
     private final ElapsedTime timeout = new ElapsedTime();
 
     private State state = State.STOPPED;
     private int speedSamplesSeen = 0;
     private int artifactsToLaunch = 0;
 
-    public AutoLaunch(MainBotHardware hardware, Runnable startLauncher, Runnable stopLauncher) {
+    //Stop and start launcher are called at the start and end of auto launching, so they can also be used to do other cleanup
+    public AutoLaunch(MainBotHardware hardware, Runnable startLauncher, Runnable stopLauncher, Supplier<Boolean> launchReady) {
         this.hardware = hardware;
         this.stopLauncher = stopLauncher;
         this.startLauncher = startLauncher;
+        this.launchReady = launchReady;
     }
 
     public AutoLaunch(MainBotHardware hardware) {
         this.hardware = hardware;
         this.startLauncher = null;
         this.stopLauncher = () -> hardware.launchDrive.setVelocity(0);
+        this.launchReady = () -> true;
     }
 
     private void internalStartAutolaunching(int count, Runnable startLauncherReal) {
@@ -126,7 +131,7 @@ public class AutoLaunch {
                     speedSamplesSeen = 0;
                 }
 
-                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples) {
+                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples || !launchReady.get()) {
                     break;
                 }
 

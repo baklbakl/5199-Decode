@@ -35,6 +35,9 @@ public class ThreadedTele extends FastIterativeOpMode {
     public volatile Boolean runVision = true;
     public volatile Boolean visionDebugInfo = true;
     public volatile Alliance alliance = Alliance.lastAlliance;
+    public volatile Boolean autoAimOnAutoLaunch = false;
+//    public volatile Boolean autoAimDebInfo = false;
+//    public volatile Boolean autoSpeedDebInfo = false;
     public Boolean timingDebugInfo = false;
 
     private AprilTagPoseEx tagPose = null;
@@ -115,8 +118,8 @@ public class ThreadedTele extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
-        controlHubThread = new ControlHubThread(hardware, this, gamepad1);
-        exansionHubThread = new ExpansionHubThread(hardware, this, gamepad1);
+        controlHubThread = new ControlHubThread(hardware, this, gamepad1, optionDriver);
+        exansionHubThread = new ExpansionHubThread(hardware, this, controlHubThread, gamepad1, optionDriver);
 
         threads.put("control hub thread", controlHubThread);
         threads.put("expansion hub thread", exansionHubThread);

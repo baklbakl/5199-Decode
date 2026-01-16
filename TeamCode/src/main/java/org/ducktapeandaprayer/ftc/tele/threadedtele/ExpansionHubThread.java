@@ -4,7 +4,8 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import org.apache.commons.lang3.tuple.Pair;
-import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
@@ -12,7 +13,6 @@ import org.ducktapeandaprayer.ftc.lib.TimedEvent;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
-import org.openftc.apriltag.AprilTagPose;
 
 public class ExpansionHubThread extends ThreadEx {
     //
@@ -24,6 +24,8 @@ public class ExpansionHubThread extends ThreadEx {
     //
     // Globals
     //
+
+    public Boolean autoSpeedDebInfo = false;
 
     private final MainBotHardware hardware;
     private final ThreadedTele threadedTele;
@@ -121,7 +123,7 @@ public class ExpansionHubThread extends ThreadEx {
             }
         }
 
-        if(threadedTele.visionDebugInfo) {
+        if(autoSpeedDebInfo) {
             visionTelemetry = visionDebugSb.toString();
         }
 
@@ -185,15 +187,28 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
 
-    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, Gamepad gamepad1) {
+    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread, Gamepad gamepad1, OptionDriver optionDriver) {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
 
-        this.autoLaunch = new AutoLaunch(hardware, this::startLauncher, this::stopLauncher);
+        this.autoLaunch = new AutoLaunch(
+                hardware,
+                this::startLauncher,
+                () -> {
+                    stopLauncher();
+                    controlHubThread.requestAutoAimStartStop(false);
+                },
+                //Disabled or locked auto aim are safe for launch. We maybe could check for auto speed lock, but it hasn't been an issue, so we won't
+                () -> {
+                    ControlHubThread.AutoAimState state = controlHubThread.getAutoAimState();
+                    return state == ControlHubThread.AutoAimState.LOCKED || state == ControlHubThread.AutoAimState.DISABLED;
+                }
+        );
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         try {
-            //Movement
+            optionDriver.add(new BooleanOption("Auto Speed debug info", "dpad_right", gamepad1, this.getClass().getField("autoSpeedDebInfo"), this));
+
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
                 if(autoLaunch.isLaunching()) {
                     return;
@@ -313,6 +328,7 @@ public class ExpansionHubThread extends ThreadEx {
                     return;
                 }
 
+                controlHubThread.requestAutoAimStartStop(true);
                 autoLaunch.startAutoLaunching(3);
             }));
 
