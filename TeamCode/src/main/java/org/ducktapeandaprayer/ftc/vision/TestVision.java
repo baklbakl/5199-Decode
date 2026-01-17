@@ -16,9 +16,14 @@ public class TestVision extends FastIterativeOpMode {
         pipeline = new AprilTagDetectionPipeline(MainBotHardware.getOrCreate(hardwareMap));
     }
 
+    private ArrayList<AprilTagDetection> detections = null;
+
     @Override
     protected void init_loop_internal() {
-        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
+        ArrayList<AprilTagDetection> detectionsUpdate = pipeline.getDetectionsUpdate();
+        if(detectionsUpdate != null) {
+            detections = detectionsUpdate;
+        }
 
         if (detections != null && !detections.isEmpty()) {
             telemetry.addData("Detections", detections.size());

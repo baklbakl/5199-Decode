@@ -64,7 +64,6 @@ public class ControlHubThread extends ThreadEx {
         return autoAimState;
     }
 
-    //ADD: Enable auto aim on auto launch if the optiondriver is on
     public void requestAutoAimStartStop(boolean running) {
         requestAutoAimStatus.set(running);
     }
@@ -137,44 +136,38 @@ public class ControlHubThread extends ThreadEx {
 
     private void computeTargetHeading() {
         //Positive x is to the right
-        double x;
-        double groundDistance;
+        double x = Double.NaN;
+        double groundDistance = Double.NaN;
+        boolean poseNull;
 
         synchronized (threadedTele.tagPoseLock) {
             AprilTagPoseEx pose = threadedTele.getTagPose();
-            if(pose == null) {
-                autoAimState = AutoAimState.NO_TAG_FOUND;
-                //FIX: Don't drop out of auto aim if we can't see the tag. Instead give the user back control to get the tag in view
-                //Drop out of auto aim if we can't see the tag
-                stopAutoAim();
-                return;
+            poseNull = pose == null;
+            if(!poseNull) {
+                x = pose.x;
+                groundDistance = pose.groundDistance;
             }
-
-            //FIX: Locking
-            autoAimState = AutoAimState.LOCKING;
-
-            x = pose.x;
-
-            groundDistance = pose.groundDistance;
-
         }
 
         StringBuilder sb = new StringBuilder();
-
-        sb.append("x: ");
-        sb.append(x);
-
-        double angularError = Math.atan2(x, groundDistance);
-        sb.append("\nVision angular error: ");
-        sb.append(angularError);
-
 
         double realHeading = computeHeading();
         sb.append("\nOdometry Heading: ");
         sb.append(realHeading);
 
-        //Subtract because positive x is to the right
-        autoAimTargetHeading = realHeading - angularError;
+        if(poseNull) {
+            autoAimTargetHeading = Double.NaN;
+        } else {
+            sb.append("x: ");
+            sb.append(x);
+
+            double angularError = Math.atan2(x, groundDistance);
+            sb.append("\nVision angular error: ");
+            sb.append(angularError);
+
+            //Subtract because positive x is to the right
+            autoAimTargetHeading = realHeading - angularError;
+        }
 
         sb.append("\nAuto Aim Target Heading: ");
         sb.append(autoAimTargetHeading);
@@ -190,7 +183,7 @@ public class ControlHubThread extends ThreadEx {
 
         try {
             optionDriver.add(new BooleanOption("Auto Aim debug info", "dpad_left", gamepad1, this.getClass().getField("autoAimDebugInfoEnable"), this));
-            optionDriver.add(new BooleanOption("Run Auto Aim", "dpad_right", gamepad1, this.getClass().getField("autoAimOptionDriverEnable"), this));
+            optionDriver.add(new BooleanOption("Run Auto Aim", "square", gamepad1, this.getClass().getField("autoAimOptionDriverEnable"), this));
 
             //Movement
             super.variablesWatched.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
@@ -277,6 +270,15 @@ public class ControlHubThread extends ThreadEx {
         telemetry.append("Auto Aim State: ");
         telemetry.append(autoAimState);
         telemetry.append("\n");
+
+        if((autoAimState != AutoAimState.DISABLED && autoAimState != AutoAimState.STOPPED)) {
+            if(Double.isNaN(autoAimTargetHeading)) {
+                autoAimState = AutoAimState.NO_TAG_FOUND;
+            } else if(autoAimState == AutoAimState.NO_TAG_FOUND) {
+                autoAimState = AutoAimState.LOCKING;
+            }
+        }
+
 
         if(autoAimState == AutoAimState.LOCKED || autoAimState == AutoAimState.LOCKING) {
             double headingError = autoAimTargetHeading - computeHeading();
