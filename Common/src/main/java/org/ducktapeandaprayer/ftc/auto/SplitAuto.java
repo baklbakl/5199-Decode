@@ -16,10 +16,10 @@ public class SplitAuto {
 //    public static Pose2d launchPos = new Pose2d(-45, 22, Math.toRadians(110));
     public static double launchPosX = -48;
     public static double launchPosY = 22;
-    public static double launchPosHeading = 110;
-    public static double launchVelocity = -1340;
+    public static double launchPosHeading = 115;
+    public static double launchVelocity = -1320;
     public static double intakeSpeed = 9;
-    public static double intakeStartY = 35;
+    public static double intakeStartY = 34;
     public static double intakeEndY = 47;
     public static double[] spikeXs = new double[] {-15, 7, 29};
 

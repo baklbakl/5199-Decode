@@ -40,7 +40,7 @@ public class MainBotHardware {
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
     public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-            new MutablePair<>(25.0, -1320.0),
+            new MutablePair<>(25.0, -1310.0),
             new MutablePair<>(33.0, -1340.0),
             new MutablePair<>(40.0, -1370.0),
             new MutablePair<>(47.0, -1420.0),
@@ -125,23 +125,27 @@ public class MainBotHardware {
     public final LynxModuleInitializer modules;
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
-        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
-        if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap)) {
+        return getOrCreate(hardwareMap, false);
+    }
+
+    public static MainBotHardware getOrCreate(HardwareMap hardwareMap, boolean useRS485) {
+        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, useRS485));
+        if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap, useRS485)) {
 //            ts = new MainBotHardware(hardwareMap);
             SingletonHelper.clear(MainBotHardware.class);
         }
-        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, useRS485));
     }
 
     public static void clearInstance() {
         SingletonHelper.clear(MainBotHardware.class);
     }
 
-    private MainBotHardware(HardwareMap hardwareMap) {
+    private MainBotHardware(HardwareMap hardwareMap, boolean useRS485) {
         this.hardwareMap = hardwareMap;
         RobotLog.ii("MainBotHardware", "Initializing mainbothardware");
 
-        modules = LynxModuleInitializer.getOrCreate(hardwareMap);
+        modules = LynxModuleInitializer.getOrCreate(hardwareMap, useRS485);
         if(modules.childModule == null) {
             throw new RuntimeException("No child module found. A child module is required for MainBotHardware");
         }
@@ -220,9 +224,11 @@ public class MainBotHardware {
         SerialNumber webCamSerial = UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber;
 
         if(webCamSerial == null) {
-            throw new RuntimeException("No webcam found and webcam is required for MainBotHardware");
+            webcamName = null;
+//            throw new RuntimeException("No webcam found and webcam is required for MainBotHardware");
+        } else {
+            webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
         }
-        webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
 
         launcherSwitch = child.createDigitalChannel(0);
         parentVoltageSensor = new ProxyVoltageSensor(parent.createAnalogInput(0), parentResistorMultiplier);

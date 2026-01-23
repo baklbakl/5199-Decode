@@ -1,4 +1,5 @@
 package org.ducktapeandaprayer.ftc.tele;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
@@ -38,8 +39,8 @@ public class RunMotor extends FastIterativeOpMode {
     private LynxModuleInitializer hardware = null;
 
     protected void init_internal() {
-        //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-        hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
+        hardware = LynxModuleInitializer.getOrCreate(hardwareMap, false);
+        hardware.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
     }
 
     /*

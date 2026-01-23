@@ -25,7 +25,7 @@ public class ExpansionHubThread extends ThreadEx {
     // Globals
     //
 
-    public Boolean autoSpeedDebInfo = false;
+    public Boolean autoSpeedDebInfo = true;
 
     private final MainBotHardware hardware;
     private final ThreadedTele threadedTele;
@@ -196,10 +196,13 @@ public class ExpansionHubThread extends ThreadEx {
                 this::startLauncher,
                 () -> {
                     stopLauncher();
-                    controlHubThread.requestAutoAimStartStop(false);
+                    if(controlHubThread.getAutoAimState() != ControlHubThread.AutoAimState.STOPPED) {
+                        controlHubThread.requestAutoAimStartStop(false);
+                    }
                 },
                 //Disabled or locked auto aim are safe for launch. We maybe could check for auto speed lock, but it hasn't been an issue, so we won't
                 () -> {
+                    //ADD: Check that auto speed is locked if we're using it before letting auto launch happen
                     ControlHubThread.AutoAimState state = controlHubThread.getAutoAimState();
                     return state == ControlHubThread.AutoAimState.LOCKED || state == ControlHubThread.AutoAimState.DISABLED;
                 }
@@ -328,7 +331,9 @@ public class ExpansionHubThread extends ThreadEx {
                     return;
                 }
 
-                controlHubThread.requestAutoAimStartStop(true);
+                if(controlHubThread.getAutoAimState() == ControlHubThread.AutoAimState.STOPPED) {
+                    controlHubThread.requestAutoAimStartStop(true);
+                }
                 autoLaunch.startAutoLaunching(3);
             }));
 
