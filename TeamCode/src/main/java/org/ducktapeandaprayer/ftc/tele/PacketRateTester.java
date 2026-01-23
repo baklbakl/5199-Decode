@@ -55,21 +55,6 @@ public class PacketRateTester extends FastIterativeOpMode {
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
-
-//        try {
-//            ScannedDevices devices = new HardwareDeviceManager(hardwareMap.appContext, OnCreateHandlers.getEventLoopManger().get()).scanForUsbDevices();
-//            devices.entrySet().stream().map((Map.Entry<SerialNumber, DeviceManager.UsbDeviceType> device) -> {
-//                return device;
-//            });
-//
-//            for (Map.Entry<SerialNumber, DeviceManager.UsbDeviceType> device : devices.entrySet()) {
-//                if (device.getValue() == DeviceManager.UsbDeviceType.LYNX_USB_DEVICE) {
-//
-//                }
-//            }
-//        } catch (RobotCoreException e) {
-//            throw new RuntimeException(e);
-//        }
     }
 
     @Override

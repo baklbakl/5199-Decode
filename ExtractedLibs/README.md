@@ -8,13 +8,14 @@ OnBotJava and Blocks were disabled to save space. As well, all the unnecessary .
 In total the extracted libs flavor is about 19.7 MB while the aar one is about 56 MB. The aar one without 32-bit libraries is about 46 MB.
 This cuts upload time in at least half. See the main `README.md` for how to make a 32-bit build
 
-[//]: # (ADD: Change the extracted libs to be a git submodule of OpenFTC extracted RC)
 ## How to update 
-1) Grab a copy of the pre-extracted code from [here](https://github.com/OpenFTC/Extracted-RC)
-2) Copy and paste all of the files in `<libname>/src/` into `ExtractedLibs/<libname>/src` except where patches are noted below. Depending on the patch either manually copy over the changes or simply don't copy those files. 
+1) Rebase in [Extracted RC](https://github.com/OpenFTC/Extracted-RC) to [our fork](https://github.com/DuckTapeAndAPrayer/Extracted-RC) of it.
+2) Update the Extracted RC git submodule in this repo.
 3) Update `SDK_VERSION_CODE` in gradle.properties with the version code from the pre-extracted code in `RobotCore/src/main/AndroidManifest.xml`
 
 ## Patches
+These are the patches that were applied to the extracted libs
+
 ### All files called `AndroidManifest.xml`
 `package="com.qualcomm.ftccommon"` removed from `<manifest>` tag. This is now done with Gradle
 

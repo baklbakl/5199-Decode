@@ -12,8 +12,7 @@ import java.util.Collections;
 import java.util.function.Function;
 
 public class SplitAuto {
-    //FIX: Launchpos doesn't show up as editable in the dashboard
-//    public static Pose2d launchPos = new Pose2d(-45, 22, Math.toRadians(110));
+    //This is split up into its components because a pose2d isn't editable in the dashboard because its fields are final
     public static double launchPosX = -48;
     public static double launchPosY = 22;
     public static double launchPosHeading = 115;
@@ -161,7 +160,7 @@ public class SplitAuto {
                         .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed))
 
                         .afterTime(0.3, () -> {
-                            //ADD: Don't nearly stall out the intake motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
+                            //ADD: Don't nearly stall out the mover motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
                             robot.stopIntake();
                             robot.startLauncher(launchVelocity);
                         })

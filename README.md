@@ -49,12 +49,12 @@ Then with the RC app open on the RC phone on the DS go to Pair with Robot Contro
 You may have to wait a few seconds for it to show up and/or toggle Filter WiFi Devices on and off a few times 
 
 #### Credentials
-Control Hub WiFi Password `verygoodpassword`
+The Control Hub WiFi Password is `verygoodpassword`  
 The phone doesn't have a password as it uses WiFi Direct mode
 
 ## How the build system differs from the FTC SDK
 ### App size reductions
-32-bit libraries have been removed because it reduces the size of the app. This causes issues with the phones as they are 32-bit and can't use the 64-bit ones that the Control Hub can. See `ExtractedLibs/README.md` for more details on space savings that can be gained from using the extracted libs. <!--ADD: how to make a 32 bit build-->
+32-bit and 64-bit libraries have split into separate APKS to save space. The correct one will the selected when the app in installed. See `ExtractedLibs/README.md` for more details on space savings that can be gained from using the extracted libs.
 
 ### AGP and minSDK
 The stock FTC SDK uses version 8.7.0 of the Android Gradle Plugin (AGP). This codebase has been updated to AGP version 8.12.x to keep up with the latest patches and bug fixes. The minSDK has been updated to SDK 25 as the Control Hub runs Android 7.1. SDK 25 is the newest one that works on Android 7.1.  
@@ -73,8 +73,8 @@ To update the AAR libraries
 See `ExtractedLibs/README.md` for how to update the Extracted Libs
 
 ## Hardware map
-A critical part of controlling a robot is controlling the actuators. Typically, to get the actuator objects a Hardware Map is used.
-This is set up on the RC and maps a string name to the physical ports on the robot. Teams will normally name their actuators based on what they do. Using a hardware map causes issues if we change our RC device out because then we have to reenter the map in which can take quite some time. This happens quite often as we have two demo bots plus a main bot. 
+A critical part of controlling a robot is controlling the actuators. Typically, to get the actuator Java objects a Hardware Map is used.
+This is set up on the RC and maps a string name to the physical ports on the robot controllers. Teams will normally name their actuators based on what they do. Using a hardware map causes issues if we change our RC device out because then we have to reenter the map in which can take quite some time. This happens quite often as we have two demo bots plus a main bot and the controllers on the main robot like to die.
 
 In the past we solved this by naming each of the entries in the hardware map a letter based on their type (M for motors, S for servos, etc.) and then a number, but now we bypass the hardware map by manually searching for hubs on startup and then instantiating all the control classes we need ourselves in MainBotHardware.
 
@@ -146,7 +146,7 @@ This only works for three dead wheel setups.
 <!--ADD: Explain what happens when the accel is too high-->
 16) Perform the same but with `maxProfileAccel` (which control speeding up) and `minProfileAccel` (which controls slowing down). Th
 17) Run `ManualFeedbackTuner` and increase `axialGain`, `lateralGain`, and `headingGain` until the robot stays on course and stops drifting. If the values are too high the robot will oscillate. The drift can be seen by looking at robot on field in the dashboard.
-18) Run `ManualStafeFeedbackTuner` and double-check the values. These values can be adjusted as increased when running the real auto path to make the following more accurate or reduce to remove oscillations. 
+18) Run `ManualStafeFeedbackTuner` and double-check the values. These values can be adjusted as increased when running the real auto path to make the following more accurate or lowered to remove oscillations. 
 
 ### Changes needed to upstream
 ManualStrafeFeedforward  
@@ -200,7 +200,7 @@ If you don't want to deal with using git in the terminal then you can use [GitHu
 3) [Add you ssh public key to GitHub](https://docs.github.com/en/authentication/connecting-to-github-with-ssh). Keep in mind that the school's network blocks ssh, so you need to be on a personal hotspot or at home to use it.
 4) Open a terminal and navigate to the folder that you want the repo folder it be in.
 5) Run `git clone git@github.com:DuckTapeAndAPrayer/FTC-Decode.git --recurseive`
-6) The `FTC-Decoce` folder now has a local copy of the code
+6) The `FTC-Decode` folder now has a local copy of the code
 
 ### Usage
 To push your changes for everyone else to see do the following
@@ -214,7 +214,7 @@ To get others changes run `git pull`
 While doing either of those things you may run into an issue where git tells you that it cannot push/pull because the upstream has new commits that conflict with yours. This is because someone else has committed while you were working. To resolve this run: `git pull`. This gets any new commits from GitHub and syncs them to your copy.
 You may have git tell you that there are conflicts. If you get in this state and don't know how to fix it feel free to ask Bryn.
 
-If rebaseing is possible please try that before making a merge commit as it makes the commit history cleaner
+If rebasing is possible please try that before making a merge commit as it makes the commit history cleaner
 
 There are many other things that can done with git and other ways to use it, but this is just a foundation to get you started.
 
@@ -243,20 +243,21 @@ For extra credit you can take the 'Bryn needs to know how it works' approach and
 
 ### Building
 The Android app must be built with Gradle 9. 
-The whole thing can be built with `gradle build` (or `./gradlew build` if you don't have the right version installed. 
+The whole thing can be built with `gradle assemble` (or `./gradlew assemble` if you don't have the right version installed. 
 It just grabs an old version of gradle). Most of the time you don't want this. All you want is to build the debug version
 which can be done with the `gradle assembleDebug`. We won't be using release mode as that is for uploading to the play
-store which we don't plan on doing. [Source](https://developer.android.com/build/building-cmdline)
+store which we don't plan on doing. We use `assemble` instead of `build` because build runs some tests and linting that fails, 
+but everything still works despite those failures [Source](https://developer.android.com/build/building-cmdline)
 
 ### Uploading
 Make sure you have debug mode enabled on the device you want to send it to. Then run `adb -d install TeamCode/build/outputs/apk/debug/TeamCode-debug.apk`
-It should get automatically started by the driver station when you connect. The same procedure can be used with the [Driver Station APK](https://github.com/FIRST-Tech-Challenge/FtcRobotController/releases) to update the Driver Station app without using the REV Hardware Client. If the app won't install due to it already being installed first run `adb uninstall com.qualcomm.ftcrobotcontroller` then try installing again.
+The Control Hub will automatically start the RC app, but you have to manually start it on the Android phones. The same procedure can be used with the [Driver Station APK](https://github.com/FIRST-Tech-Challenge/FtcRobotController/releases) to update the Driver Station app without using the REV Hardware Client. If the app won't install due to it already being installed first run `adb uninstall com.qualcomm.ftcrobotcontroller` then try installing again.
 
 If you want gradle to install the Robot Controller App for you, you can use `gradle installDebug` to build (if your apk is out of date from your code)
 and upload it to the device.
 
 ### Running
-Sometimes the app won't start on its own, so you need to start it manually. Run `adb shell monkey -p com.qualcomm.ftcrobotcontroller 1` 
+Sometimes the app won't start on its own, so you need to start it manually, but this can't be done with screen on the Control Hub because it doesn't have one. In that case we used adb to start the RC app. Run `adb shell monkey -p com.qualcomm.ftcrobotcontroller 1` 
 
 ### Listing Devices
 `adb devices`
