@@ -14,6 +14,7 @@ import com.google.gson.GsonBuilder;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
+import org.ducktapeandaprayer.ftc.tele.threadedtele.ControlHubThread;
 import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
@@ -33,6 +34,7 @@ public class RegisterConfigClasses {
             Test.class,
             AutoLaunch.class,
             ExpansionHubThread.class,
+            ControlHubThread.class,
             AprilTagDetectionPipeline.class,
             LauncherInternalControlTuner.class
     };

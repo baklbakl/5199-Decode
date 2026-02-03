@@ -35,6 +35,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
 //    public static double cy = 351.276;
 
     //Logitech C920
+    //FIX: Double check camera calibration
     public static double fx = 588.586;
     public static double fy = 588.586;
     public static double cx = 418.17;

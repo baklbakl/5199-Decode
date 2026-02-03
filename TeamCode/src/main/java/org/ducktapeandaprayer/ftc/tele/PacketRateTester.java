@@ -2,60 +2,130 @@ package org.ducktapeandaprayer.ftc.tele;
 
 import com.qualcomm.hardware.HardwareDeviceManager;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.hardware.lynx.LynxUsbDevice;
+import com.qualcomm.hardware.lynx.LynxUsbDeviceImpl;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.exception.RobotCoreException;
-import com.qualcomm.robotcore.hardware.DeviceManager;
-import com.qualcomm.robotcore.hardware.ScannedDevices;
-import com.qualcomm.robotcore.util.SerialNumber;
+import com.qualcomm.robotcore.hardware.LynxModuleDescription;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
+import org.ducktapeandaprayer.ftc.hardware.LynxModuleInitializer;
 import org.ducktapeandaprayer.ftc.hardware.UsbScanner;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
+import org.ducktapeandaprayer.ftc.lib.LoopTimeCalculator;
 import org.ducktapeandaprayer.ftc.lib.OnCreateHandlers;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.List;
-import java.util.Map;
+
+import static org.ducktapeandaprayer.ftc.lib.OnCreateHandlers.getEventLoopManger;
 
 @TeleOp(name = "PacketRateTester", group = MainBotConfig.opmodeGroupName)
 public class PacketRateTester extends FastIterativeOpMode {
-    private UsbScanner scanner = null;
-    private List<LynxModule> modules = null;
+    public enum LynxModules {
+        CONTROL_HUB_INTERNAL("Control Hub Internal Lynx Module"),
+        CONTROL_HUB_RS485("Lynx Module Connected to Control Hub with RS485"),
+        EXPANSION_HUB_USB("Expansion Hub Connected with USB"),
+
+        ;
+
+        private final String string;
+
+        @Override
+        public String toString() {
+            return string;
+        }
+
+        LynxModules(String string) {
+            this.string = string;
+
+        }
+    }
+
+    public LynxModules moduleTypeToTest;
+    private OptionDriver options;
 
     @Override
     protected void init_internal() {
-
+        options = new OptionDriver();
         try {
-            ScannedDevices devices = new HardwareDeviceManager(hardwareMap.appContext, OnCreateHandlers.getEventLoopManger().get()).scanForUsbDevices();
-            devices.entrySet().stream().map((Map.Entry<SerialNumber, DeviceManager.UsbDeviceType> device) -> {
-                return device;
-            });
-
-            for (Map.Entry<SerialNumber, DeviceManager.UsbDeviceType> device : devices.entrySet()) {
-                if (device.getValue() == DeviceManager.UsbDeviceType.LYNX_USB_DEVICE) {
-
-                }
-            }
-        } catch (RobotCoreException e) {
+            options.add(new EnumOption<>("Lynx Module", "triangle", gamepad1, this.getClass().getField("moduleTypeToTest"), this, LynxModules.class));
+        } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
     protected void init_loop_internal() {
-
+        String out = options.tick();
+        if(out != null) {
+            telemetry.addLine(out);
+            telemetry.update();
+        }
     }
+
+    private LynxModuleInitializer.LynxModuleControllers moduleToTest;
+    private LoopTimeCalculator timeCalculator;
+    private Method pingMethod;
 
     @Override
     protected void start_internal() {
+        timeCalculator = new LoopTimeCalculator();
+        LynxModuleInitializer initializer = LynxModuleInitializer.getOrCreate(hardwareMap, moduleTypeToTest == LynxModules.CONTROL_HUB_RS485);
+        initializer.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
+        switch (moduleTypeToTest) {
+            case CONTROL_HUB_INTERNAL:
+                moduleToTest = initializer.parentModule;
+                break;
+
+            case CONTROL_HUB_RS485:
+            case EXPANSION_HUB_USB:
+                if(initializer.childModule == null) {
+                    throw new RuntimeException("No module found for selected mode \"" + moduleTypeToTest + "\"");
+                }
+
+                moduleToTest = initializer.childModule;
+                break;
+        }
+
+        try {
+            Class<LynxModule> clazz = LynxModule.class;
+            pingMethod = clazz.getDeclaredMethod("ping");
+            pingMethod.setAccessible(true);
+            Method m = clazz.getDeclaredMethod("stopPingTimer", boolean.class);
+            m.invoke(moduleToTest, true);
+
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
+        timeCalculator.reset();
     }
 
     @Override
     protected void loop_internal() {
+        moduleToTest.module.clearBulkCache();
+        telemetry.addLine(timeCalculator.toString());
+        telemetry.update();
 
+        try {
+            pingMethod.invoke(moduleToTest.module);
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
     protected void stop_internal() {
+
+        try {
+            Method m = LynxModule.class.getDeclaredMethod("startPingTimer");
+            m.invoke(moduleToTest);
+        } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
+            throw new RuntimeException(e);
+        }
 
     }
 }

@@ -5,9 +5,10 @@ import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
 
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public class AutoLaunch {
-    public static double autoLaunchTimeout = 3.0;
+    public static double autoLaunchTimeout = 2.0;
 
     private enum State {
         STOPPED,
@@ -21,26 +22,30 @@ public class AutoLaunch {
     private final MainBotHardware hardware;
     private final Runnable stopLauncher;
     private final Runnable startLauncher;
+    private final Supplier<Boolean> launchReady;
     private final ElapsedTime timeout = new ElapsedTime();
 
     private State state = State.STOPPED;
     private int speedSamplesSeen = 0;
     private int artifactsToLaunch = 0;
 
-    public AutoLaunch(MainBotHardware hardware, Runnable startLauncher, Runnable stopLauncher) {
+    //Stop and start launcher are called at the start and end of auto launching, so they can also be used to do other cleanup
+    public AutoLaunch(MainBotHardware hardware, Runnable startLauncher, Runnable stopLauncher, Supplier<Boolean> launchReady) {
         this.hardware = hardware;
         this.stopLauncher = stopLauncher;
         this.startLauncher = startLauncher;
+        this.launchReady = launchReady;
     }
 
     public AutoLaunch(MainBotHardware hardware) {
         this.hardware = hardware;
         this.startLauncher = null;
         this.stopLauncher = () -> hardware.launchDrive.setVelocity(0);
+        this.launchReady = () -> true;
     }
 
     private void internalStartAutolaunching(int count, Runnable startLauncherReal) {
-        if(artifactsToLaunch != 0) {
+        if(state != State.STOPPED) {
             throw new IllegalStateException("Not allowed to start launching while launching is in progress");
         }
 
@@ -78,26 +83,23 @@ public class AutoLaunch {
         switch (state) {
             case STOPPED:
                 throw new RuntimeException("Trying to stop auto launch while auto launch is already stopped");
-            case WAITING_ARTIFACT:
-                hardware.moverDrive.setPower(0);
-                hardware.intakeDrive.setPower(0);
-                break;
-            case SPINNING_UP:
-                //Nothing special needs to happen here
-                break;
+
             case LAUNCHING:
                 //Wait for speed dip instead of stopping the launcher right now to prevent any artifacts from getting stuck mid launch.
                 RobotLog.ii("AutoLaunch", "Auto launch stop requested while waiting for speed dip");
                 state = State.LAUNCHING_STOP_REQUESTED;
                 return;
-
             //Stop requested a second time while waiting for speed dip. We will e-stop
             case LAUNCHING_STOP_REQUESTED:
                 hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
+            case SPINNING_UP:
+            case WAITING_ARTIFACT:
+                hardware.moverDrive.setPower(0);
+                hardware.intakeDrive.setPower(0);
+                stopLauncher.run();
                 break;
         }
 
-        stopLauncher.run();
         state = State.STOPPED;
     }
 
@@ -129,7 +131,7 @@ public class AutoLaunch {
                     speedSamplesSeen = 0;
                 }
 
-                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples) {
+                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples || !launchReady.get()) {
                     break;
                 }
 
@@ -159,6 +161,7 @@ public class AutoLaunch {
                     state = State.WAITING_ARTIFACT;
                     speedSamplesSeen = 0;
                 } else {
+                    state = State.LAUNCHING_STOP_REQUESTED;
                     stopAutoLaunch();
                 }
                 break;

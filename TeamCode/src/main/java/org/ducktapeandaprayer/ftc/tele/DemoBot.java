@@ -15,7 +15,7 @@ public class DemoBot extends LinearOpMode {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
+        LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap, false);
 
         DcMotor leftDrive = hardware.parentModule.createDcMotor(0);
         DcMotor rightDrive = hardware.parentModule.createDcMotor(3);

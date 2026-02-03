@@ -21,7 +21,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
-@TeleOp(group = MainBotConfig.opmodeGroupName)
+@TeleOp(name = "1ThreadedTele", group = MainBotConfig.opmodeGroupName)
 public class ThreadedTele extends FastIterativeOpMode {
     public MainBotHardware hardware = null;
     private ControlHubThread controlHubThread = null;
@@ -35,7 +35,10 @@ public class ThreadedTele extends FastIterativeOpMode {
     public volatile Boolean runVision = true;
     public volatile Boolean visionDebugInfo = true;
     public volatile Alliance alliance = Alliance.lastAlliance;
-    public Boolean timingDebugInfo = false;
+//    public volatile Boolean autoAimOnAutoLaunch = false;
+//    public volatile Boolean autoAimDebInfo = false;
+//    public volatile Boolean autoSpeedDebInfo = false;
+    public Boolean timingDebugInfo = true;
 
     private AprilTagPoseEx tagPose = null;
     public final Object tagPoseLock = new Object();
@@ -104,7 +107,7 @@ public class ThreadedTele extends FastIterativeOpMode {
     @Override
     protected void init_internal() {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
-        pipeline = new AprilTagDetectionPipeline(hardware);
+//        pipeline = new AprilTagDetectionPipeline(hardware);
         optionDriver = new OptionDriver();
         try {
             optionDriver.add(new BooleanOption("Loop Timing debug info", "triangle", gamepad1, this.getClass().getField("timingDebugInfo"), this));
@@ -115,8 +118,8 @@ public class ThreadedTele extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
-        controlHubThread = new ControlHubThread(hardware, this, gamepad1);
-        exansionHubThread = new ExpansionHubThread(hardware, this, gamepad1);
+        controlHubThread = new ControlHubThread(hardware, this, gamepad1, optionDriver);
+        exansionHubThread = new ExpansionHubThread(hardware, this, controlHubThread, gamepad1, optionDriver);
 
         threads.put("control hub thread", controlHubThread);
         threads.put("expansion hub thread", exansionHubThread);
@@ -143,7 +146,13 @@ public class ThreadedTele extends FastIterativeOpMode {
 
     @Override
     protected void start_internal() {
-        pipeline = new AprilTagDetectionPipeline(hardware);
+        if(hardware.webcamName == null) {
+            runVision = false;
+        }
+
+        if(runVision) {
+            pipeline = new AprilTagDetectionPipeline(hardware);
+        }
 
         for(ThreadEx t : threads.values()) {
             t.start();

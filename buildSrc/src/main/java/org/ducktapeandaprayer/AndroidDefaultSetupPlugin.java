@@ -21,8 +21,6 @@ public class AndroidDefaultSetupPlugin implements Plugin<Project> {
             int compileSDK = PropertiesHelper.getIntProperty(target, "androidsdk.compileVersion");
             extension.setCompileSdk(compileSDK);
             extension.getBuildFeatures().setBuildConfig(true);
-
-//            extension.getAaptOptions().
             
             Lint lint = extension.getLint();
             lint.setTargetSdk(compileSDK);

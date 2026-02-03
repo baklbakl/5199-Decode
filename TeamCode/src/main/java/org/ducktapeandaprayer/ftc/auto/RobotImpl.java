@@ -32,7 +32,7 @@ public class RobotImpl implements RobotInterface {
 
     @Override
     public void intake() {
-        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+        hardware.moverDrive.setPower(MainBotHardware.moverDriveAutoPower);
         hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
     }
 

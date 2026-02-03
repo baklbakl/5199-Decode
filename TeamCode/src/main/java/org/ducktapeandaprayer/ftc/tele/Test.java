@@ -41,21 +41,21 @@ public class Test extends FastIterativeOpMode {
      * Code to run REPEATEDLY after the driver hits INIT, but before they hit PLAY
      */
     public void init_loop_internal() {
-        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
-
-        if (detections != null && !detections.isEmpty()) {
-            telemetry.addData("Detections", detections.size());
-            for (AprilTagDetection d : detections) {
-                telemetry.addLine("Target Found!");
-                telemetry.addLine(AprilTagDetectionPipeline.aprilTagDetectionToString(d));
-//                telemetry.addData("groundDistance (in)", Math.cos(Math.atan(d.pose.y / d.pose.z)) * d.pose.z);
-                telemetry.addData("groundDistance (in)", AprilTagDetectionPipeline.getGroundDistance(d.pose));
-            }
-        } else {
-            telemetry.addLine("No detections");
-        }
-        telemetry.addLine(pipeline.getTimingTelemetry());
-        telemetry.update();
+//        ArrayList<AprilTagDetection> detections = pipeline.getLatestDetections();
+//
+//        if (detections != null && !detections.isEmpty()) {
+//            telemetry.addData("Detections", detections.size());
+//            for (AprilTagDetection d : detections) {
+//                telemetry.addLine("Target Found!");
+//                telemetry.addLine(AprilTagDetectionPipeline.aprilTagDetectionToString(d));
+////                telemetry.addData("groundDistance (in)", Math.cos(Math.atan(d.pose.y / d.pose.z)) * d.pose.z);
+//                telemetry.addData("groundDistance (in)", AprilTagDetectionPipeline.getGroundDistance(d.pose));
+//            }
+//        } else {
+//            telemetry.addLine("No detections");
+//        }
+//        telemetry.addLine(pipeline.getTimingTelemetry());
+//        telemetry.update();
     }
 
     /*

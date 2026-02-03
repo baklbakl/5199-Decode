@@ -2,15 +2,24 @@ package org.ducktapeandaprayer.ftc;
 
 import com.acmerobotics.roadrunner.*;
 import com.noahbres.meepmeep.MeepMeep;
+import com.noahbres.meepmeep.core.colorscheme.ColorManager;
+import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeBlueDark;
+import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeRedDark;
+import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeRedLight;
 import com.noahbres.meepmeep.roadrunner.DefaultBotBuilder;
+import com.noahbres.meepmeep.roadrunner.entity.ActionEntity;
 import com.noahbres.meepmeep.roadrunner.entity.RoadRunnerBotEntity;
+import jdk.internal.misc.Unsafe;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.jetbrains.annotations.NotNull;
 
+import java.awt.*;
 import java.lang.Math;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 
 class CustomVelConstraint implements VelConstraint {
     AngularVelConstraint base = new AngularVelConstraint(Math.PI / 2);
@@ -44,15 +53,26 @@ class AroundCornerConstraint implements VelConstraint {
 }
 
 public class MeepMeepTesting {
+//    private static class BetterColorScheme extends ColorSchemeRedLight {
+//        @NotNull
+//        @Override
+//        public Color getTRAJECTORY_PATH_COLOR() {
+//            return ColorManager.COLOR_PALETTE.getBLUE_400();
+//        }
+//    }
+
     public static void main(String[] args) {
         System.setProperty("sun.java2d.opengl", "true");
 
         MeepMeep meepMeep = new MeepMeep(800);
+//        meepMeep.setTheme(new BetterColorScheme());
         RoadRunnerBotEntity bot = new DefaultBotBuilder(meepMeep)
                 // Required: Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
                 .setConstraints(45, 55, 3, 3, 12.5)
                 .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
                 .build();
+
+
 
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());

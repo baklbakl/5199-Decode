@@ -4,7 +4,8 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import org.apache.commons.lang3.tuple.Pair;
-import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
@@ -12,7 +13,6 @@ import org.ducktapeandaprayer.ftc.lib.TimedEvent;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
-import org.openftc.apriltag.AprilTagPose;
 
 public class ExpansionHubThread extends ThreadEx {
     //
@@ -24,6 +24,8 @@ public class ExpansionHubThread extends ThreadEx {
     //
     // Globals
     //
+
+    public Boolean autoSpeedDebInfo = true;
 
     private final MainBotHardware hardware;
     private final ThreadedTele threadedTele;
@@ -121,7 +123,7 @@ public class ExpansionHubThread extends ThreadEx {
             }
         }
 
-        if(threadedTele.visionDebugInfo) {
+        if(autoSpeedDebInfo) {
             visionTelemetry = visionDebugSb.toString();
         }
 
@@ -151,7 +153,7 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
             case IN_RANGE:
                 targetSpeed = result.speed;
-                if((hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) || forceStart) {
+                if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
                     hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
                 } else {
                     hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
@@ -159,7 +161,7 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
         }
 
-        if(hardware.launchDrive.getTargetVelocity() != 0) {
+        if(hardware.launchDrive.getTargetVelocity() != 0 || forceStart) {
             hardware.launchDrive.setVelocity(targetSpeed);
         }
     }
@@ -185,15 +187,31 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
 
-    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, Gamepad gamepad1) {
+    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread, Gamepad gamepad1, OptionDriver optionDriver) {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
 
-        this.autoLaunch = new AutoLaunch(hardware, this::startLauncher, this::stopLauncher);
+        this.autoLaunch = new AutoLaunch(
+                hardware,
+                this::startLauncher,
+                () -> {
+                    stopLauncher();
+                    if(controlHubThread.getAutoAimState() != ControlHubThread.AutoAimState.STOPPED) {
+                        controlHubThread.requestAutoAimStartStop(false);
+                    }
+                },
+                //Disabled or locked auto aim are safe for launch. We maybe could check for auto speed lock, but it hasn't been an issue, so we won't
+                () -> {
+                    //ADD: Check that auto speed is locked if we're using it before letting auto launch happen
+                    ControlHubThread.AutoAimState state = controlHubThread.getAutoAimState();
+                    return state == ControlHubThread.AutoAimState.LOCKED || state == ControlHubThread.AutoAimState.DISABLED;
+                }
+        );
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         try {
-            //Movement
+            optionDriver.add(new BooleanOption("Auto Speed debug info", "dpad_right", gamepad1, this.getClass().getField("autoSpeedDebInfo"), this));
+
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
                 if(autoLaunch.isLaunching()) {
                     return;
@@ -203,7 +221,7 @@ public class ExpansionHubThread extends ThreadEx {
                     hardware.moverDrive.setPower(0);
                 } else if(left_bumper) {
                     if(hardware.kickerServo.getPosition() == MainBotHardware.kickerServoDownPos) {
-                        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                        hardware.moverDrive.setPower(hardware.launcherSwitch.getState() ? MainBotHardware.moverDrivePower : MainBotHardware.moverDriveBallInPower);
                     }
                 } else if(right_bumper) {
                     hardware.moverDrive.setPower(-MainBotHardware.moverDrivePower);
@@ -313,6 +331,9 @@ public class ExpansionHubThread extends ThreadEx {
                     return;
                 }
 
+                if(controlHubThread.getAutoAimState() == ControlHubThread.AutoAimState.STOPPED) {
+                    controlHubThread.requestAutoAimStartStop(true);
+                }
                 autoLaunch.startAutoLaunching(3);
             }));
 
@@ -355,10 +376,24 @@ public class ExpansionHubThread extends ThreadEx {
 
     public void tick() {
 //        RobotLog.ii("ExpansionHubThread", "Running!");
+        autoLaunch.tick();
+
+        if(hardware.moverDrive.getPower() > 0) {
+            if(hardware.launcherSwitch.getState()) {
+                hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+            } else {
+                hardware.moverDrive.setPower(MainBotHardware.moverDriveBallInPower);
+            }
+        }
 
         hardware.modules.childModule.module.clearBulkCache();
 
         telemetry.append(visionTelemetry);
+
+        telemetry.append("Launcher Target Speed: ");
+        telemetry.append(hardware.launchDrive.getTargetVelocity());
+        telemetry.append("\nLauncher Current Speed: ");
+        telemetry.append(hardware.launchDrive.getVelocity());
         updateTelemetry();
     }
 }
