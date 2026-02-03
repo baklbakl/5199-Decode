@@ -71,6 +71,11 @@ public class MeepMeepTesting {
                 .setConstraints(45, 55, 3, 3, 12.5)
                 .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
                 .build();
+        RoadRunnerBotEntity botTwo = new DefaultBotBuilder(meepMeep)
+                // Required: Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
+                .setConstraints(45, 55, 3, 3, 12.5)
+                .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
+                .build();
 
 
 
@@ -79,6 +84,9 @@ public class MeepMeepTesting {
         Alliance alliance = Alliance.RED;
         TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, true, 3);
 
+        SplitAuto splitAutoTwo = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
+        Alliance allianceTwo = Alliance.BLUE;
+        TrajectoryActionBuilder builderTwo = splitAutoTwo.fillBuilderTwo(Delay.NONE, StartPos.GOAL, allianceTwo, true, 3);
         Action action = builder.build();
         bot.runAction(
 //              new TrajectoryActionStub(newTT)
@@ -95,11 +103,14 @@ public class MeepMeepTesting {
 
 
         );
+        Action actionTwo = builderTwo.build();
+        botTwo.runAction(actionTwo);
 
         meepMeep.setBackground(MeepMeep.Background.FIELD_DECODE_JUICE_DARK)
                 .setDarkMode(true)
                 .setBackgroundAlpha(0.95f)
                 .addEntity(bot)
+                .addEntity(botTwo)
                 .start();
     }
 }
