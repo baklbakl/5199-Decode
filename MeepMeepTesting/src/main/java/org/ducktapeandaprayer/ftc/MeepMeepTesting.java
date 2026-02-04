@@ -76,17 +76,26 @@ public class MeepMeepTesting {
                 .setConstraints(45, 55, 3, 3, 12.5)
                 .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
                 .build();
+        RoadRunnerBotEntity botGR = new DefaultBotBuilder(meepMeep)
+                // Required: Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
+                .setConstraints(45, 55, 3, 3, 12.5)
+                .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
+                .build();
 
 
 
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
-        Alliance alliance = Alliance.RED;
+        Alliance alliance = Alliance.BLUE;
         TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, true, 3);
 
-        SplitAuto splitAutoTwo = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
-        Alliance allianceTwo = Alliance.BLUE;
+        SplitAuto splitAutoTwo = new SplitAuto((startPose) -> botTwo.getDrive().actionBuilder(startPose), new MeepMeepImp());
+        Alliance allianceTwo = Alliance.RED;
         TrajectoryActionBuilder builderTwo = splitAutoTwo.fillBuilderTwo(Delay.NONE, StartPos.GOAL, allianceTwo, true, 3);
+
+        SplitAuto splitAutoGR = new SplitAuto((startPose) -> botGR.getDrive().actionBuilder(startPose), new MeepMeepImp());
+        Alliance allianceGR = Alliance.RED;
+        TrajectoryActionBuilder builderGR = splitAutoGR.fillBuilderGR(Delay.NONE, StartPos.AUDIENCE_IN, allianceGR, true, 3);
         Action action = builder.build();
         bot.runAction(
 //              new TrajectoryActionStub(newTT)
@@ -106,11 +115,15 @@ public class MeepMeepTesting {
         Action actionTwo = builderTwo.build();
         botTwo.runAction(actionTwo);
 
+        Action actionGR = builderGR.build();
+        botGR.runAction(actionGR);
+
         meepMeep.setBackground(MeepMeep.Background.FIELD_DECODE_JUICE_DARK)
                 .setDarkMode(true)
                 .setBackgroundAlpha(0.95f)
                 .addEntity(bot)
                 .addEntity(botTwo)
+                .addEntity(botGR)
                 .start();
     }
 }
