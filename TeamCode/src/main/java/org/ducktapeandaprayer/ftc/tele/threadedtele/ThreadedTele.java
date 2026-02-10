@@ -60,7 +60,7 @@ public class ThreadedTele extends FastIterativeOpMode {
         }
 
         StringBuilder visionDebugSb = new StringBuilder();
-        int aprilTagID = alliance.toAprilTagID();
+        int aprilTagID = alliance.aprilTagID;
 
         visionDebugSb.append("Target ID: ");
         visionDebugSb.append(aprilTagID).append('\n');

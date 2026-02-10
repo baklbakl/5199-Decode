@@ -59,6 +59,7 @@ public final class MecanumDrive {
         public double kASlowDown = 0.0002;
 //        public double kASlowDownStrafe = 0.00013;
 //        public double kASlowDownForward = 0.00033;
+        public double negDeg = 0.8;
 
         // path profile parameters (in inches)
         //Max wheel vel is 55. This means 55 in / sec for feedforward and 50 in / sec for strafe ish
@@ -87,7 +88,7 @@ public final class MecanumDrive {
             PARAMS.trackWidth, PARAMS.lateralMultiplier);
 
     //FIX: The kASlowDown doesn't seem to fix as much as it did in the past.
-    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
+    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick, PARAMS.negDeg);
 
     public final TurnConstraints defaultTurnConstraints = new TurnConstraints(
             PARAMS.maxAngVel, -PARAMS.maxAngAccel, PARAMS.maxAngAccel);
@@ -129,8 +130,6 @@ public final class MecanumDrive {
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-//        voltageSensor = hardware.modules.parentModule.voltageSensor;
 
         localizer = new ThreeDeadWheelLocalizer(hardware, PARAMS.inPerTick, pose);
 

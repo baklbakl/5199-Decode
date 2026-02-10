@@ -39,7 +39,7 @@ public class RunMotor extends FastIterativeOpMode {
     private LynxModuleInitializer hardware = null;
 
     protected void init_internal() {
-        hardware = LynxModuleInitializer.getOrCreate(hardwareMap, false);
+        hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
         hardware.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
     }
 

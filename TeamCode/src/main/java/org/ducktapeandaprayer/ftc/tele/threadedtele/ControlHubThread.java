@@ -204,6 +204,7 @@ public class ControlHubThread extends ThreadEx {
                             turning = lastGamePadTurn;
                         }
 
+
                         lastForward = -left_stick_y_f;
                         lastStrafe = left_stick_x_f;
 
