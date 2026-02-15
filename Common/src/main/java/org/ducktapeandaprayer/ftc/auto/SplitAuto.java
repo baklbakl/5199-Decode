@@ -362,8 +362,9 @@ public class SplitAuto {
 //                }
 
                 pathBuilder = pathBuilder
-                        .splineToSplineHeading(new Pose2d(spikeX, intakeStartY, Math.toRadians(90)), Math.toRadians(90))
-                        .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed))
+
+//                        .splineToSplineHeading(new Pose2d(spikeX, intakeStartY, Math.toRadians(90)), Math.toRadians(90))
+//                        .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed))
 
                         .afterTime(0.3, () -> {
                             //ADD: Don't nearly stall out the mover motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
