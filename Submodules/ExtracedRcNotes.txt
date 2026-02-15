@@ -1,0 +1,76 @@
+# TODO:
+
+# Done
+# Update all Java, res, asset, and jar files from extracted AARs - done
+# Update gradle files from stock repo - done
+  # build.common.gradle - done
+  # build.gradle - done
+  # FtcRobotController build.gradle - done
+  # TeamCode build.gradle - done
+# Update gradle to not be so duplicated. Use build.common.gradle - done
+# Check if any of the jars can be grabbed from maven central - done
+# Check FtcRobotController is up to date - done
+# Check if TeamCode is up to date - done
+# RobotCore NDK filter include 64 bit libs - done
+# Check if renderscript stuff is needed - done
+# Check if namespace should be in TeamCode build.gradle - done
+# Check if jniLibs.useLegacyPackaging matters in TeamCode build.gradle - done
+# Update NDK - not needed
+# Update gradle wrapper - not needed
+# Update version codes and versions - done
+
+# Changelist
+ # removed proguard
+ # updated gradle wrapper version
+ # Cleaned up gradle build files
+ # updated libs
+ # added 64 bit so libs - maybe make there be architecture splits to save size?
+ # Removed renderscript stuff from RobotCore gradle
+ # Moved cmake flags from RobotCore gradle to CMakeLists.txt
+ # Added a project directive to CMakeLists.txt to make it stop complaining. Make associated changes to make it still work
+ # Edited OBJ RenameFile.java to comment out unused r8 import that could not be found
+ # jniLibs.useLegacyPackaging set to false
+
+# Questions
+#  Get rid of build.common.gradle put in in teamcode build.gradle?
+#  Get rid of the read of versioncode from AndroidManifest.xml?
+#  JavaWebSocket 1.4.1 exists on maven central, but it might not be the exact same build. Should we use the Jar or the maven one?
+#  OpenFTC's EasyOpenCV and AprilTag don't seem to be bundled with the stock sdk, but they are in the vision build.gradle as deps. I updated them to the latest version. Is that okay?
+
+
+Here is my update to SDK version v11.1.0. It's a little more than just an SDK update and I hope my extra changes are okay.
+
+## Changes
+- Update all java, res, asset, and jar files from extracted AARs
+- Gradle
+  - Update Gradle files from the stock repo
+    - build.common.gradle
+    - build.gradle
+    - FtcRobotController build.gradle
+    - TeamCode build.gradle
+  - Update Gradle scripts to not be so duplicated. Use build.androidVersionCommon.gradle
+  - Enable 64 bit libs in NDK filter
+  - Remove renderscript from build scripts
+  - Remove jniLibs.useLegacyPackaging from build scripts
+  - NDK was already up to date with stock repo
+  - Gradle wrapper was already up to date with stock repo
+  - Removed Proguard as it didn't seem to do anything
+  - Moved package, versionCode, and versionName from manifest to Gradle
+- Use libraries from Maven Central not the jars from AARs where possible
+- Update FtcRobotController
+- Update TeamCode
+- Removed minSDK from manifests
+- Update version codes and version names
+- CMake
+  - Moved flags from RobotCore Gradle to CMakeLists.txt
+  - Added a project directive to CMakeLists.txt and made associated changes CMakeLists.txt
+- Edited OBJ RenameFile.java to comment out unused r8 import that could not be found
+
+## Known issues
+- `gradle build` fails due to linting issues with the SDK code. Can be bypassed by using `gradle build -x lint`
+
+## Questions
+- JavaWebSocket 1.4.1 exists on maven central, but it might not be the exact same build as the file name is different. Would it be okay to replace it with the maven one?
+- OpenFTC's EasyOpenCV and AprilTag don't seem to be bundled with the stock sdk, but they are in the vision build.gradle as dependencies. I updated them to the latest version. Is that okay?
+- I added 64 bit native libraries to mirror the stock app, but it makes the app bigger. Is it okay to enable them and if so should I enable architecture splits to save size?
+

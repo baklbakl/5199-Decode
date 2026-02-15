@@ -1,19 +1,19 @@
 package org.ducktapeandaprayer.ftc.auto.options;
 
 public enum Delay {
-    NONE,
-    FIVE,
-    TEN
+    NONE("0"),
+    FIVE("5"),
+    TEN("10")
     ;
+
+    private final String string;
+
     @Override
     public String toString() {
-        if(this == NONE) {
-            return "0";
-        } else if(this == FIVE) {
-            return "5";
-        } else if (this == TEN) {
-            return "10";
-        }
-        throw new RuntimeException("Delay toString() incomplete");
+        return string;
+    }
+
+    Delay(String string) {
+        this.string = string;
     }
 }

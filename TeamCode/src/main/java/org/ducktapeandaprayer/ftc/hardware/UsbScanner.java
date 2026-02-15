@@ -80,9 +80,9 @@ public class UsbScanner {
 
             if (localWebCamSerialNumber == null) {
                 RobotLog.ww("UsbScanner", "No webcam found!\n" + Arrays.toString(Thread.currentThread().getStackTrace()));
-                TeamCodeWarningSource.getInstance().setWarning("No webcam found!");
+                TeamCodeWarningSource.getInstance().setUsbScannerWarning("No webcam found!");
             } else {
-                TeamCodeWarningSource.getInstance().clearWarning();
+                TeamCodeWarningSource.getInstance().clearUsbScannerWarning();
             }
 
             lynxParentUsbSerialNumber = localLynxParentUsbSerialNumber;

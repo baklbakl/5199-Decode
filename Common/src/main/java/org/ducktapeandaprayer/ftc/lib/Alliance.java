@@ -1,28 +1,20 @@
 package org.ducktapeandaprayer.ftc.lib;
 
 public enum Alliance {
-    RED,
-    BLUE;
+    RED("🟥 (red)", 24),
+    BLUE("🟦 (blue)", 20);
+
+    private final String string;
+    public final int aprilTagID;
 
     @Override
     public String toString() {
-        if (this == RED) {
-            return "🟥 (red)";
-        } else if (this == BLUE) {
-            return "🟦 (blue)";
-        }
-        throw new RuntimeException("Alliance toString() incomplete");
+        return string;
     }
 
-    public int toAprilTagID() {
-        switch (this) {
-            case RED:
-                return 24;
-            case BLUE:
-                return 20;
-            default:
-                throw new IllegalArgumentException("toAprilTagID incomplete");
-        }
+    Alliance(String string, int aprilTagID) {
+        this.string = string;
+        this.aprilTagID = aprilTagID;
     }
 
     public static Alliance lastAlliance = null;

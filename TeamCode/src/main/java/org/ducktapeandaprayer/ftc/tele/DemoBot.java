@@ -1,49 +1,75 @@
 package org.ducktapeandaprayer.ftc.tele;
 
-import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
+import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.Range;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.hardware.LynxModuleInitializer;
+import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
+import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
+import org.ducktapeandaprayer.ftc.lib.variablewatcher.VariableWatcher;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @TeleOp(name="DemoBot (Small)", group = MainBotConfig.demoGroupName)
-public class DemoBot extends LinearOpMode {
+public class DemoBot extends FastIterativeOpMode {
+    private DcMotor leftDrive = null;
+    private DcMotor rightDrive = null;
+    private List<VariableWatcher> variablesWatched = null;
 
     @Override
-    public void runOpMode() {
+    protected void init_internal() {
         // Initialize the hardware variables. Note that the strings used here as parameters
         // to 'get' must correspond to the names assigned during the robot configuration
         // step (using the FTC Robot Controller app on the phone).
-        LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap, false);
+        LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
 
-        DcMotor leftDrive = hardware.parentModule.createDcMotor(0);
-        DcMotor rightDrive = hardware.parentModule.createDcMotor(3);
+        leftDrive = hardware.parentModule.createDcMotor(0);
+        rightDrive = hardware.parentModule.createDcMotor(3);
 
-        // To drive forward, most robots need the motor on one side to be reversed, because the axles point in opposite directions.
-        // Pushing the left stick forward MUST make robot go forward. So adjust these two lines based on your first test drive.
-        // Note: The settings here assume direct drive on left and right wheels.  Gear Reduction or 90 Deg drives may require direction flips
-        leftDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightDrive.setDirection(DcMotor.Direction.FORWARD);
+        variablesWatched = new ArrayList<>();
+        try {
+            variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
+                    (Float left_stick_y, Float right_stick_x) -> {
+                        double drive = -left_stick_y / 2;
+                        double turn = -right_stick_x / 2;
+                        if(turn != 0) {
+                            drive = 0;
+                        }
+                        double leftPower = Range.clip(drive + turn, -1.0, 1.0) ;
+                        double rightPower = Range.clip(drive - turn, -1.0, 1.0) ;
 
-        // Wait for the game to start (driver presses PLAY)
-        waitForStart();
-
-        // run until the end of the match (driver presses STOP)
-        while (opModeIsActive()) {
-            // POV Mode uses left stick to go forward, and right stick to turn.
-            // - This uses basic math to combine motions and is easier to drive straight.
-            double drive = -gamepad1.left_stick_y / 2;
-            double turn = -gamepad1.right_stick_x / 2;
-            if(turn != 0) {
-                drive = 0;
-            }
-            double leftPower = Range.clip(drive + turn, -1.0, 1.0) ;
-            double rightPower = Range.clip(drive - turn, -1.0, 1.0) ;
-
-            // Send calculated power to wheels
-            leftDrive.setPower(leftPower);
-            rightDrive.setPower(rightPower);
+                        // Send calculated power to wheels
+                        leftDrive.setPower(leftPower);
+                        rightDrive.setPower(rightPower);
+                    }
+            ));
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    protected void init_loop_internal() {
+
+    }
+
+    @Override
+    protected void start_internal() {
+
+    }
+
+    @Override
+    protected void loop_internal() {
+        for(VariableWatcher watcher : variablesWatched) {
+            watcher.tick();
+        }
+    }
+
+    @Override
+    protected void stop_internal() {
+
     }
 }

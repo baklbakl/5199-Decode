@@ -25,7 +25,8 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
 
     private int suppressionCount = 0;
 //    private List<String> warnings = new ArrayList<>();
-    private String warning  = "";
+    private String usbScannerWarning  = "";
+    private String lynxModuleInitalizerWarning  = "";
 
     @Override
     public String getGlobalWarning() {
@@ -34,7 +35,8 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
         }
 
         List<String> warnings = new ArrayList<>();
-        warnings.add(warning);
+        warnings.add(usbScannerWarning);
+        warnings.add(lynxModuleInitalizerWarning);
 
         if(BuildConfig.FLAVOR.equals("extractedLibs")) {
             warnings.add("NOT LEGAL FOR COMP!!!! Using extracted FTC libraries. To use legal AAR libs switch build flavor to \"aarLibs\"");
@@ -62,14 +64,24 @@ public class TeamCodeWarningSource extends RequireSingleInstance implements Glob
     @Override
     public void setGlobalWarning(String warning) {}
 
-    public void setWarning(String warning) {
-        this.warning = warning;
+    public void setLynxModuleInitializerWarning(String warning) {
+        this.lynxModuleInitalizerWarning = warning;
+    }
+
+    public void clearLynxModuleInitializerWarning() {
+        this.lynxModuleInitalizerWarning = "";
+    }
+
+    public void setUsbScannerWarning(String warning) {
+        this.usbScannerWarning = warning;
+    }
+
+    public void clearUsbScannerWarning() {
+        this.usbScannerWarning = "";
     }
 
     @Override
     public void clearGlobalWarning() {}
 
-    public void clearWarning() {
-        this.warning = "";
-    }
+
 }

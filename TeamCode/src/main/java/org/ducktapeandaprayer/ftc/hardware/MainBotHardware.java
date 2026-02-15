@@ -25,7 +25,7 @@ public class MainBotHardware {
     //
     // Dashboard options
     //
-    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 15);
+    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.5);
     public static int motorVelocityTolerance = 30;
     public static double moverDrivePower = 1;
     public static double moverDriveBallInPower = 0.7; //Was 0.85
@@ -33,7 +33,7 @@ public class MainBotHardware {
     public static double kickerServoUpPos = 0.5;
     public static double kickerServoDownPos = 0.32;
     public static double inIntakePower = 1;
-    public static long teleOpLauncherNoVisionVelocity = -1380;
+    public static long teleOpLauncherNoVisionVelocity = 1600;
     public static int launchRequiredSpeedSamples = 10;
     public static double parentResistorMultiplier = 3.19;
 
@@ -124,28 +124,25 @@ public class MainBotHardware {
     public final WebcamName webcamName;
     public final LynxModuleInitializer modules;
 
-    public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
-        return getOrCreate(hardwareMap, false);
-    }
 
-    public static MainBotHardware getOrCreate(HardwareMap hardwareMap, boolean useRS485) {
-        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, useRS485));
-        if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap, useRS485)) {
+    public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
+        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+        if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap)) {
 //            ts = new MainBotHardware(hardwareMap);
             SingletonHelper.clear(MainBotHardware.class);
         }
-        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, useRS485));
+        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
     }
 
     public static void clearInstance() {
         SingletonHelper.clear(MainBotHardware.class);
     }
 
-    private MainBotHardware(HardwareMap hardwareMap, boolean useRS485) {
+    private MainBotHardware(HardwareMap hardwareMap) {
         this.hardwareMap = hardwareMap;
         RobotLog.ii("MainBotHardware", "Initializing mainbothardware");
 
-        modules = LynxModuleInitializer.getOrCreate(hardwareMap, useRS485);
+        modules = LynxModuleInitializer.getOrCreate(hardwareMap);
         if(modules.childModule == null) {
             throw new RuntimeException("No child module found. A child module is required for MainBotHardware");
         }

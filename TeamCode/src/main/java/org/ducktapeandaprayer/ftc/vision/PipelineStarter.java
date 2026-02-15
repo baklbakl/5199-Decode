@@ -8,6 +8,10 @@ public abstract class PipelineStarter extends OpenCvPipeline {
 
     public PipelineStarter(MainBotHardware hardware, int width, int height) {
         int cameraMonitorViewId = hardware.hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardware.hardwareMap.appContext.getPackageName());
+        //TEST: Clean error on no camera found in pipeline starter
+        if(hardware.webcamName == null) {
+            throw new RuntimeException("Pipeline Starter / Vision cannot be started without a camera");
+        }
         camera = OpenCvCameraFactory.getInstance().createWebcam(hardware.webcamName, cameraMonitorViewId);
         camera.setPipeline(this);
         camera.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener() {

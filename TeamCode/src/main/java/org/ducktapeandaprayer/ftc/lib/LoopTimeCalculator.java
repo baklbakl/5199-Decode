@@ -2,15 +2,25 @@ package org.ducktapeandaprayer.ftc.lib;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class LoopTimeCalculator {
     private final ElapsedTime runtime = new ElapsedTime();
 
     private long lastNanos = 0;
-    private final long[] loopTimes = new long[5];
+    private final long[] loopTimes;
     private int loopTimesPos = 0;
     private final AtomicLong timeNs = new AtomicLong(0);
+    //private final AtomicLong medianTimeNs = new AtomicLong(0);
+
+    public LoopTimeCalculator(int sampleCount) {
+         loopTimes = new long[sampleCount];
+    }
+
+    public LoopTimeCalculator() {
+        this(5);
+    }
 
     public void reset() {
         runtime.reset();
@@ -39,6 +49,7 @@ public class LoopTimeCalculator {
     public String toString() {
         return "Loop Speed: " + getLoopFrequency() + " Hz\n" +
                 "Loop Time: " + getLoopTime() + "s\n";
+                //"Median Speed: " + 1000000000.0d / medianTimeNs.get() + " Hz\n";
     }
 
     public void tick() {
@@ -51,8 +62,12 @@ public class LoopTimeCalculator {
             averageNanos += time;
         }
         averageNanos /= loopTimes.length;
-        lastNanos = thisNanos;
-
         this.timeNs.set(averageNanos);
+
+        //long[] arrayToSort = Arrays.copyOf(loopTimes, loopTimes.length);
+        //Arrays.sort(arrayToSort);
+        //medianTimeNs.set(arrayToSort[arrayToSort.length/2]);
+
+        lastNanos = thisNanos;
     }
 }

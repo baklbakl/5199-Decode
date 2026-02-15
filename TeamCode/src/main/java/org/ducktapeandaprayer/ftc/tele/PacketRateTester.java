@@ -1,6 +1,7 @@
 package org.ducktapeandaprayer.ftc.tele;
 
 import com.qualcomm.hardware.HardwareDeviceManager;
+import com.qualcomm.hardware.lynx.LynxDcMotorController;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.lynx.LynxUsbDevice;
 import com.qualcomm.hardware.lynx.LynxUsbDeviceImpl;
@@ -8,8 +9,10 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.LynxModuleDescription;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
+import org.ducktapeandaprayer.ftc.hardware.LynxDcMotorControllerEx;
 import org.ducktapeandaprayer.ftc.hardware.LynxModuleInitializer;
 import org.ducktapeandaprayer.ftc.hardware.UsbScanner;
+import org.ducktapeandaprayer.ftc.lib.EnumToStringHelper;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
 import org.ducktapeandaprayer.ftc.lib.LoopTimeCalculator;
 import org.ducktapeandaprayer.ftc.lib.OnCreateHandlers;
@@ -44,7 +47,21 @@ public class PacketRateTester extends FastIterativeOpMode {
         }
     }
 
+    public enum PacketType {
+        KEEP_ALIVE,
+        BULK_READ,
+        MOTOR_POWER,
+
+        ;
+
+        @Override
+        public String toString() {
+            return EnumToStringHelper.toStringHelper(super.toString());
+        }
+    }
+
     public LynxModules moduleTypeToTest;
+    public PacketType packetType;
     private OptionDriver options;
 
     @Override
@@ -52,6 +69,7 @@ public class PacketRateTester extends FastIterativeOpMode {
         options = new OptionDriver();
         try {
             options.add(new EnumOption<>("Lynx Module", "triangle", gamepad1, this.getClass().getField("moduleTypeToTest"), this, LynxModules.class));
+            options.add(new EnumOption<>("Packet Type", "square", gamepad1, this.getClass().getField("packetType"), this, PacketType.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -69,11 +87,14 @@ public class PacketRateTester extends FastIterativeOpMode {
     private LynxModuleInitializer.LynxModuleControllers moduleToTest;
     private LoopTimeCalculator timeCalculator;
     private Method pingMethod;
+    private Method setMotorPowerInternalMethod;
 
     @Override
     protected void start_internal() {
-        timeCalculator = new LoopTimeCalculator();
-        LynxModuleInitializer initializer = LynxModuleInitializer.getOrCreate(hardwareMap, moduleTypeToTest == LynxModules.CONTROL_HUB_RS485);
+        timeCalculator = new LoopTimeCalculator(500);
+        //FIX: Add back ability to select usb vs RS485
+        //LynxModuleInitializer initializer = LynxModuleInitializer.getOrCreate(hardwareMap, moduleTypeToTest == LynxModules.CONTROL_HUB_RS485);
+        LynxModuleInitializer initializer = LynxModuleInitializer.getOrCreate(hardwareMap);
         initializer.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
         switch (moduleTypeToTest) {
@@ -95,9 +116,13 @@ public class PacketRateTester extends FastIterativeOpMode {
             Class<LynxModule> clazz = LynxModule.class;
             pingMethod = clazz.getDeclaredMethod("ping");
             pingMethod.setAccessible(true);
-            Method m = clazz.getDeclaredMethod("stopPingTimer", boolean.class);
-            m.invoke(moduleToTest, true);
 
+            setMotorPowerInternalMethod = LynxDcMotorController.class.getDeclaredMethod("internalSetMotorPower", int.class, double.class, boolean.class);
+            setMotorPowerInternalMethod.setAccessible(true);
+
+            Method m = clazz.getDeclaredMethod("stopPingTimer", boolean.class);
+            m.setAccessible(true);
+            m.invoke(moduleToTest.module, true);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
@@ -107,11 +132,24 @@ public class PacketRateTester extends FastIterativeOpMode {
     @Override
     protected void loop_internal() {
         moduleToTest.module.clearBulkCache();
+        timeCalculator.tick();
         telemetry.addLine(timeCalculator.toString());
         telemetry.update();
 
         try {
-            pingMethod.invoke(moduleToTest.module);
+            switch (packetType) {
+                case KEEP_ALIVE:
+                    pingMethod.invoke(moduleToTest.module);
+                    break;
+                case BULK_READ:
+                    moduleToTest.module.getBulkData();
+                    break;
+                case MOTOR_POWER:
+                    setMotorPowerInternalMethod.invoke(moduleToTest.motorController, 0, 0.0, true);
+                    break;
+            }
+
+
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }
@@ -122,7 +160,8 @@ public class PacketRateTester extends FastIterativeOpMode {
 
         try {
             Method m = LynxModule.class.getDeclaredMethod("startPingTimer");
-            m.invoke(moduleToTest);
+            m.setAccessible(true);
+            m.invoke(moduleToTest.module);
         } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
             throw new RuntimeException(e);
         }

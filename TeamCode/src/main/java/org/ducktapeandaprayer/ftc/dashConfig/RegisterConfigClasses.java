@@ -14,11 +14,11 @@ import com.google.gson.GsonBuilder;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
+import org.ducktapeandaprayer.ftc.tele.LauncherTuner;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ControlHubThread;
 import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
-import org.ducktapeandaprayer.ftc.tele.LauncherInternalControlTuner;
 import org.ducktapeandaprayer.ftc.tele.Test;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
@@ -36,7 +36,7 @@ public class RegisterConfigClasses {
             ExpansionHubThread.class,
             ControlHubThread.class,
             AprilTagDetectionPipeline.class,
-            LauncherInternalControlTuner.class
+            LauncherTuner.class
     };
 
 //    private static List<Double> testList = null;
