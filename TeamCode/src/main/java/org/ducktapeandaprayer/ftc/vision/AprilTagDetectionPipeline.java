@@ -98,7 +98,7 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
     }
 
     @Override
-    public Mat processFrame(Mat input) {
+    public Mat childProcessFrame(Mat input) {
         // Convert to greyscale
         Imgproc.cvtColor(input, grey, Imgproc.COLOR_RGBA2GRAY);
 

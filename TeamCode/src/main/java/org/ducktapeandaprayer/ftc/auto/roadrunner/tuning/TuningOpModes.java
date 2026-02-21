@@ -112,7 +112,8 @@ public final class TuningOpModes {
         manager.register(metaForClass(DeadWheelDirectionDebugger.class), new DeadWheelDirectionDebugger(dvf));
 
         //Using the .class ones erases the group name from the meta for some reason
-        manager.register(metaForClass(ManualStrafeFeedbackTuner.class), new ManualFeedbackTuner());
+        manager.register(metaForClass(ManualStrafeFeedbackTuner.class), new ManualStrafeFeedbackTuner());
+        manager.register(metaForClass(ManualFeedbackTuner.class), new ManualFeedbackTuner());
         manager.register(metaForClass(SplineTest.class), new SplineTest());
         manager.register(metaForClass(TurnTest.class), new TurnTest());
         manager.register(metaForClass(LocalizationTest.class), new LocalizationTest());

@@ -3,13 +3,11 @@
           xmlns:tools="http://schemas.android.com/tools"
           >
 <!--    Removed the version from here and we are now using the gradle.properties one-->
-    <!--  android:versionCode="57"
-          android:versionName="11.0"
+    <!--  android:versionCode="61"
+          android:versionName="11.1"
           >-->
 
   <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
-
-
 
   <application
     android:allowBackup="true"

@@ -18,18 +18,33 @@ import org.ducktapeandaprayer.ftc.lib.SingletonHelper;
 import org.ducktapeandaprayer.ftc.lib.TeamCodeWarningSource;
 
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.ducktapeandaprayer.ftc.lib.OnCreateHandlers.*;
 
 public class LynxModuleInitializer {
-    public static LynxModuleInitializer getOrCreate(HardwareMap hardwareMap) {
-        LynxModuleInitializer ts = SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
+    public enum UseRS485 {
+        FORCE,
+        FALLBACK,
+        NEVER
+    }
 
-        if(!ts.scanner.equals(UsbScanner.getOrCreate(hardwareMap))) {
+    private final UseRS485 useRS485;
+
+    public static LynxModuleInitializer getOrCreate(HardwareMap hardwareMap, UseRS485 useRS485) {
+        LynxModuleInitializer ts = SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap, useRS485));
+
+        if(!ts.scanner.equals(UsbScanner.getOrCreate(hardwareMap)) || ts.useRS485 != useRS485) {
             SingletonHelper.clear(LynxModuleInitializer.class);
         }
 
-        return SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap));
+        return SingletonHelper.getOrCreate(LynxModuleInitializer.class, () -> new LynxModuleInitializer(hardwareMap, useRS485));
+    }
+
+
+    public static LynxModuleInitializer getOrCreate(HardwareMap hardwareMap) {
+        return getOrCreate(hardwareMap, UseRS485.FALLBACK);
     }
 
     public static void clearInstance() {
@@ -87,8 +102,88 @@ public class LynxModuleInitializer {
         }
     }
 
-    private LynxModuleInitializer(HardwareMap hardwareMap) {
+    private LynxModuleControllers createChildModule(LynxUsbDevice parentUsbDevice) {
+        LynxUsbDevice childUsbDevice = null;
+
+        if(useRS485 == UseRS485.FORCE) {
+            childUsbDevice = parentUsbDevice;
+        } else {
+            if(scanner.lynxChildUsbSerialNumber != null) {
+                try {
+                    childUsbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxChildUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
+                } catch (RobotCoreException | InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            } else if(useRS485 == UseRS485.FALLBACK) {
+                childUsbDevice = parentUsbDevice;
+            } else if(useRS485 == UseRS485.NEVER) {
+                TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
+                        "Could not find USB Connected Expansion Hub with address "
+                                + MainBotHardware.expansionHubAddress
+                                + " and RS485 fallback is disabled. Check that the module is powered on, "
+                                + "connected, and that the address is correct"
+                );
+                return null;
+            }
+        }
+
+        LynxModuleControllers localChildModule = null;
+        try {
+            localChildModule = new LynxModuleControllers(
+                    childUsbDevice.getOrAddModule((new LynxModuleDescription.Builder(MainBotHardware.expansionHubAddress, childUsbDevice != parentUsbDevice)).build())
+            );
+
+            localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
+            //Put the module in the hardware map that stopping when the opmode works right
+            hardwareMap.put("Expansion Hub " + localChildModule.module.toString(), localChildModule.module);
+
+            if(childUsbDevice == parentUsbDevice) {
+                if(useRS485 == UseRS485.FALLBACK) {
+                    TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
+                            "Could not find USB Connected Expansion Hub. " +
+                                    "Falling back to RS485. This may be expected if no USB connected expansion Hub is present."
+                    );
+                }
+            } else {
+                //Put the usb device in the hardware that disconnections and reconnections work right. This means that there will be issues if a new eh it installed without a power cycle.
+                hardwareMap.put("Expansion Hub Portal Created" + childUsbDevice.toString(), childUsbDevice);
+            }
+
+        } catch (RobotCoreException e) {
+            RobotLog.logStackTrace("LynxModuleInitializer", e);
+
+            if(localChildModule != null) {
+                localChildModule.module.close();
+            }
+
+            if(parentUsbDevice == childUsbDevice) {
+                TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
+                        "Could not find Expansion Hub with address "
+                                + MainBotHardware.expansionHubAddress
+                                + " connected via RS485" + (useRS485 == UseRS485.FALLBACK ? " or USB" : "") + ". Check that the module is powered on, "
+                                + "connected, and that the address is correct"
+                );
+            } else {
+                //Only close the child usb device if it is distinct from the parent one. When we are not connected with RS485
+                childUsbDevice.close();
+
+                TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
+                        "Could not find Expansion Hub with address "
+                                + MainBotHardware.expansionHubAddress
+                                + " connected via USB. This is strange because a USB device was found, "
+                                + "but the lynx module itself was not. Check the address of the module is correct"
+                );
+            }
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        return localChildModule;
+    }
+
+    private LynxModuleInitializer(HardwareMap hardwareMap, UseRS485 useRS485) {
         this.hardwareMap = hardwareMap;
+        this.useRS485 = useRS485;
 
         RobotLog.ii("LynxModuleInitializer", "Initializing modules");
         // Empty the hardware map so no one tries to use it except for LynxModules and LynxUsbDevices because the
@@ -100,13 +195,29 @@ public class LynxModuleInitializer {
             } else {
                 RobotLog.ii("LynxModuleInitializer", "Removing device called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
                 hardwareMap.remove(name, device);
+
+                if(!(device instanceof LynxModule) && !(device instanceof VoltageSensor)) {
+                    device.close();
+                }
             }
         }
 
         //Empty out device specific map
         for(HardwareMap.DeviceMapping<? extends HardwareDevice> mapping : hardwareMap.allDeviceMappings) {
-            for(Map.Entry<String, ? extends HardwareDevice> device : mapping.entrySet()) {
-                mapping.remove(device.getKey());
+            Set<? extends Map.Entry<String, ? extends HardwareDevice>> entries = mapping.entrySet();
+            Optional<? extends Map.Entry<String, ? extends HardwareDevice>> entry = entries.stream().findAny();
+
+            if(entry.isPresent()) {
+                if(entry.get().getValue() instanceof VoltageSensor) {
+                    continue;
+                }
+
+                for(Map.Entry<String, ? extends HardwareDevice> device : entries) {
+                    mapping.remove(device.getKey());
+                    if(!(device.getValue() instanceof LynxModule)) {
+                        device.getValue().close();
+                    }
+                }
             }
         }
 
@@ -138,61 +249,7 @@ public class LynxModuleInitializer {
 
             LynxModuleControllers localChildModule = null;
             if(Device.isRevControlHub()) {
-                LynxUsbDevice childUsbDevice;
-
-                //TEST: Auto RS485 switchover
-                if(scanner.lynxChildUsbSerialNumber != null) {
-                    childUsbDevice = LynxUsbDeviceImpl.findOrCreateAndArm(hardwareMap.appContext, scanner.lynxChildUsbSerialNumber, getEventLoopManger().get(), HardwareDeviceManager.createUsbManager());
-                } else {
-                    childUsbDevice = parentUsbDevice;
-                }
-
-                try {
-                    localChildModule = new LynxModuleControllers(
-                            childUsbDevice.getOrAddModule((new LynxModuleDescription.Builder(MainBotHardware.expansionHubAddress, childUsbDevice != parentUsbDevice)).build())
-                    );
-
-                    localChildModule.module.pingAndQueryKnownInterfacesAndEtc();
-                    //Put the module in the hardware map that stopping when the opmode works right
-                    hardwareMap.put("Expansion Hub " + localChildModule.module.toString(), localChildModule.module);
-
-                    if(childUsbDevice == parentUsbDevice) {
-                        TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
-                                "Could not find USB Connected Expansion Hub. " +
-                                        "Falling back to RS485. This may be expected if no USB connected expansion Hub is present."
-                        );
-                    } else {
-                        //Put the usb device in the hardware that disconnections and reconnections work right. This means that there will be issues if a new eh it installed without a power cycle.
-                        hardwareMap.put("Expansion Hub Portal Created" + childUsbDevice.toString(), childUsbDevice);
-                    }
-
-                } catch (RobotCoreException e) {
-                    if(localChildModule != null) {
-                        localChildModule.module.close();
-                    }
-
-                    if(parentUsbDevice == childUsbDevice) {
-                        TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
-                                "Could not find Expansion Hub with address "
-                                + MainBotHardware.expansionHubAddress
-                                + " connected via RS485 or USB. Check that the module is powered on, "
-                                + "connected, and that the address is correct"
-                        );
-                    } else {
-                        //Only close the child usb device if it is distinct from the parent one. When we are not connected with RS485
-                        childUsbDevice.close();
-
-                        TeamCodeWarningSource.getInstance().setLynxModuleInitializerWarning(
-                                "Could not find Expansion Hub with address "
-                                + MainBotHardware.expansionHubAddress
-                                + " connected via USB. This is strange because a USB device was found, "
-                                + "but the lynx module itself was not. Check the address of the module is correct"
-                        );
-                    }
-
-                    localChildModule = null;
-
-                }
+                localChildModule = createChildModule(parentUsbDevice);
             }
             childModule = localChildModule;
         } catch (RobotCoreException | InterruptedException e) {

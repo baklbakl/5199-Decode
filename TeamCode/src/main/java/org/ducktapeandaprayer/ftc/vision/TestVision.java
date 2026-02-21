@@ -43,7 +43,7 @@ public class TestVision extends FastIterativeOpMode {
 
     @Override
     protected void start_internal() {
-
+        this.requestOpModeStop();
     }
 
     @Override

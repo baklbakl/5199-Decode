@@ -10,7 +10,6 @@ import org.ducktapeandaprayer.ftc.auto.roadrunner.ThreeDeadWheelLocalizer;
 public final class ManualStrafeFeedbackTuner extends LinearOpMode {
     public static double DISTANCE = 64;
 
-    //FIX: Deduplicate this with ManualFeedbackTuner
     @Override
     public void runOpMode() {
         MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));

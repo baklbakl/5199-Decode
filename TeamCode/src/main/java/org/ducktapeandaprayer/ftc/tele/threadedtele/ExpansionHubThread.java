@@ -200,9 +200,9 @@ public class ExpansionHubThread extends ThreadEx {
                         controlHubThread.requestAutoAimStartStop(false);
                     }
                 },
-                //Disabled or locked auto aim are safe for launch. We maybe could check for auto speed lock, but it hasn't been an issue, so we won't
+                //Disabled or locked auto aim are safe for launch.
+                //We maybe could check for auto speed lock, but it hasn't been an issue and launching may affect the reading and throw things off
                 () -> {
-                    //ADD: Check that auto speed is locked if we're using it before letting auto launch happen
                     ControlHubThread.AutoAimState state = controlHubThread.getAutoAimState();
                     return state == ControlHubThread.AutoAimState.LOCKED || state == ControlHubThread.AutoAimState.DISABLED;
                 }
@@ -220,8 +220,8 @@ public class ExpansionHubThread extends ThreadEx {
                 if(left_bumper == right_bumper) {
                     hardware.moverDrive.setPower(0);
                 } else if(left_bumper) {
-                    if(hardware.kickerServo.getPosition() == MainBotHardware.kickerServoDownPos) {
-                        hardware.moverDrive.setPower(hardware.launcherSwitch.getState() ? MainBotHardware.moverDrivePower : MainBotHardware.moverDriveBallInPower);
+                    if(Math.abs(hardware.kickerServo.getPosition() - MainBotHardware.kickerServoDownPos) < 0.0001) {
+                        hardware.moverDrive.setPower(hardware.childLauncherSwitch.getState() ? MainBotHardware.moverDrivePower : MainBotHardware.moverDriveBallInPower);
                     }
                 } else if(right_bumper) {
                     hardware.moverDrive.setPower(-MainBotHardware.moverDrivePower);
@@ -255,7 +255,7 @@ public class ExpansionHubThread extends ThreadEx {
                 }
 
                 if(circle) {
-                    if(!hardware.launcherSwitch.getState()
+                    if(!hardware.childLauncherSwitch.getState()
                             && hardware.launchDrive.isAtTargetVelocity()
                             && hardware.launchDrive.getTargetVelocity() != 0
                     ) {
@@ -379,7 +379,7 @@ public class ExpansionHubThread extends ThreadEx {
         autoLaunch.tick();
 
         if(hardware.moverDrive.getPower() > 0) {
-            if(hardware.launcherSwitch.getState()) {
+            if(hardware.childLauncherSwitch.getState()) {
                 hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
             } else {
                 hardware.moverDrive.setPower(MainBotHardware.moverDriveBallInPower);

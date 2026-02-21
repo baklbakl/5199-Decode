@@ -92,25 +92,31 @@ public class PacketRateTester extends FastIterativeOpMode {
     @Override
     protected void start_internal() {
         timeCalculator = new LoopTimeCalculator(500);
-        //FIX: Add back ability to select usb vs RS485
-        //LynxModuleInitializer initializer = LynxModuleInitializer.getOrCreate(hardwareMap, moduleTypeToTest == LynxModules.CONTROL_HUB_RS485);
-        LynxModuleInitializer initializer = LynxModuleInitializer.getOrCreate(hardwareMap);
-        initializer.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
-
+        LynxModuleInitializer initializer = null;
         switch (moduleTypeToTest) {
             case CONTROL_HUB_INTERNAL:
+                initializer = LynxModuleInitializer.getOrCreate(hardwareMap);
                 moduleToTest = initializer.parentModule;
                 break;
 
             case CONTROL_HUB_RS485:
-            case EXPANSION_HUB_USB:
-                if(initializer.childModule == null) {
-                    throw new RuntimeException("No module found for selected mode \"" + moduleTypeToTest + "\"");
-                }
+                initializer = LynxModuleInitializer.getOrCreate(hardwareMap, LynxModuleInitializer.UseRS485.FORCE);
+                break;
 
-                moduleToTest = initializer.childModule;
+            case EXPANSION_HUB_USB:
+                initializer = LynxModuleInitializer.getOrCreate(hardwareMap, LynxModuleInitializer.UseRS485.NEVER);
                 break;
         }
+
+        if(moduleTypeToTest != LynxModules.CONTROL_HUB_INTERNAL) {
+            if(initializer.childModule == null) {
+                throw new RuntimeException("No module found for selected mode \"" + moduleTypeToTest + "\"");
+            }
+
+            moduleToTest = initializer.childModule;
+        }
+
+        initializer.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
         try {
             Class<LynxModule> clazz = LynxModule.class;

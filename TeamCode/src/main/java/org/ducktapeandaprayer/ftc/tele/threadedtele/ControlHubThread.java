@@ -22,13 +22,11 @@ public class ControlHubThread extends ThreadEx {
     // Dash Options
     //
 
-    public static double autoAimKS = -0.05;
-    public static double autoAimKP = -0.7;
+    public static double autoAimKS = -0.08;
+    public static double autoAimKP = -0.6;
     public static double autoAimCutoffAngle = 1;
-    public static double autoAimThreshAngle = 10;
-    public static double autoAimOffsetAngle = 10;
-
-    //    public final AtomicBoolean autoAim = new AtomicBoolean(false);
+    public static double autoAimThreshAngle = 3;
+    public static double autoAimXOffsetIn = 5;
 
     //
     // Global Variables
@@ -167,7 +165,11 @@ public class ControlHubThread extends ThreadEx {
             sb.append("\nx: ");
             sb.append(x);
 
-            double angularError = Math.atan2(x, groundDistance) + Math.toRadians(autoAimOffsetAngle);
+            x = x + autoAimXOffsetIn;
+            sb.append("\ncorrected x: ");
+            sb.append(x);
+
+            double angularError = Math.atan2(x, groundDistance);
             sb.append("\nVision angular error: ");
             sb.append(Math.toDegrees(angularError));
 
@@ -284,15 +286,16 @@ public class ControlHubThread extends ThreadEx {
         telemetry.append("\n");
 
         if((autoAimState != AutoAimState.DISABLED && autoAimState != AutoAimState.STOPPED)) {
-            if(Double.isNaN(autoAimTargetHeading) && autoAimState != AutoAimState.NO_TAG_FOUND) {
-                autoAimState = AutoAimState.NO_TAG_FOUND;
-                autoAimTurningPower = 0;
-                computeSetWheelSpeeds(lastForward, lastStrafe, lastGamePadTurn);
+            if(Double.isNaN(autoAimTargetHeading)) {
+                if(autoAimState != AutoAimState.NO_TAG_FOUND) {
+                    autoAimState = AutoAimState.NO_TAG_FOUND;
+                    autoAimTurningPower = 0;
+                    computeSetWheelSpeeds(lastForward, lastStrafe, lastGamePadTurn);
+                }
             } else if(autoAimState == AutoAimState.NO_TAG_FOUND) {
                 autoAimState = AutoAimState.LOCKING;
             }
         }
-
 
         if(autoAimState == AutoAimState.LOCKED || autoAimState == AutoAimState.LOCKING) {
             double headingError = autoAimTargetHeading - computeHeading();

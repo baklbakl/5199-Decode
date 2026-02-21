@@ -6,12 +6,12 @@ public class MeepMeepImp implements RobotInterface {
 
 
     @Override
-    public void launch(int numToLaunch, double speed) {
+    public void launch(int numToLaunch) {
       System.out.println("launch") ;
     }
 
     @Override
-    public void startLauncher(double speed) {
+    public void setLauncherSpeed(double speed) {
         System.out.println("launcher start");
     }
 

@@ -10,10 +10,6 @@ import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
 
-import org.openftc.apriltag.AprilTagDetection;
-
-import java.util.ArrayList;
-
 @TeleOp(name = "Test", group = MainBotConfig.opmodeGroupName)
 public class Test extends FastIterativeOpMode {
     public static double thresh = 0.8;
@@ -26,7 +22,7 @@ public class Test extends FastIterativeOpMode {
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware = MainBotHardware.getOrCreate(hardwareMap);
-        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
+        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.AUTO);
     
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -63,15 +59,16 @@ public class Test extends FastIterativeOpMode {
      */
     public void start_internal() {
         runtime.reset();
+        hardware.launchDrive.setVelocity(SplitAuto.launchVelocity);
         RobotImpl robot = new RobotImpl(hardware, this::opModeIsActive);
-        robot.launch(3, SplitAuto.launchVelocity);
+        robot.launch(3);
     }
 
     /*
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
     public void loop_internal() {
-//        hardware.modules.clearBulkCache();
+        requestOpModeStop();
     }
 
     /*

@@ -2,13 +2,12 @@ package org.ducktapeandaprayer.ftc.hardware;
 
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
-import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
 
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class AutoLaunch {
-    public static double autoLaunchTimeout = 2.0;
+    public static double autoLaunchTimeout = 2.5;
+    public static double slowDownThresh = 30;
 
     private enum State {
         STOPPED,
@@ -37,23 +36,17 @@ public class AutoLaunch {
         this.launchReady = launchReady;
     }
 
-    public AutoLaunch(MainBotHardware hardware) {
-        this.hardware = hardware;
-        this.startLauncher = null;
-        this.stopLauncher = () -> hardware.launchDrive.setVelocity(0);
-        this.launchReady = () -> true;
-    }
-
-    private void internalStartAutolaunching(int count, Runnable startLauncherReal) {
+    public void startAutoLaunching(int count) {
         if(state != State.STOPPED) {
             throw new IllegalStateException("Not allowed to start launching while launching is in progress");
         }
 
         artifactsToLaunch = count;
-        startLauncherReal.run();
+        speedSamplesSeen = 0;
+        startLauncher.run();
 
         //We check here because we don't want to start the mover if there is already and artifact in position and waiting
-        if(hardware.launcherSwitch.getState()) {
+        if(hardware.childLauncherSwitch.getState()) {
             hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
             hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
             state = State.WAITING_ARTIFACT;
@@ -63,20 +56,9 @@ public class AutoLaunch {
             state = State.SPINNING_UP;
         }
         hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
+        RobotLog.ii("AutoLaunch", "==================================================\nLaunching " + artifactsToLaunch + " state: " + state);
 
         timeout.reset();
-    }
-
-    public void startAutoLaunching(int count, double velocity) {
-        internalStartAutolaunching(count, () -> hardware.launchDrive.setVelocity(velocity));
-    }
-
-    public void startAutoLaunching(int count) {
-        if(startLauncher == null) {
-            throw new IllegalStateException("Must have provided a start launcher runnable on construction to use startAutoLaunching without a speed");
-        }
-
-        internalStartAutolaunching(count, startLauncher);
     }
 
     public void stopAutoLaunch() {
@@ -115,38 +97,54 @@ public class AutoLaunch {
                     speedSamplesSeen = 0;
                 }
 
-                if(hardware.launcherSwitch.getState()) {
+                RobotLog.ii("AutoLaunch", "Waiting speed Samples Seen: " + speedSamplesSeen + " Target velocity: " + hardware.launchDrive.getTargetVelocity() + " Velocity: " + hardware.launchDrive.getVelocity());
+
+                if(hardware.childLauncherSwitch.getState()) {
+                    if(hardware.moverDrive.getPower() == 0) {
+                        hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                    }
+
+                    if(hardware.intakeDrive.getPower() == 0) {
+                        hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+                    }
                     break;
                 }
 
                 hardware.moverDrive.setPower(0);
                 hardware.intakeDrive.setPower(0);
+                RobotLog.ii("AutoLaunch", "Switch to spinning up with " + speedSamplesSeen + " speed samples seen and left: " + artifactsToLaunch + " spent: " + timeout.seconds());
                 timeout.reset();
                 state = State.SPINNING_UP;
 
             case SPINNING_UP:
-                if(hardware.launchDrive.isAtTargetVelocity()) {
-                    speedSamplesSeen++;
-                } else {
-                    speedSamplesSeen = 0;
-                }
+                boolean launchReadyReal = launchReady.get();
+                RobotLog.ii("AutoLaunch", "Speeding up Speed Samples Seen: " + speedSamplesSeen + " ready function: " + launchReadyReal + " Target velocity: " + hardware.launchDrive.getTargetVelocity() + " Velocity: " + hardware.launchDrive.getVelocity());
+                //if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples || !launchReady.get()) {
+                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples || !launchReadyReal) {
+                    if(hardware.launchDrive.isAtTargetVelocity()) {
+                        speedSamplesSeen++;
+                    } else {
+                        speedSamplesSeen = 0;
+                    }
 
-                if (speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples || !launchReady.get()) {
                     break;
                 }
 
                 hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
-                speedSamplesSeen = 0;
+                RobotLog.ii("AutoLaunch", "Switch to launching with " + speedSamplesSeen + " speed samples seen and left: " + artifactsToLaunch + " spent: " + timeout.seconds());
                 timeout.reset();
+                speedSamplesSeen = 0;
                 state = State.LAUNCHING;
 
             case LAUNCHING:
             case LAUNCHING_STOP_REQUESTED:
-                if(hardware.launchDrive.isAtTargetVelocity()) {
-                    speedSamplesSeen = 0;
-                } else {
+                if(Math.abs(hardware.launchDrive.getTargetVelocity()) - Math.abs(hardware.launchDrive.getVelocity()) > slowDownThresh) {
                     speedSamplesSeen++;
+                } else {
+                    speedSamplesSeen = 0;
                 }
+
+                RobotLog.ii("AutoLaunch", "Lauching Speed Samples Seen: " + speedSamplesSeen + " Target velocity: " + hardware.launchDrive.getTargetVelocity() + " Velocity: " + hardware.launchDrive.getVelocity());
 
                 if(speedSamplesSeen < MainBotHardware.launchRequiredSpeedSamples) {
                     break;
@@ -154,13 +152,15 @@ public class AutoLaunch {
 
                 artifactsToLaunch--;
                 if(artifactsToLaunch > 0 && state == State.LAUNCHING) {
-                    hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
-                    hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
+                    //hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
+                    //hardware.intakeDrive.setPower(MainBotHardware.inIntakePower);
                     hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
+                    RobotLog.ii("AutoLaunch", "Switch to waiting with left: " + artifactsToLaunch + " spent: " + timeout.seconds());
                     timeout.reset();
                     state = State.WAITING_ARTIFACT;
                     speedSamplesSeen = 0;
                 } else {
+                    RobotLog.ii("AutoLaunch", "Ended naturally with artifacts left of " + artifactsToLaunch + " spent: " + timeout.seconds());
                     state = State.LAUNCHING_STOP_REQUESTED;
                     stopAutoLaunch();
                 }
@@ -169,6 +169,7 @@ public class AutoLaunch {
 
         if(state != State.STOPPED) {
             if(timeout.seconds() > autoLaunchTimeout) {
+                RobotLog.ii("AutoLaunch", "Timed out in " + state);
                 //We timed out, stop trying to autolaunch.
                 if(state == State.LAUNCHING) {
                     state = State.LAUNCHING_STOP_REQUESTED;

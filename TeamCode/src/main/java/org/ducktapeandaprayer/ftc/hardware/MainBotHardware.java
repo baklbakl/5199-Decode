@@ -20,35 +20,40 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class MainBotHardware {
     //
     // Dashboard options
     //
-    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 14.5);
+    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(90, 0, 0, 13);
     public static int motorVelocityTolerance = 30;
     public static double moverDrivePower = 1;
-    public static double moverDriveBallInPower = 0.7; //Was 0.85
+    public static double moverDriveBallInPower = 0.5; //Was 0.85
     public static double moverDriveAutoPower = 0.85; //Was 0.85
-    public static double kickerServoUpPos = 0.5;
-    public static double kickerServoDownPos = 0.32;
+    public static double kickerServoUpPos = 0.53;
+    public static double kickerServoDownPos = 0.28;
     public static double inIntakePower = 1;
-    public static long teleOpLauncherNoVisionVelocity = 1600;
+    public static long teleOpLauncherNoVisionVelocity = 1210;
     public static int launchRequiredSpeedSamples = 10;
     public static double parentResistorMultiplier = 3.19;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
     public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-            new MutablePair<>(25.0, -1310.0),
-            new MutablePair<>(33.0, -1340.0),
-            new MutablePair<>(40.0, -1370.0),
-            new MutablePair<>(47.0, -1420.0),
-            new MutablePair<>(55.0, -1460.0),
-            new MutablePair<>(60.0, -1500.0),
-            new MutablePair<>(70.0, -1550.0),
-            new MutablePair<>(78.0, -1630.0)
-    ));
+            new MutablePair<>(39.0, 1240.0),
+            new MutablePair<>(47.0, 1210.0),
+            new MutablePair<>(55.0, 1210.0),
+            new MutablePair<>(63.0, 1210.0),
+            new MutablePair<>(71.0, 1230.0),
+            new MutablePair<>(79.0, 1270.0),
+            new MutablePair<>(90.0, 1330.0),
+            new MutablePair<>(115.0, 1500.0),
+            new MutablePair<>(120.0, 1530.0),
+            new MutablePair<>(125.0, 1550.0),
+            new MutablePair<>(131.0, 1590.0),
+            new MutablePair<>(140.0, 1630.0)
+            ));
 
     //
     // Options
@@ -79,7 +84,7 @@ public class MainBotHardware {
     public static final int leftRearDriveID = 2;
     public static final int rightRearDriveID = 3;
 
-    public static final int intakeDriveID = 0;
+    public static final int intakeDriveID = 2;
     public static final int launchDriveID = 3;
     public static final int moverDriveID = 1;
 
@@ -92,8 +97,6 @@ public class MainBotHardware {
 
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
-//    public static final int colorSensorI2CBus = 1;
-//    public static final int colorSensor2I2CBus = 2;
 
     //
     // Actual hardware
@@ -115,7 +118,8 @@ public class MainBotHardware {
     public final VoltageSensor parentVoltageSensor;
 
     //True is not pressed, false is
-    public final DigitalChannel launcherSwitch;
+    public final DigitalChannel childLauncherSwitch;
+    public final DigitalChannel parentLauncherSwitch;
 
     public final RevBlinkinLedDriver blinkin;
     public final LazyImu lazyImu;
@@ -168,7 +172,7 @@ public class MainBotHardware {
 
         launchDrive = child.createDcMotor(launchDriveID);
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        launchDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+        launchDrive.setDirection(DcMotorSimple.Direction.FORWARD);
         launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
         launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         launchDrive.setVelocity(0);
@@ -227,9 +231,15 @@ public class MainBotHardware {
             webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
         }
 
-        launcherSwitch = child.createDigitalChannel(0);
+        childLauncherSwitch = child.createDigitalChannel(0);
+        parentLauncherSwitch = parent.createDigitalChannel(0);
         parentVoltageSensor = new ProxyVoltageSensor(parent.createAnalogInput(0), parentResistorMultiplier);
         hardwareMap.put("ProxyVoltageSensor", parentVoltageSensor);
+
+        for(Map.Entry<String, VoltageSensor> entry : hardwareMap.voltageSensor.entrySet()) {
+            hardwareMap.voltageSensor.remove(entry.getKey());
+        }
+
         hardwareMap.voltageSensor.put("ProxyVoltageSensor", parentVoltageSensor);
     }
 }

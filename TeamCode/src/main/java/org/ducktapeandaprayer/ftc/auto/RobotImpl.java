@@ -13,12 +13,13 @@ public class RobotImpl implements RobotInterface {
     public RobotImpl(MainBotHardware hardware, Supplier<Boolean> isOpModeActive) {
         this.hardware = hardware;
         this.isOpModeActive = isOpModeActive;
-        autoLaunch = new AutoLaunch(hardware);
+        autoLaunch = new AutoLaunch(hardware, () -> {}, () -> {},
+                () -> hardware.launchDrive.getTargetVelocity() != 0);
     }
 
     @Override
-    public void launch(int numToLaunch, double speed) {
-        autoLaunch.startAutoLaunching(3, speed);
+    public void launch(int numToLaunch) {
+        autoLaunch.startAutoLaunching(3);
 
         while(autoLaunch.isLaunching() && isOpModeActive.get()) {
             autoLaunch.tick();
@@ -26,7 +27,7 @@ public class RobotImpl implements RobotInterface {
     }
 
     @Override
-    public void startLauncher(double speed) {
+    public void setLauncherSpeed(double speed) {
         hardware.launchDrive.setVelocity(speed);
     }
 

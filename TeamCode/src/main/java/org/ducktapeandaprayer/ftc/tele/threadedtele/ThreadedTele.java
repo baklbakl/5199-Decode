@@ -74,7 +74,7 @@ public class ThreadedTele extends FastIterativeOpMode {
                 }
             }
 
-            visionDebugSb.append("Detected ").append(detections.size()).append("april tags\n");
+            visionDebugSb.append("Detected ").append(detections.size()).append(" april tags\n");
             if (targetDetection != null) {
                 visionDebugSb.append("Target Found!\n");
                 visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');

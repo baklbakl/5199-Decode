@@ -1,6 +1,6 @@
 # Duct-Tape-and-a-Prayer repo
 polarbub=Bryn  
-baklbakl=Bryn
+baklbakl=Bryn  
 BotDevPanda (Mr. Panda)=Kavish  
 aruneoz=Haasini  
 Annakhg=Anna  

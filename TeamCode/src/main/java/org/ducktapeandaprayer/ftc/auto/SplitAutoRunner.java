@@ -33,6 +33,8 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     public Delay delay;
     public boolean score;
     public int spikeCount;
+    public boolean park;
+    public boolean gate;
 
     @Override
     protected void init_internal() {
@@ -43,6 +45,8 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             optionDriver.add(new EnumOption<>("Delay", "cross", gamepad1, this.getClass().getField("delay"), this, Delay.class));
             optionDriver.add(new BooleanOption("Score", "circle", gamepad1, this.getClass().getField("score"), this));
             optionDriver.add(new IntOption("Spike Count", "square", gamepad1, this.getClass().getField("spikeCount"), this, 0, 3));
+            optionDriver.add(new BooleanOption("Park", "triangle", gamepad1, this.getClass().getField("park"), this));
+            optionDriver.add(new BooleanOption("Gate", "dpad_left", gamepad1, this.getClass().getField("gate"), this));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -72,7 +76,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            builder = splitAuto.fillBuilder(delay, startPos, alliance, score, spikeCount);
+            builder = splitAuto.fillBuilder(delay, startPos, alliance, score, spikeCount, park, gate);
             path = builder.build();
 
             telemetry.addLine(out);
@@ -98,20 +102,29 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
                         ),
                         (TelemetryPacket telemetryPacket) -> {
+                            if(hardware.moverDrive.getPower() != 0) {
+                                if(hardware.parentLauncherSwitch.getState()) {
+                                    hardware.moverDrive.setPower(MainBotHardware.moverDriveAutoPower);
+                                } else {
+                                    hardware.moverDrive.setPower(MainBotHardware.moverDriveBallInPower);
+
+                                }
+                            }
+
+                            telemetry.addData("x", mecanumDrive.localizer.getPose().position.x);
+                            telemetry.addData("y", mecanumDrive.localizer.getPose().position.y);
+                            telemetry.addData("heading (deg)", Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
                             telemetry.update();
                             return !pathDone.get();
                         }
                 )
         );
         pathDone.set(true);
+        this.requestOpModeStop();
     }
 
     @Override
     protected void loop_internal() {
-        telemetry.addData("x", mecanumDrive.localizer.getPose().position.x);
-        telemetry.addData("y", mecanumDrive.localizer.getPose().position.y);
-        telemetry.addData("heading (deg)", Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));
-        telemetry.update();
     }
 
 

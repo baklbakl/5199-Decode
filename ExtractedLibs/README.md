@@ -11,11 +11,12 @@ This cuts upload time in at least half. See the main `README.md` for how to make
 ## How to update 
 1) Rebase in [Extracted RC](https://github.com/OpenFTC/Extracted-RC) to [our fork](https://github.com/DuckTapeAndAPrayer/Extracted-RC) of it.
 2) Update the Extracted RC git submodule in this repo.
-3) Update `SDK_VERSION_CODE` in gradle.properties with the version code from the pre-extracted code in `RobotCore/src/main/AndroidManifest.xml`
+3) Update `SDK_VERSION_CODE` in gradle.properties with the version code from the pre-extracted code in `FtcRobotContoller/src/main/AndroidManifest.xml`
 
 ## Patches
 These are the patches that were applied to the extracted libs
 
+<!--FIX: Update extracted libs readme update section to talk about new extracted rc changes-->
 ### All files called `AndroidManifest.xml`
 `package="com.qualcomm.ftccommon"` removed from `<manifest>` tag. This is now done with Gradle
 
@@ -27,9 +28,9 @@ OnBotJava service removed
 `<uses-sdk android:minSdkVersion="24" />` removed
 
 ### FTCRobotController
-Removed `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal` because they were annoying to maintain and can be found online.
- 
-Patched `FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity.java` to use reflection when dealing with OnBotJava or Blocks to be able to handle being used without either present
+Removed `FTCRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal` because they were annoying to maintain and can be found online.  
+Patched `FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/internal/FtcRobotControllerActivity.java` to use reflection when dealing with OnBotJava or Blocks to be able to handle being used without either present  
+Removed `gold.wav` and `silver.wav` because they aren't used and take up space
 
 #### `AndroidManifest.xml`
 `android:versionCode="57" android:versionName="11.0"` removed from `manifest` tag. This is now done in Gradle in the TeamCode subproject

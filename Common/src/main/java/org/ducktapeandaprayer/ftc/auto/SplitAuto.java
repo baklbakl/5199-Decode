@@ -13,16 +13,24 @@ import java.util.function.Function;
 
 public class SplitAuto {
     //This is split up into its components because a pose2d isn't editable in the dashboard because its fields are final
-    public static double launchPosX = -48;
+    public static double launchPosX = -22;
     public static double launchPosY = 22;
-    public static double launchPosHeading = 115;
-    public static double launchVelocity = -1320;
+    public static double launchPosHeading = 141;
+    public static double launchPosEndX = -42;
+    public static double launchPosEndY = 16;
+    public static double launchPosEndHeading = 122;
+    public static double launchVelocity = 1210;
     public static double intakeSpeed = 9;
-    public static double intakeStartY = 34;
-    public static double intakeEndY = 47;
-    public static double[] spikeXs = new double[] {-15, 7, 29};
+    public static double intakeStartY = 31;
+    public static double intakeLineUpY = 29;
+    public static double intakeEndY = 46;
+    public static double gateY = 51.25;
+    public static double gateX = -5.5;
+    public static double[] spikeXs = new double[] {-9, 10, 34};
     public static double[] spikeXsTwo = new double[] {35, 7};
     public static double[] spikeXsGR = new double[] {-15, 7, 35, 55};
+    public static double goalParkX = -63;
+    public static double goalParkY = 7;
 
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
@@ -37,12 +45,12 @@ public class SplitAuto {
         return new Pose2dDual<>(pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse());
     }
 
-    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Alliance alliance, boolean score, int spikeCount) {
+    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Alliance alliance, boolean score, int spikeCount, boolean park, boolean gate) {
         Pose2d autoStartPosition;
 
         double audienceHeading = 0;
         if(score) {
-            audienceHeading = 180;
+            audienceHeading = 0;
         } else {
             audienceHeading = 90;
         }
@@ -101,7 +109,6 @@ public class SplitAuto {
             } catch (IllegalAccessException | NoSuchFieldException e) {
                 throw new RuntimeException(e);
             }
-//            transformedLaunchPose = transformIfBlue(new Pose2d(launchPos.position, launchPos.heading.plus(Math.toRadians(200))));
         }
 
         if(delay == Delay.FIVE) {
@@ -111,29 +118,26 @@ public class SplitAuto {
         }
 
         Pose2d launchPos = new Pose2d(launchPosX, launchPosY, Math.toRadians(launchPosHeading));
+        Pose2d launchPosEnd = new Pose2d(launchPosEndX, launchPosEndY, Math.toRadians(launchPosEndHeading));
 
         if(score) {
-            if (startPos == StartPos.GOAL) {
-                pathBuilder = pathBuilder.setTangent(Math.toRadians(315));
-            } else if (startPos == StartPos.CLASSIFIER) {
-                pathBuilder = pathBuilder.setTangent(Math.toRadians(270));
+            pathBuilder = pathBuilder.stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity))
+                    .setReversed(true);
+
+            if (startPos == StartPos.AUDIENCE_IN || startPos == StartPos.AUDIENCE_OUT) {
+                pathBuilder = pathBuilder
+                      .splineTo(new Vector2d(0, 20), Math.toRadians(180));
             }
 
-            if (startPos == StartPos.GOAL || startPos == StartPos.CLASSIFIER) {
-                pathBuilder = pathBuilder
-                        .stopAndAdd(() -> robot.startLauncher(launchVelocity))
-                        .splineToLinearHeading(launchPos, Math.toRadians(315));
-            } else {
-
-                pathBuilder = pathBuilder
-                        .splineTo(new Vector2d(0, 20), Math.toRadians(180))
-                        .stopAndAdd(() -> robot.startLauncher(launchVelocity))
-                        .splineToSplineHeading(launchPos, Math.toRadians(180));
-            }
+            Pose2d firstLaunchPos = spikeCount == 0 ? launchPosEnd : launchPos;
 
             pathBuilder = pathBuilder
+                    //heading.real = cos(theta) and heading.imag = sin(theta). Control click on heading for a good comment with more info
+                    .splineTo(firstLaunchPos.position.plus(new Vector2d(firstLaunchPos.heading.real * 5, firstLaunchPos.heading.imag * 5)), firstLaunchPos.heading.plus(Math.PI))
+                    .splineTo(firstLaunchPos.position, firstLaunchPos.heading.plus(Math.PI))
+
                     .stopAndAdd(() -> {
-                        robot.launch(3, launchVelocity);
+                        robot.launch(3);
                     });
 
             int count = 0;
@@ -143,98 +147,54 @@ public class SplitAuto {
                 }
 
                 pathBuilder = pathBuilder
-                        .stopAndAdd(robot::intake);
+                        .stopAndAdd(robot::intake)
+                        .setTangent(Math.toRadians(0))
+                        .splineToSplineHeading(new Pose2d(spikeX, intakeLineUpY, Math.toRadians(90)), Math.toRadians(90))
+                        .splineTo(new Vector2d(spikeX, intakeStartY), Math.toRadians(90))
+                        .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed));
 
-                if(count < 1) {
-                    pathBuilder = pathBuilder
-                            .setTangent(Math.toRadians(45));
-                } else {
-                    pathBuilder = pathBuilder
-                            .setTangent(Math.toRadians(0));
+                if(count == 0 && gate) {
+                    pathBuilder = pathBuilder.splineToConstantHeading(new Vector2d(gateX, gateY), Math.toRadians(90));
                 }
 
-//                if(count == 1) {
-//                    pathBuilder = pathBuilder
-//                            .splineTo(new Vector2d(-8, 25), Math.toRadians(0));
-//                }
+                pathBuilder = pathBuilder
+                        .afterTime(0.3, robot::stopIntake)
+                        .setReversed(true);
+
+                if(count == (spikeCount - 1)) {
+                    pathBuilder = pathBuilder.splineToLinearHeading(launchPosEnd, Math.toRadians(180));
+                } else {
+                    pathBuilder = pathBuilder.splineToLinearHeading(launchPos, Math.toRadians(180));
+                }
 
                 pathBuilder = pathBuilder
-                        .splineToSplineHeading(new Pose2d(spikeX, intakeStartY, Math.toRadians(90)), Math.toRadians(90))
-                        .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed))
-
-                        .afterTime(0.3, () -> {
-                            //ADD: Don't nearly stall out the mover motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
-                            robot.stopIntake();
-                            robot.startLauncher(launchVelocity);
-                        })
-
-                        .setReversed(true)
-//                .splineTo(transformIfBlue(new Vector2d(spikeX+10, 23)), transformIfBlue(Math.toRadians(320)))
-//                .setReversed(false)
-                        .splineToLinearHeading(launchPos, Math.toRadians(180))
                         .stopAndAdd(() -> {
-                            robot.launch(3, launchVelocity);
+                            robot.launch(3);
                         });
 
                 count++;
             }
 
-//            pathBuilder = pathBuilder
-//                    .setTangent(Math.toRadians(45))
-//                    .splineToSplineHeading(new Pose2d(-13, 35, Math.toRadians(90)), Math.toRadians(90))
-//                    .splineTo(new Vector2d(-13, 45), Math.toRadians(90), new TranslationalVelConstraint(10))
-//
-//                    .afterTime(0.3, () -> {
-//                        robot.stopIntake();
-//                        robot.startLauncher(launchVelocity);
-//                    })
-//
-//                    .setReversed(true)
-////                .splineTo(transformIfBlue(new Vector2d(spikeX+10, 23)), transformIfBlue(Math.toRadians(320)))
-////                .setReversed(false)
-//                    .splineToLinearHeading(launchPos, Math.toRadians(180))
-//                    .stopAndAdd(() -> {
-//                        robot.launch(3, launchVelocity);
-//                        robot.intake();
-//                    })
-//
-//                    .setTangent(Math.toRadians(45))
-////                    .splineTo(new Vector2d(-8, 25), Math.toRadians(0))
-//                    .splineToSplineHeading(new Pose2d(11, 37.5, Math.toRadians(90)), Math.toRadians(90))
-//                    .splineTo(new Vector2d(11, 45), Math.toRadians(90), new TranslationalVelConstraint(10))
-//                    .afterTime(0.3, () -> {
-//                        robot.stopIntake();
-//                        robot.startLauncher(launchVelocity);
-//                    })
-//                    .setReversed(true)
-//                    .splineToLinearHeading(launchPos, Math.toRadians(180))
-//                    .stopAndAdd(() -> robot.launch(3, launchVelocity));
-            return pathBuilder;
-        }
-        else
-        {
-            pathBuilder = pathBuilder
-                    .splineToConstantHeading(new Vector2d(71-5 - MainBotConfig.robotChassisLength / 2, 35), Math.toRadians(90));
+            pathBuilder = pathBuilder.stopAndAdd(() -> robot.setLauncherSpeed(0));
         }
 
-        if(true) return pathBuilder;
+        if(park) {
+            if((startPos == StartPos.AUDIENCE_IN || startPos == StartPos.AUDIENCE_OUT) && !score) {
+                pathBuilder = pathBuilder
+                        .splineToConstantHeading(new Vector2d(71-5 - MainBotConfig.robotChassisLength / 2, 35), Math.toRadians(90));
+            } else {
+                if(score) {
+                    pathBuilder = pathBuilder
+                            .setTangent(Math.toRadians(225));
+                } else {
+                    pathBuilder = pathBuilder
+                            .setTangent(Math.toRadians(300));
+                }
 
-        for (double x = 35.6; x >= -12; x = x -23.4) {
-            pathBuilder = pathBuilder
-                    .splineToLinearHeading(launchPos, launchPos.heading).setReversed(false)
-                    .splineTo(new Vector2d(-40, 25), Math.toRadians(140))
-                   //add launch
-                    .splineTo(new Vector2d(-30.5, 41.9), Math.toRadians(0))
-                    .splineTo(new Vector2d(x, 40), Math.toRadians(90))
-                    //add intake
-                    .splineTo(new Vector2d(x, 50), Math.toRadians(90))
-                    .setReversed(true)
-                    .splineTo(new Vector2d(x+10, 30), Math.toRadians(320));
+                pathBuilder = pathBuilder
+                        .splineToLinearHeading(new Pose2d(goalParkX, goalParkY, Math.toRadians(90)), Math.toRadians(225));
+            }
         }
-
-        pathBuilder = pathBuilder
-                .setReversed(false)
-                .splineTo(new Vector2d(-40, 39), Math.toRadians(130));
 
         return pathBuilder;
     }
@@ -324,19 +284,19 @@ public class SplitAuto {
 
             if (startPos == StartPos.GOAL || startPos == StartPos.CLASSIFIER) {
                 pathBuilder = pathBuilder
-                        .stopAndAdd(() -> robot.startLauncher(launchVelocity))
+                        .stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity))
                         .splineToLinearHeading(launchPosTwo, Math.toRadians(315));
             } else {
 
                 pathBuilder = pathBuilder
                         .splineTo(new Vector2d(0, 20), Math.toRadians(180))
-                        .stopAndAdd(() -> robot.startLauncher(launchVelocity))
+                        .stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity))
                         .splineToSplineHeading(launchPosTwo, Math.toRadians(180));
             }
 
             pathBuilder = pathBuilder
                     .stopAndAdd(() -> {
-                        robot.launch(3, launchVelocity);
+                        robot.launch(3);
                     });
 
             int count = 0;
@@ -369,7 +329,7 @@ public class SplitAuto {
                         .afterTime(0.3, () -> {
                             //ADD: Don't nearly stall out the mover motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
                             robot.stopIntake();
-                            robot.startLauncher(launchVelocity);
+                            robot.setLauncherSpeed(launchVelocity);
                         })
 
                         .setReversed(true)
@@ -377,7 +337,7 @@ public class SplitAuto {
 //                .setReversed(false)
                         .splineToLinearHeading(launchPos, Math.toRadians(180))
                         .stopAndAdd(() -> {
-                            robot.launch(3, launchVelocity);
+                            robot.launch(3);
                         });
 
                 count++;
@@ -527,19 +487,19 @@ public class SplitAuto {
 
             if (startPos == StartPos.GOAL || startPos == StartPos.CLASSIFIER) {
                 pathBuilder = pathBuilder
-                        .stopAndAdd(() -> robot.startLauncher(launchVelocity))
+                        .stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity))
                         .splineToLinearHeading(launchPosGR, Math.toRadians(315));
             } else {
 
                 pathBuilder = pathBuilder
 
-                        .stopAndAdd(() -> robot.startLauncher(launchVelocity))
+                        .stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity))
                         .splineToSplineHeading(launchPosGR, Math.toRadians(180));
             }
 
             pathBuilder = pathBuilder
                     .stopAndAdd(() -> {
-                        robot.launch(3, launchVelocity);
+                        robot.launch(3);
                     });
 
             int count = 0;
@@ -572,14 +532,14 @@ public class SplitAuto {
                         .afterTime(0.3, () -> {
                             //ADD: Don't nearly stall out the mover motor. Stop it if we notice a ball is in place by adding a poll on another thread ...
                             robot.stopIntake();
-                            robot.startLauncher(launchVelocity);
+                            robot.setLauncherSpeed(launchVelocity);
                         })
 
                         .setReversed(true)
 
                         .splineToLinearHeading(launchPosGR, Math.toRadians(180))
                         .stopAndAdd(() -> {
-                            robot.launch(3, launchVelocity);
+                            robot.launch(3);
                         });
 
                 count++;

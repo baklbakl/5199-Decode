@@ -30,6 +30,7 @@ import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.messages.DriveCommandMessage;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.messages.MecanumCommandMessage;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.messages.PoseMessage;
+import org.ducktapeandaprayer.ftc.lib.LoopTimeCalculator;
 
 import java.lang.Math;
 import java.util.Arrays;
@@ -59,14 +60,13 @@ public final class MecanumDrive {
         public double kASlowDown = 0.0002;
 //        public double kASlowDownStrafe = 0.00013;
 //        public double kASlowDownForward = 0.00033;
-        public double negDeg = 0.8;
 
         // path profile parameters (in inches)
         //Max wheel vel is 55. This means 55 in / sec for feedforward and 50 in / sec for strafe ish
-        public double maxWheelVel = 45;
+        public double maxWheelVel = 50;
         //These probably could be 65, but they are 60 to play it safe
-        public double minProfileAccel = -40;
-        public double maxProfileAccel = 40;
+        public double minProfileAccel = -45;
+        public double maxProfileAccel = 45;
 
         // turn profile parameters (in radians)
         public double maxAngVel = 3; // shared with path
@@ -75,7 +75,7 @@ public final class MecanumDrive {
         // path controller gains
         public double axialGain = 3;
         public double lateralGain = 10;
-        public double headingGain = 3; // shared with turn
+        public double headingGain = 4.5; // shared with turn
 
         public double axialVelGain = 0;
         public double lateralVelGain = 0.0;
@@ -87,8 +87,7 @@ public final class MecanumDrive {
     public final MecanumKinematics kinematics = new MecanumKinematics(
             PARAMS.trackWidth, PARAMS.lateralMultiplier);
 
-    //FIX: The kASlowDown doesn't seem to fix as much as it did in the past.
-    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick, PARAMS.negDeg);
+    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
 
     public final TurnConstraints defaultTurnConstraints = new TurnConstraints(
             PARAMS.maxAngVel, -PARAMS.maxAngAccel, PARAMS.maxAngAccel);
@@ -101,10 +100,6 @@ public final class MecanumDrive {
             new ProfileAccelConstraint(PARAMS.minProfileAccel, PARAMS.maxProfileAccel);
 
     public final DcMotorEx leftFront, leftBack, rightBack, rightFront;
-
-//    public final VoltageSensor voltageSensor;
-
-//    public final LazyImu lazyImu;
 
     public final Localizer localizer;
     private final LinkedList<Pose2d> poseHistory = new LinkedList<>();
@@ -161,6 +156,8 @@ public final class MecanumDrive {
 
         private final double[] xPoints, yPoints;
 
+        private LoopTimeCalculator loopTimeCalc = new LoopTimeCalculator();
+
         public FollowTrajectoryAction(TimeTrajectory t) {
             timeTrajectory = t;
 
@@ -181,6 +178,7 @@ public final class MecanumDrive {
             double t;
             if (beginTs < 0) {
                 beginTs = Actions.now();
+                loopTimeCalc.reset();
                 t = 0;
             } else {
                 t = Actions.now() - beginTs;
@@ -251,6 +249,9 @@ public final class MecanumDrive {
             c.setStrokeWidth(1);
             c.strokePolyline(xPoints, yPoints);
 
+            p.put("Loop times: ", loopTimeCalc.toString());
+
+            loopTimeCalc.tick();
             return true;
         }
 
