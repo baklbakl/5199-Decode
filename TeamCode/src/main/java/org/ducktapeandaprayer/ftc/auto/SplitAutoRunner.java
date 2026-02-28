@@ -32,7 +32,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     public StartPos startPos;
     public Delay delay;
     public boolean score;
-    public int spikeCount;
+    public int collectCount;
     public boolean park;
     public boolean gate;
 
@@ -44,7 +44,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             optionDriver.add(new EnumOption<>("Start Pos", "dpad_down", gamepad1, this.getClass().getField("startPos"), this, StartPos.class));
             optionDriver.add(new EnumOption<>("Delay", "cross", gamepad1, this.getClass().getField("delay"), this, Delay.class));
             optionDriver.add(new BooleanOption("Score", "circle", gamepad1, this.getClass().getField("score"), this));
-            optionDriver.add(new IntOption("Spike Count", "square", gamepad1, this.getClass().getField("spikeCount"), this, 0, 3));
+            optionDriver.add(new IntOption("Collect Count", "square", gamepad1, this.getClass().getField("collectCount"), this, 0, 3));
             optionDriver.add(new BooleanOption("Park", "triangle", gamepad1, this.getClass().getField("park"), this));
             optionDriver.add(new BooleanOption("Gate", "dpad_left", gamepad1, this.getClass().getField("gate"), this));
         } catch (NoSuchFieldException e) {
@@ -76,7 +76,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                 hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
             }
 
-            builder = splitAuto.fillBuilder(delay, startPos, alliance, score, spikeCount, park, gate);
+            builder = splitAuto.fillBuilder(delay, startPos, alliance, score, collectCount, park, gate);
             path = builder.build();
 
             telemetry.addLine(out);

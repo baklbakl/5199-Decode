@@ -2,24 +2,15 @@ package org.ducktapeandaprayer.ftc;
 
 import com.acmerobotics.roadrunner.*;
 import com.noahbres.meepmeep.MeepMeep;
-import com.noahbres.meepmeep.core.colorscheme.ColorManager;
-import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeBlueDark;
-import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeRedDark;
-import com.noahbres.meepmeep.core.colorscheme.scheme.ColorSchemeRedLight;
 import com.noahbres.meepmeep.roadrunner.DefaultBotBuilder;
-import com.noahbres.meepmeep.roadrunner.entity.ActionEntity;
 import com.noahbres.meepmeep.roadrunner.entity.RoadRunnerBotEntity;
-import jdk.internal.misc.Unsafe;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.jetbrains.annotations.NotNull;
 
-import java.awt.*;
 import java.lang.Math;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 
 class CustomVelConstraint implements VelConstraint {
     AngularVelConstraint base = new AngularVelConstraint(Math.PI / 2);
@@ -87,7 +78,7 @@ public class MeepMeepTesting {
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
         Alliance alliance = Alliance.RED;
-        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, true, 3, true, true);
+        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.AUDIENCE, alliance, true, 3, false, true);
 
         //SplitAuto splitAutoTwo = new SplitAuto((startPose) -> botTwo.getDrive().actionBuilder(startPose), new MeepMeepImp());
         //Alliance allianceTwo = Alliance.RED;
