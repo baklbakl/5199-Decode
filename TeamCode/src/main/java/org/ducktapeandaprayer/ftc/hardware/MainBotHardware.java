@@ -44,15 +44,16 @@ public class MainBotHardware {
             new MutablePair<>(39.0, 1240.0),
             new MutablePair<>(47.0, 1210.0),
             new MutablePair<>(55.0, 1210.0),
-            new MutablePair<>(63.0, 1210.0),
-            new MutablePair<>(71.0, 1230.0),
-            new MutablePair<>(79.0, 1270.0),
-            new MutablePair<>(90.0, 1330.0),
+            new MutablePair<>(63.0, 1220.0),
+            new MutablePair<>(71.0, 1250.0),
+            new MutablePair<>(79.0, 1280.0),
+            new MutablePair<>(90.0, 1380.0),
             new MutablePair<>(115.0, 1500.0),
             new MutablePair<>(120.0, 1530.0),
             new MutablePair<>(125.0, 1550.0),
             new MutablePair<>(131.0, 1590.0),
-            new MutablePair<>(140.0, 1630.0)
+            new MutablePair<>(140.0, 1630.0),
+            new MutablePair<>(147.0, 1640.0)
             ));
 
     //

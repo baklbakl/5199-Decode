@@ -3,6 +3,7 @@ package org.ducktapeandaprayer.ftc.auto;
 import com.acmerobotics.roadrunner.*;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
+import org.ducktapeandaprayer.ftc.auto.options.GatePush;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 
@@ -21,13 +22,16 @@ public class SplitAuto {
     public static double launchPosEndY = 16;
     public static double launchPosEndHeading = 122;
     public static double launchVelocity = 1210;
-    public static double intakeSpeed = 9;
-    public static double intakeStartY = 31;
-    public static double intakeLineUpY = 29;
-    public static double intakeEndY = 46;
-    public static double gateY = 51.25;
-    public static double gateX = -5.5;
-    public static double[] spikeXs = new double[] {-9, 10, 34};
+    public static double farLaunchVelocity = 1560;
+    public static double intakeSpeed = 10;
+    public static double intakeStartY = 30;
+    public static double intakeLineUpY = 28;
+    public static double intakeEndY = 43;
+    public static double gateY = 52;
+    public static double gateOneX = -4.5;
+    public static double gateTwoX = 3;
+    public static double gatePushWait = 0.5;
+    public static double[] spikeXs = new double[] {-10, 10, 34};
     public static double[] spikeXsTwo = new double[] {35, 7};
     public static double[] spikeXsGR = new double[] {-15, 7, 35, 55};
     public static double goalParkX = -63;
@@ -35,13 +39,15 @@ public class SplitAuto {
 
     public static double backLaunchPosX = 54;
     //public static double backLaunchPosY = 12;
-    public static double backLaunchPosHeading = 150;
-    public static double backLaunchPullAwayDist = 5;
+    public static double backLaunchPosHeading = 158;
+    public static double backLaunchOneLineUpDist = 5;
+    public static double backLaunchLineUpSpeed = 15;
+    public static double backLaunchTurnLineUpSpeed = Math.PI / 4;
 
-    public static double depotFixedX = 62;
-    public static double depotFixedY = 62;
-    public static double depotFixedYLineup = 58;
-    public static double depotFixedHeading = 90;
+    public static double depotFixedX = 60;
+    public static double depotFixedY = 61;
+    public static double depotFixedHeading = 80;
+    public static double depotFixedWait = 1.5;
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -55,7 +61,7 @@ public class SplitAuto {
         return new Pose2dDual<>(pose.position.x, pose.position.y.unaryMinus(), pose.heading.inverse());
     }
 
-    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Alliance alliance, boolean score, int collectCount, boolean park, boolean gate) {
+    public TrajectoryActionBuilder fillBuilder(Delay delay, StartPos startPos, Alliance alliance, boolean score, int collectCount, boolean park, GatePush gate) {
         Pose2d autoStartPosition;
 
         switch (startPos) {
@@ -118,18 +124,21 @@ public class SplitAuto {
         }
 
         if(score) {
-            pathBuilder = pathBuilder.stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity));
-
             if (startPos == StartPos.AUDIENCE) {
-                //double launchPosX =
-                //This makes a nice smooth circular path based on our target heading and our desired x by computing the Y value
+                //This makes a nice smooth circular path based on our target heading and our desired x by computing the Y value.
+                // As well, it allows for a straight line up
                 double backLaunchHeadingRad = Math.toRadians(backLaunchPosHeading);
                 double deltaHeading = autoStartPosition.heading.toDouble() - backLaunchHeadingRad;
-                double deltaX = autoStartPosition.position.x - backLaunchPosX;
-                Pose2d launchPos = new Pose2d(backLaunchPosX, autoStartPosition.position.y + deltaX / Math.sin(deltaHeading) - deltaX / Math.tan(deltaHeading), backLaunchHeadingRad);
+                double launchLineUpPosX = backLaunchPosX + backLaunchOneLineUpDist * Math.cos(deltaHeading);
+                double deltaX = autoStartPosition.position.x - launchLineUpPosX;
+                double launchLineUpPosY = autoStartPosition.position.y + deltaX / Math.sin(deltaHeading) - deltaX / Math.tan(deltaHeading);
+                Pose2d launchLineUpPos = new Pose2d(launchLineUpPosX, launchLineUpPosY, backLaunchHeadingRad);
+                Pose2d launchPos = new Pose2d(backLaunchPosX, launchLineUpPosY + backLaunchOneLineUpDist * Math.sin(deltaHeading), backLaunchHeadingRad);
 
                 pathBuilder = pathBuilder
-                        .splineTo(launchPos.position, launchPos.heading)
+                        .stopAndAdd(() -> robot.setLauncherSpeed(farLaunchVelocity))
+                        .splineTo(launchLineUpPos.position, launchLineUpPos.heading, new AngularVelConstraint(backLaunchTurnLineUpSpeed))
+                        .splineTo(launchPos.position, launchPos.heading, new TranslationalVelConstraint(backLaunchLineUpSpeed))
                         .stopAndAdd(() -> {
                             robot.launch(3);
                         });
@@ -138,25 +147,27 @@ public class SplitAuto {
 
                 if(collectCount >= 1) {
                     Rotation2d launchPosTangentHeading = launchPos.heading.plus( Math.PI / 2);
+                    //double intakeHeadingRad = Math.toRadians(depotFixedHeading);
+                    //double lineUpX = depotFixedX - (depotFixedY - depotFixedYLineup) * Math.tan(Math.PI / 2 - intakeHeadingRad);
 
-                    for(int i = (gate && collectCount >= 2) ? 2 : 1; i > 0; i--) {
+                    for(int i = (gate != GatePush.DONT && collectCount >= 2) ? 2 : 1; i > 0; i--) {
                         pathBuilder = pathBuilder.setTangent(backLaunchHeadingRad - Math.toRadians(90))
-                               .splineToSplineHeading(new Pose2d(58, 36, Math.toRadians(depotFixedHeading)), Math.toRadians(depotFixedHeading))
+                               .splineToSplineHeading(new Pose2d(57, 40, Math.toRadians(90)), Math.toRadians(90))
                                .afterTime(0.3, robot::intake)
-                               .splineToConstantHeading(new Vector2d(depotFixedX, depotFixedYLineup), Math.toRadians(depotFixedHeading))
-                               .splineTo(new Vector2d(depotFixedX, depotFixedY), Math.toRadians(depotFixedHeading), new TranslationalVelConstraint(intakeSpeed))
+                               .splineTo(new Vector2d(depotFixedX, depotFixedY), Math.toRadians(depotFixedHeading), null, new ProfileAccelConstraint(-20, 50))
+                               .waitSeconds(depotFixedWait)
                                .stopAndAdd(robot::stopIntake)
                                .setReversed(true)
-                               .splineToConstantHeading(new Vector2d(58, 36), Math.toRadians(depotFixedHeading + 180))
-                               .splineToSplineHeading(new Pose2d(launchPos.position.minus(new Vector2d(launchPosTangentHeading.real * launchLineUpDist, launchPosTangentHeading.imag * launchLineUpDist)), launchPos.heading), launchPosTangentHeading)
-                               .splineToConstantHeading(launchPos.position, launchPosTangentHeading)
+                               .splineTo(new Vector2d(57, 40), Math.toRadians(270))
+                               .splineToSplineHeading(new Pose2d(launchPos.position.minus(new Vector2d(launchPosTangentHeading.real * launchLineUpDist, launchPosTangentHeading.imag * launchLineUpDist)), launchPos.heading), launchPosTangentHeading, new AngularVelConstraint(backLaunchTurnLineUpSpeed))
+                               .splineToConstantHeading(launchPos.position, launchPosTangentHeading, new TranslationalVelConstraint(backLaunchLineUpSpeed))
                                .stopAndAdd(() -> {
                                    robot.launch(3);
                                });
                     }
                 }
 
-                if((collectCount >= 2 && !gate) || collectCount >= 3) {
+                if((collectCount >= 2 && gate == GatePush.DONT) || collectCount >= 3) {
                     pathBuilder = pathBuilder
                             .afterTime(0.3, robot::intake)
                             .splineTo(new Vector2d(spikeXs[2], intakeLineUpY), Math.toRadians(90))
@@ -170,13 +181,14 @@ public class SplitAuto {
                             });
                 }
 
-                pathBuilder = pathBuilder.splineTo(launchPos.position.plus(new Vector2d(launchPos.heading.real * backLaunchPullAwayDist, launchPos.heading.imag * backLaunchPullAwayDist)), launchPos.heading);
+                //pathBuilder = pathBuilder.splineTo(launchPos.position.plus(new Vector2d(launchPos.heading.real * backLaunchPullAwayDist, launchPos.heading.imag * backLaunchPullAwayDist)), launchPos.heading);
             } else {
                 Pose2d launchPos = new Pose2d(launchPosX, launchPosY, Math.toRadians(launchPosHeading));
                 Pose2d launchPosEnd = new Pose2d(launchPosEndX, launchPosEndY, Math.toRadians(launchPosEndHeading));
                 Pose2d firstLaunchPos = collectCount == 0 ? launchPosEnd : launchPos;
 
                 pathBuilder = pathBuilder
+                        .stopAndAdd(() -> robot.setLauncherSpeed(launchVelocity))
                         .setReversed(true)
                         //heading.real = cos(theta) and heading.imag = sin(theta). Control click on heading for a good comment with more info
                         .splineTo(firstLaunchPos.position.plus(new Vector2d(firstLaunchPos.heading.real * launchLineUpDist, firstLaunchPos.heading.imag * launchLineUpDist)), firstLaunchPos.heading.plus(Math.PI))
@@ -197,14 +209,20 @@ public class SplitAuto {
                             .setTangent(Math.toRadians(0))
                             .splineToSplineHeading(new Pose2d(spikeX, intakeLineUpY, Math.toRadians(90)), Math.toRadians(90))
                             .splineTo(new Vector2d(spikeX, intakeStartY), Math.toRadians(90))
-                            .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed));
+                            .splineTo(new Vector2d(spikeX, intakeEndY), Math.toRadians(90), new TranslationalVelConstraint(intakeSpeed))
+                            .afterTime(0.3, robot::stopIntake);
 
-                    if(count == 0 && gate) {
-                        pathBuilder = pathBuilder.splineToConstantHeading(new Vector2d(gateX, gateY), Math.toRadians(90));
+                    if(
+                            (count == 0 && (gate == GatePush.AFTER_ONE || gate == GatePush.AFTER_BOTH))
+                            || (count == 1 && (gate == GatePush.AFTER_TWO || gate == GatePush.AFTER_BOTH))
+                    ) {
+                        pathBuilder = pathBuilder
+                                .splineToConstantHeading(new Vector2d(count == 0 ? gateOneX : gateTwoX, gateY), Math.toRadians(90))
+                                .waitSeconds(gatePushWait);
                     }
 
                     pathBuilder = pathBuilder
-                            .afterTime(0.3, robot::stopIntake)
+
                             .setReversed(true);
 
                     if(count == (collectCount - 1)) {
@@ -226,9 +244,17 @@ public class SplitAuto {
         }
 
         if(park) {
-            if((startPos == StartPos.AUDIENCE) && !score) {
-                pathBuilder = pathBuilder
-                        .splineToConstantHeading(new Vector2d(71-5 - MainBotConfig.robotChassisLength / 2, 35), Math.toRadians(90));
+            if((startPos == StartPos.AUDIENCE)) {
+                Vector2d backParkPos = new Vector2d(71-5 - MainBotConfig.robotChassisLength / 2, 35);
+                if(score) {
+                    pathBuilder = pathBuilder
+                            .setTangent(Math.toRadians(backLaunchPosHeading - 90))
+                            .splineTo(backParkPos, Math.toRadians(90));
+                } else {
+                    pathBuilder = pathBuilder
+                            .splineToConstantHeading(backParkPos, Math.toRadians(90));
+                }
+
             } else {
                 if(score) {
                     pathBuilder = pathBuilder

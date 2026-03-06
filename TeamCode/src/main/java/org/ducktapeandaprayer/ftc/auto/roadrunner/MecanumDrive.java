@@ -43,18 +43,18 @@ public final class MecanumDrive {
 //        public double inPerTick = (48.0 / 25.4 * Math.PI) / 2000;
         // 126.5 42370
         public double inPerTick = 0.002985603021005428;
-        public double lateralMultiplier = 1.23;
+        public double lateralMultiplier = 1.24;
         public double trackWidth = 13.65;
 
         // feedforward parameters (in tick units)
         //ADD: different feedforwards for strafing and 45 degrees
-        public double kS = 1;
+        public double kS = 0.8;
 //        public double kSForward = 1;
 //        public double kSStrafe = 2;
-        public double kV = 0.000515;
+        public double kV = 0.00054;
 //        public double kVForward = 0.00056;
 //        public double kVStrafe = 0.00064;
-        public double kASpeedUp = 0.0001;
+        public double kASpeedUp = 0.00012;
 //        public double kASpeedUpStrafe = 0.00012;
 //        public double kASpeedUpForward = 0.000075;
         public double kASlowDown = 0.0002;

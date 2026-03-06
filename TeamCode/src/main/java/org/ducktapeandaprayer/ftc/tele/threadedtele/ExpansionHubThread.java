@@ -3,6 +3,7 @@ package org.ducktapeandaprayer.ftc.tele.threadedtele;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.RobotLog;
 import org.apache.commons.lang3.tuple.Pair;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
@@ -12,7 +13,6 @@ import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 import org.ducktapeandaprayer.ftc.lib.TimedEvent;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
-import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
 
 public class ExpansionHubThread extends ThreadEx {
     //
@@ -31,7 +31,7 @@ public class ExpansionHubThread extends ThreadEx {
     private final ThreadedTele threadedTele;
     private final AutoLaunch autoLaunch;
 
-    private String visionTelemetry = "";
+    private String autoSpeedTelemetry = "";
 
     private enum LauncherControlMethod {
         MANUAL,
@@ -70,7 +70,6 @@ public class ExpansionHubThread extends ThreadEx {
             }
         }
 
-
         return Double.NaN;
     }
 
@@ -90,7 +89,7 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
 
-    //This could realize when it has seen this pose before and skip its processing, but that would add complexity and recomputing is easier.
+    private VisionComputationResult lastResult = null;
     private VisionComputationResult computeLauncherSpeed() {
         if(!threadedTele.runVision) {
             return null;
@@ -101,13 +100,17 @@ public class ExpansionHubThread extends ThreadEx {
         VisionComputationResultState state = null;
         double groundDist = Double.NaN;
 
-        synchronized (threadedTele.tagPoseLock) {
-            AprilTagPoseEx pose = threadedTele.getTagPose();
-
-            if(pose == null) {
-                state = VisionComputationResultState.NO_TAG_FOUND;
+        synchronized (tagPoseUpdateLock) {
+            if(tagPoseUpdate == null && lastResult != null) {
+                return lastResult;
             } else {
-                groundDist = pose.groundDistance;
+                if(tagPoseUpdate == null || tagPoseUpdate.value == null) {
+                    state = VisionComputationResultState.NO_TAG_FOUND;
+                } else {
+                    groundDist = tagPoseUpdate.value.groundDistance;
+                }
+
+                tagPoseUpdate = null;
             }
         }
 
@@ -124,10 +127,11 @@ public class ExpansionHubThread extends ThreadEx {
         }
 
         if(autoSpeedDebInfo) {
-            visionTelemetry = visionDebugSb.toString();
+            autoSpeedTelemetry = visionDebugSb.toString();
         }
 
-        return new VisionComputationResult(state, visionTargetSpeed);
+        lastResult = new VisionComputationResult(state, visionTargetSpeed);
+        return lastResult;
     }
 
     private void updateLaunchSpeedAndBlinkinVision(VisionComputationResult result) {
@@ -195,7 +199,7 @@ public class ExpansionHubThread extends ThreadEx {
                 hardware,
                 this::startLauncher,
                 () -> {
-                    stopLauncher();
+                    //stopLauncher();
                     if(controlHubThread.getAutoAimState() != ControlHubThread.AutoAimState.STOPPED) {
                         controlHubThread.requestAutoAimStartStop(false);
                     }
@@ -343,8 +347,6 @@ public class ExpansionHubThread extends ThreadEx {
         }
 
         timedEvents.add(new TimedEvent(launcherVelocityCheckInterval, () -> {
-//            System.out.println("Run vision: " + runVision);
-//            System.out.println("Run vision deb info: " + visionDebugInfo);
 
             VisionComputationResult result = computeLauncherSpeed();
 
@@ -388,12 +390,16 @@ public class ExpansionHubThread extends ThreadEx {
 
         hardware.modules.childModule.module.clearBulkCache();
 
-        telemetry.append(visionTelemetry);
-
         telemetry.append("Launcher Target Speed: ");
         telemetry.append(hardware.launchDrive.getTargetVelocity());
         telemetry.append("\nLauncher Current Speed: ");
         telemetry.append(hardware.launchDrive.getVelocity());
+        telemetry.append("\n\n");
+
+        if (autoSpeedDebInfo) {
+            telemetry.append(autoSpeedTelemetry);
+            telemetry.append("\n");
+        }
         updateTelemetry();
     }
 }

@@ -6,6 +6,7 @@ import com.acmerobotics.roadrunner.ftc.Actions;
 import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
+import org.ducktapeandaprayer.ftc.auto.options.GatePush;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.MecanumDrive;
@@ -34,7 +35,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
     public boolean score;
     public int collectCount;
     public boolean park;
-    public boolean gate;
+    public GatePush gate;
 
     @Override
     protected void init_internal() {
@@ -46,7 +47,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
             optionDriver.add(new BooleanOption("Score", "circle", gamepad1, this.getClass().getField("score"), this));
             optionDriver.add(new IntOption("Collect Count", "square", gamepad1, this.getClass().getField("collectCount"), this, 0, 3));
             optionDriver.add(new BooleanOption("Park", "triangle", gamepad1, this.getClass().getField("park"), this));
-            optionDriver.add(new BooleanOption("Gate", "dpad_left", gamepad1, this.getClass().getField("gate"), this));
+            optionDriver.add(new EnumOption<>("Push Gate", "dpad_left", gamepad1, this.getClass().getField("gate"), this, GatePush.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }

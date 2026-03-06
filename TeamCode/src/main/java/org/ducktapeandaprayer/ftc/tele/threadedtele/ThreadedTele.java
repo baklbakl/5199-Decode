@@ -15,7 +15,6 @@ import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
 import org.openftc.apriltag.AprilTagDetection;
-import org.openftc.apriltag.AprilTagPose;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,10 +23,8 @@ import java.util.Map;
 @TeleOp(name = "1ThreadedTele", group = MainBotConfig.opmodeGroupName)
 public class ThreadedTele extends FastIterativeOpMode {
     public MainBotHardware hardware = null;
-    private ControlHubThread controlHubThread = null;
-    private ExpansionHubThread exansionHubThread = null;
-    private Map<String, ThreadEx> threads = new HashMap<>();
-    private LoopTimeCalculator timer = new LoopTimeCalculator();
+    private final Map<String, ThreadEx> threads = new HashMap<>();
+    private final LoopTimeCalculator timer = new LoopTimeCalculator();
     private OptionDriver optionDriver;
     private AprilTagDetectionPipeline pipeline;
 
@@ -35,18 +32,9 @@ public class ThreadedTele extends FastIterativeOpMode {
     public volatile Boolean runVision = true;
     public volatile Boolean visionDebugInfo = true;
     public volatile Alliance alliance = Alliance.lastAlliance;
-//    public volatile Boolean autoAimOnAutoLaunch = false;
-//    public volatile Boolean autoAimDebInfo = false;
-//    public volatile Boolean autoSpeedDebInfo = false;
     public Boolean timingDebugInfo = true;
 
-    private AprilTagPoseEx tagPose = null;
-    public final Object tagPoseLock = new Object();
-
-    public AprilTagPoseEx getTagPose() {
-        return tagPose;
-    }
-
+    private double lastSeenTagTime = Double.NaN;
     private String visionTelemetry = "";
 
     private void updateDetection() {
@@ -66,6 +54,7 @@ public class ThreadedTele extends FastIterativeOpMode {
         visionDebugSb.append(aprilTagID).append('\n');
 
         AprilTagDetection targetDetection = null;
+        AprilTagPoseEx tagPose = null;
         if (!detections.isEmpty()) {
             for (AprilTagDetection d : detections) {
                 if (d.id == aprilTagID) {
@@ -78,22 +67,21 @@ public class ThreadedTele extends FastIterativeOpMode {
             if (targetDetection != null) {
                 visionDebugSb.append("Target Found!\n");
                 visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
-                synchronized (tagPoseLock) {
-                    tagPose = new AprilTagPoseEx(targetDetection.pose);
-                    visionDebugSb.append("Ground distance: ").append(tagPose.groundDistance).append("\n");
-                }
-
+                tagPose = new AprilTagPoseEx(targetDetection.pose);
+                lastSeenTagTime = getRuntime();
+                visionDebugSb.append("Ground distance: ").append(tagPose.groundDistance).append("\n");
+                visionDebugSb.append("Pitch: ").append(Math.toDegrees(tagPose.pitch)).append("\n");
             } else {
                 visionDebugSb.append("Target not found in frame\n");
-                synchronized (tagPoseLock) {
-                    tagPose = null;
-                }
             }
 
         } else {
             visionDebugSb.append("No detections\n");
-            synchronized (tagPoseLock) {
-                tagPose = null;
+        }
+
+        if(tagPose != null || getRuntime() - lastSeenTagTime > ControlHubThread.noTagBridgeTime) {
+            for(ThreadEx thread : threads.values()) {
+                thread.updateTagPose(tagPose);
             }
         }
 
@@ -118,11 +106,12 @@ public class ThreadedTele extends FastIterativeOpMode {
             throw new RuntimeException(e);
         }
 
-        controlHubThread = new ControlHubThread(hardware, this, gamepad1, optionDriver);
-        exansionHubThread = new ExpansionHubThread(hardware, this, controlHubThread, gamepad1, optionDriver);
+        threads.clear();
+        ControlHubThread controlHubThread = new ControlHubThread(hardware, this, gamepad1, optionDriver);
+        ExpansionHubThread expansionHubThread = new ExpansionHubThread(hardware, this, controlHubThread, gamepad1, optionDriver);
 
         threads.put("control hub thread", controlHubThread);
-        threads.put("expansion hub thread", exansionHubThread);
+        threads.put("expansion hub thread", expansionHubThread);
     }
 
     @Override
@@ -152,6 +141,7 @@ public class ThreadedTele extends FastIterativeOpMode {
 
         if(runVision) {
             pipeline = new AprilTagDetectionPipeline(hardware);
+
         }
 
         for(ThreadEx t : threads.values()) {
@@ -180,8 +170,9 @@ public class ThreadedTele extends FastIterativeOpMode {
                 thread.feedWatchdog();
             }
 
-            telemetry.addLine();
-            telemetry.addLine(visionTelemetry);
+            if(visionDebugInfo) {
+                telemetry.addLine(visionTelemetry);
+            }
 
             if(timingDebugInfo) {
                 for(Map.Entry<String, ThreadEx> t : threads.entrySet()) {
@@ -202,7 +193,12 @@ public class ThreadedTele extends FastIterativeOpMode {
             }
         } catch (Exception e) {
             stop_internal();
-            throw e;
+            if(e instanceof RuntimeException && e.getCause() instanceof InterruptedException && !opModeIsActive()) {
+                RobotLog.ee("ThreadedTele", "Ignored exception as its an InterruptedException probably from stopping the opmode");
+                RobotLog.logStackTrace(e);
+            } else {
+                throw e;
+            }
         }
     }
 

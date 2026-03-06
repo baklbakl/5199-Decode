@@ -93,7 +93,11 @@ public class AprilTagDetectionPipeline extends PipelineStarter {
         sb.append("ID: ").append(d.id).append('\n');
         sb.append("x: ").append(String.format("%.3f", d.pose.x)).append('\n');
         sb.append("y: ").append(String.format("%.3f", d.pose.y)).append('\n');
-        sb.append("z: ").append(String.format("%.3f", d.pose.z));
+        sb.append("z: ").append(String.format("%.3f", d.pose.z)).append('\n');
+        //sb.append("R: ").append(d.pose.R.toString()).append('\n');
+        //sb.append("Yaw: ").append(Math.toDegrees(Math.atan2(d.pose.R.get(0, 0), d.pose.R.get(1, 0)))).append('\n');
+        //sb.append("Pitch: ").append(Math.toDegrees(Math.atan2(-d.pose.R.get(2, 0), Math.sqrt( Math.pow(d.pose.R.get(2, 1), 2) +  Math.pow(d.pose.R.get(2, 2), 2))))).append('\n');
+        //sb.append("Roll: ").append(Math.toDegrees(Math.atan2(d.pose.R.get(2, 1), d.pose.R.get(2, 2)))).append('\n');
         return sb.toString();
     }
 

@@ -5,7 +5,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
-import org.ducktapeandaprayer.ftc.lib.TimedEvent;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
@@ -22,11 +21,21 @@ public class ControlHubThread extends ThreadEx {
     // Dash Options
     //
 
-    public static double autoAimKS = -0.08;
-    public static double autoAimKP = -0.6;
-    public static double autoAimCutoffAngle = 1;
-    public static double autoAimThreshAngle = 3;
-    public static double autoAimXOffsetIn = 5;
+    public static double autoAimKS = 0.1;
+    public static double autoAimKP = 0.5;
+    public static double autoAimCutoffAngle = 1.5;
+    public static double autoAimThreshAngle = 2;
+
+    public static double autoAimXOffsetRedIn = 4;
+    public static double autoAimXOffsetBlueIn = 6;
+    public static double autoAimXOffsetFarBlueIn = 4;
+    public static double autoAimXOffsetFarRedIn = 13;
+    public static double farCrossoverDist = 110;
+    //How long to wait without a tag detected while still using the old data
+    public static double noTagBridgeTime = 0.3;
+    //public static double autoAimXOffsetLowPitchIn = 5;
+    //public static double autoAimLowPitchCrossOver = ;
+    //public static
 
     //
     // Global Variables
@@ -39,7 +48,6 @@ public class ControlHubThread extends ThreadEx {
     private final ThreadedTele threadedTele;
 
     private double autoAimTurningPower = 0;
-    private double autoAimTargetHeading = 0;
     private double lastForward = 0;
     private double lastStrafe = 0;
     private double lastGamePadTurn = 0;
@@ -113,8 +121,7 @@ public class ControlHubThread extends ThreadEx {
         startingEncoder1Ticks = hardware.parallelEncoder1.getPositionAndVelocity().position;
 
         //FIX: This may take a cycle to update into locked if we started locked
-        autoAimState = AutoAimState.LOCKING;
-        computeTargetHeading();
+        autoAimState = AutoAimState.NO_TAG_FOUND;
     }
 
     private void stopAutoAim() {
@@ -130,42 +137,64 @@ public class ControlHubThread extends ThreadEx {
         autoAimState = AutoAimState.STOPPED;
     }
 
-    private String autoAimDebugInfo = "";
-
     private double computeHeading() {
         double currEncoder0Ticks = startingEncoder0Ticks - hardware.parallelEncoder0.getPositionAndVelocity().position;
         double currEncoder1Ticks = startingEncoder1Ticks - hardware.parallelEncoder1.getPositionAndVelocity().position;
         return ((currEncoder0Ticks - currEncoder1Ticks) / (PARAMS.par0YTicks - PARAMS.par1YTicks)) % (Math.PI * 2);
     }
 
-    private void computeTargetHeading() {
+    private double lastAutoAimTargetHeading = Double.NaN;
+    private String computeTargetHeadingTelemetry = "";
+
+    private double computeTargetHeading(double odoHeading) {
         //Positive x is to the right
         double x = Double.NaN;
         double groundDistance = Double.NaN;
         boolean poseNull;
 
-        synchronized (threadedTele.tagPoseLock) {
-            AprilTagPoseEx pose = threadedTele.getTagPose();
-            poseNull = pose == null;
-            if(!poseNull) {
-                x = pose.x;
-                groundDistance = pose.groundDistance;
+        synchronized (tagPoseUpdateLock) {
+            if(tagPoseUpdate == null) {
+                return lastAutoAimTargetHeading;
+            } else {
+                AprilTagPoseEx pose = tagPoseUpdate.value;
+                poseNull = pose == null;
+                if(!poseNull) {
+                    x = pose.x;
+                    groundDistance = pose.groundDistance;
+                }
+                tagPoseUpdate = null;
             }
         }
 
+        double retVal;
         StringBuilder sb = new StringBuilder();
 
-        double realHeading = computeHeading();
-        sb.append("\nOdometry Heading: ");
-        sb.append(Math.toDegrees(realHeading));
-
         if(poseNull) {
-            autoAimTargetHeading = Double.NaN;
+            retVal = Double.NaN;
         } else {
             sb.append("\nx: ");
             sb.append(x);
 
-            x = x + autoAimXOffsetIn;
+            if(groundDistance > farCrossoverDist) {
+                switch (threadedTele.alliance) {
+                    case RED:
+                        x += autoAimXOffsetFarRedIn;
+                        break;
+                    case BLUE:
+                        x += autoAimXOffsetFarBlueIn;
+                        break;
+                }
+            } else {
+                switch (threadedTele.alliance) {
+                    case RED:
+                        x += autoAimXOffsetRedIn;
+                        break;
+                    case BLUE:
+                        x += autoAimXOffsetBlueIn;
+                        break;
+                }
+            }
+
             sb.append("\ncorrected x: ");
             sb.append(x);
 
@@ -174,14 +203,20 @@ public class ControlHubThread extends ThreadEx {
             sb.append(Math.toDegrees(angularError));
 
             //Subtract because positive x is to the right
-            autoAimTargetHeading = realHeading - angularError;
+            retVal = odoHeading + angularError;
         }
 
         sb.append("\nAuto Aim Target Heading: ");
-        sb.append(Math.toDegrees(autoAimTargetHeading));
+        sb.append(Math.toDegrees(retVal));
         sb.append("\n");
 
-        autoAimDebugInfo = sb.toString();
+        if(autoAimDebugInfoEnable) {
+            computeTargetHeadingTelemetry = sb.toString();
+        }
+
+        lastAutoAimTargetHeading = retVal;
+        //RobotLog.ii("Control Hub Thread", "New AutoAimTargetHeading:" + retVal);
+        return retVal;
     }
 
     public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, Gamepad gamepad1, OptionDriver optionDriver) {
@@ -260,12 +295,6 @@ public class ControlHubThread extends ThreadEx {
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
-
-        this.timedEvents.add(new TimedEvent(30, () -> {
-            if(threadedTele.runVision) {
-                computeTargetHeading();
-            }
-        }));
     }
 
     @Override
@@ -281,61 +310,64 @@ public class ControlHubThread extends ThreadEx {
     }
 
     public void tick() {
-        telemetry.append("Auto Aim State: ");
-        telemetry.append(autoAimState);
-        telemetry.append("\n");
-
-        if((autoAimState != AutoAimState.DISABLED && autoAimState != AutoAimState.STOPPED)) {
-            if(Double.isNaN(autoAimTargetHeading)) {
-                if(autoAimState != AutoAimState.NO_TAG_FOUND) {
-                    autoAimState = AutoAimState.NO_TAG_FOUND;
-                    autoAimTurningPower = 0;
-                    computeSetWheelSpeeds(lastForward, lastStrafe, lastGamePadTurn);
+        if(threadedTele.runVision) {
+            if(autoAimState != AutoAimState.DISABLED) {
+                Boolean requestAutoAimLocal;
+                synchronized (requestAutoAimStatus) {
+                    requestAutoAimLocal = requestAutoAimStatus.get();
+                    if(requestAutoAimLocal != null) {
+                        requestAutoAimStatus.set(null);
+                    }
                 }
-            } else if(autoAimState == AutoAimState.NO_TAG_FOUND) {
-                autoAimState = AutoAimState.LOCKING;
-            }
-        }
 
-        if(autoAimState == AutoAimState.LOCKED || autoAimState == AutoAimState.LOCKING) {
-            double headingError = autoAimTargetHeading - computeHeading();
-            if(Math.abs(headingError) > Math.toRadians(autoAimCutoffAngle)) {
-                autoAimTurningPower = Math.signum(headingError) * autoAimKS + headingError * autoAimKP;
-            } else {
-                autoAimTurningPower = 0;
-            }
-
-            computeSetWheelSpeeds(lastForward, lastStrafe, autoAimTurningPower);
-
-//            autoAimState = Math.abs(headingError) <                                                                                                                                                                            th.toRadians(autoAimThreshAngle) ? AutoAimState.LOCKED : AutoAimState.LOCKING;
-            autoAimState = Math.abs(headingError) < Math.toRadians(autoAimThreshAngle) ? AutoAimState.LOCKED : AutoAimState.LOCKING;
-        }
-
-        if(autoAimDebugInfoEnable) {
-            telemetry.append("Turning Power: ");
-            telemetry.append(autoAimTurningPower);
-            telemetry.append("\n");
-        }
-
-        if(autoAimState != AutoAimState.DISABLED) {
-            if(autoAimDebugInfoEnable) {
-                telemetry.append(autoAimDebugInfo);
-            }
-
-            Boolean requestAutoAimLocal;
-            synchronized (requestAutoAimStatus) {
-                requestAutoAimLocal = requestAutoAimStatus.get();
                 if(requestAutoAimLocal != null) {
-                    requestAutoAimStatus.set(null);
+                    if(requestAutoAimLocal) {
+                        startAutoAim();
+                    } else {
+                        stopAutoAim();
+                    }
                 }
             }
 
-            if(requestAutoAimLocal != null) {
-                if(requestAutoAimLocal) {
-                    startAutoAim();
-                } else {
-                    stopAutoAim();
+            double odoHeading = computeHeading();
+            double autoAimTargetHeading = computeTargetHeading(odoHeading);
+
+            //We're running auto aim
+            if((autoAimState != AutoAimState.DISABLED && autoAimState != AutoAimState.STOPPED)) {
+                if(Double.isNaN(autoAimTargetHeading)) {
+                    if(autoAimState != AutoAimState.NO_TAG_FOUND) {
+                        autoAimState = AutoAimState.NO_TAG_FOUND;
+                        autoAimTurningPower = 0;
+                        computeSetWheelSpeeds(lastForward, lastStrafe, lastGamePadTurn);
+                    }
+                } else if(autoAimState == AutoAimState.NO_TAG_FOUND) {
+                    autoAimState = AutoAimState.LOCKING;
                 }
+            }
+
+            if(autoAimState == AutoAimState.LOCKED || autoAimState == AutoAimState.LOCKING) {
+                double headingError = autoAimTargetHeading - odoHeading;
+                if(Math.abs(headingError) > Math.toRadians(autoAimCutoffAngle)) {
+                    autoAimTurningPower = Math.signum(headingError) * autoAimKS + headingError * autoAimKP;
+                    //RobotLog.ii("Control Hub Thread", "AutoAimTargetHeading:" + autoAimTargetHeading + " Curr Heading:" + odoHeading);
+                } else {
+                    autoAimTurningPower = 0;
+                }
+
+                computeSetWheelSpeeds(lastForward, lastStrafe, autoAimTurningPower);
+                autoAimState = Math.abs(headingError) < Math.toRadians(autoAimThreshAngle) ? AutoAimState.LOCKED : AutoAimState.LOCKING;
+            }
+
+            if(autoAimDebugInfoEnable) {
+                telemetry.append("Auto Aim State: ");
+                telemetry.append(autoAimState);
+                telemetry.append("\nOdo heading: ");
+                telemetry.append(Math.toDegrees(odoHeading));
+                telemetry.append("\nTurning Power: ");
+                telemetry.append(autoAimTurningPower);
+                telemetry.append("\n");
+                telemetry.append(computeTargetHeadingTelemetry);
+                telemetry.append("\n");
             }
         }
 

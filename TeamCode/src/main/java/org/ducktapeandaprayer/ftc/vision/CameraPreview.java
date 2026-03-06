@@ -21,11 +21,11 @@ public class CameraPreview extends LinearOpMode {
         CameraPreviewPipline vision = new CameraPreviewPipline(MainBotHardware.getOrCreate(hardwareMap));
         ArrayList<VariableWatcher> watchers = new ArrayList<>();
         try {
-            watchers.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("square"), (Boolean square) -> {
-                if(square) {
-                    vision.updateCameraSettings();
-                }
-            }));
+            //watchers.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("square"), (Boolean square) -> {
+            //    if(square) {
+            //        vision.updateCameraSettings();
+            //    }
+            //}));
             watchers.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
                 if(circle) {
                     vision.showCenterLine = !vision.showCenterLine;
@@ -35,7 +35,7 @@ public class CameraPreview extends LinearOpMode {
             throw new RuntimeException(e);
         }
 
-        telemetry.addLine("Square to update camera settings");
+        //telemetry.addLine("Square to update camera settings");
         telemetry.addLine("Circle to turn on center line");
         telemetry.addLine("These only work when the camera stream is closed");
         telemetry.update();

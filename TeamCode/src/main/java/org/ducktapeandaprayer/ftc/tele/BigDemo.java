@@ -93,6 +93,7 @@ public class BigDemo extends FastIterativeOpMode {
         for(VariableWatcher watcher : variablesWatched) {
             watcher.tick();
         }
+        telemetry.update();
     }
 
     @Override
