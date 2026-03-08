@@ -45,7 +45,7 @@ public class SplitAuto {
     public static double backLaunchTurnLineUpSpeed = Math.PI / 4;
 
     public static double depotFixedX = 60;
-    public static double depotFixedY = 61;
+    public static double depotFixedY = 62;
     public static double depotFixedHeading = 80;
     public static double depotFixedWait = 1.5;
 

@@ -21,13 +21,11 @@ public abstract class PipelineStarter extends OpenCvPipeline {
     public static int gain = 180; // Min 0, max 255
     public static long exposure = 7; // Max 204, min 0.
     public static int framesBeforeSet = 8;
-    public static int framesBeforeCheck = 8;
 
     public final OpenCvWebcam camera;
 
-    //private CameraAttachmentCallback cameraCallback;
+    private CameraAttachmentCallback cameraCallback;
     private volatile int frameCountTillSet = 0;
-    private int frameCountTillCheck = 0;
     private final Object frameCountTillSetLock = new Object();
 
     private class CameraAttachmentCallback implements CameraManagerInternal.UsbAttachmentCallback {
@@ -39,14 +37,14 @@ public abstract class PipelineStarter extends OpenCvPipeline {
 
         @Override
         public void onAttached(UsbDevice usbDevice, SerialNumber serialNumber, MutableReference<Boolean> claimed) {
-            RobotLog.ii("Pipeline starter", "Camera Connected with serial number: \"" + serialNumber.toString() + "\"");
+            RobotLog.ii("PipelineStarter", "Camera Connected with serial number: \"" + serialNumber.toString() + "\"");
         }
 
         @Override
         public void onDetached(UsbDevice usbDevice) {
-            RobotLog.ii("Pipeline starter", "Camera disconnected with serial number: \"" + usbDevice.getSerialNumber() + "\" Our camera: " + ourSerialNumber);
+            RobotLog.ii("PipelineStarter", "Camera disconnected with serial number: \"" + usbDevice.getSerialNumber() + "\" Our camera: " + ourSerialNumber);
             if(ourSerialNumber.equals(usbDevice.getSerialNumber())) {
-                RobotLog.ii("Pipeline starter", "Our camera was disconnected");
+                RobotLog.ii("PipelineStarter", "Our camera was disconnected");
                 CachingExposureControl exposureControlLocal = (CachingExposureControl) camera.getExposureControl();
                 if(exposureControlLocal == null) {
                     RobotLog.ii("PipelineStarter", "Exposure Control cleaned up while we are still taking callbacks");
@@ -55,7 +53,7 @@ public abstract class PipelineStarter extends OpenCvPipeline {
                         Field lockField = exposureControlLocal.getClass().getDeclaredField("lock");
                         lockField.setAccessible(true);
                         synchronized (lockField.get(exposureControlLocal)) {
-                            Field modeField = exposureControlLocal.getClass().getDeclaredField("Mode");
+                            Field modeField = exposureControlLocal.getClass().getDeclaredField("mode");
                             modeField.setAccessible(true);
                             modeField.set(exposureControlLocal, null);
 
@@ -75,7 +73,6 @@ public abstract class PipelineStarter extends OpenCvPipeline {
                 synchronized (frameCountTillSetLock) {
                     frameCountTillSet = 0;
                 }
-
             }
         }
     }
@@ -91,36 +88,36 @@ public abstract class PipelineStarter extends OpenCvPipeline {
             @Override
             public void onOpened() {
                 camera.startStreaming(width, height, OpenCvCameraRotation.UPRIGHT, OpenCvWebcam.StreamFormat.YUY2);
-                //try {
-                //    CameraManagerImpl cameraManager = (CameraManagerImpl) ClassFactory.getInstance().getCameraManager();
-                //    Field callbacksField = cameraManager.getClass().getDeclaredField("callbacks");
-                //    callbacksField.setAccessible(true);
-                //    ArrayList<CameraManagerInternal.UsbAttachmentCallback> callbacks = (ArrayList<CameraManagerInternal.UsbAttachmentCallback>) callbacksField.get(cameraManager);
-                //    CameraAttachmentCallback callBackToRemove = null;
-                //
-                //    synchronized (callbacks) {
-                //        for(CameraManagerInternal.UsbAttachmentCallback callback : callbacks) {
-                //            if(callback instanceof CameraAttachmentCallback) {
-                //                if(callBackToRemove == null) {
-                //                    callBackToRemove = (CameraAttachmentCallback) callback;
-                //                } else {
-                //                    throw new RuntimeException("Should not have to remove more than one camera callback to remove");
-                //                }
-                //
-                //            }
-                //        }
-                //
-                //        if(callBackToRemove != null) {
-                //            RobotLog.ii("PipelineStarter", "Removing Callback with serial number \"" + callBackToRemove.ourSerialNumber + "\"");
-                //            cameraManager.unregisterReceiver(callBackToRemove);
-                //        }
-                //
-                //        cameraCallback = new CameraAttachmentCallback(hardware.webcamName.getSerialNumber());
-                //        cameraManager.registerReceiver(cameraCallback);
-                //    }
-                //} catch (NoSuchFieldException | IllegalAccessException e) {
-                //    throw new RuntimeException(e);
-                //}
+                try {
+                    CameraManagerImpl cameraManager = (CameraManagerImpl) ClassFactory.getInstance().getCameraManager();
+                    Field callbacksField = cameraManager.getClass().getDeclaredField("callbacks");
+                    callbacksField.setAccessible(true);
+                    ArrayList<CameraManagerInternal.UsbAttachmentCallback> callbacks = (ArrayList<CameraManagerInternal.UsbAttachmentCallback>) callbacksField.get(cameraManager);
+                    CameraAttachmentCallback callBackToRemove = null;
+
+                    synchronized (callbacks) {
+                        for(CameraManagerInternal.UsbAttachmentCallback callback : callbacks) {
+                            if(callback instanceof CameraAttachmentCallback) {
+                                if(callBackToRemove == null) {
+                                    callBackToRemove = (CameraAttachmentCallback) callback;
+                                } else {
+                                    throw new RuntimeException("Should not have to remove more than one camera callback to remove");
+                                }
+
+                            }
+                        }
+
+                        if(callBackToRemove != null) {
+                            RobotLog.ii("PipelineStarter", "Removing Callback with serial number \"" + callBackToRemove.ourSerialNumber + "\"");
+                            cameraManager.unregisterReceiver(callBackToRemove);
+                        }
+
+                        cameraCallback = new CameraAttachmentCallback(hardware.webcamName.getSerialNumber());
+                        cameraManager.registerReceiver(cameraCallback);
+                    }
+                } catch (NoSuchFieldException | IllegalAccessException e) {
+                    throw new RuntimeException(e);
+                }
                 //updateCameraSettings();
             }
 
@@ -133,11 +130,8 @@ public abstract class PipelineStarter extends OpenCvPipeline {
         this(hardware, 800, 448);
     }
 
-    private boolean checkCameraSettings() {
-        return camera.getExposureControl().getMode() != ExposureControl.Mode.Manual || camera.getGainControl().getGain() != gain || camera.getExposureControl().getExposure(TimeUnit.MILLISECONDS) != exposure;
-    }
-
     private void updateCameraSettings() {
+        RobotLog.ii("PipelineStarter", "Update Camera Settings Called");
         if(camera.getExposureControl().getMode() != ExposureControl.Mode.Manual) {
             RobotLog.ii("PipelineStarter", "mode: " + camera.getExposureControl().getMode());
             camera.getExposureControl().setMode(ExposureControl.Mode.Manual);
@@ -174,17 +168,7 @@ public abstract class PipelineStarter extends OpenCvPipeline {
                 updateCameraSettings();
             }
         }
-
-        if(frameCountTillSet == framesBeforeSet + 1) {
-            if(frameCountTillCheck < framesBeforeCheck) {
-                frameCountTillCheck++;
-            } else if(frameCountTillCheck == framesBeforeCheck) {
-                frameCountTillCheck = 0;
-                if(checkCameraSettings()) {
-                    frameCountTillSet = framesBeforeSet;
-                }
-            }
-        }
+        
         return childProcessFrame(mat);
     }
 
