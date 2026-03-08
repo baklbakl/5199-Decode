@@ -168,7 +168,7 @@ public abstract class PipelineStarter extends OpenCvPipeline {
                 updateCameraSettings();
             }
         }
-        
+
         return childProcessFrame(mat);
     }
 
