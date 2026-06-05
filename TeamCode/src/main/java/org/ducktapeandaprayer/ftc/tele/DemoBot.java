@@ -26,9 +26,6 @@ public class DemoBot extends FastIterativeOpMode {
 
     @Override
     protected void init_internal() {
-        // Initialize the hardware variables. Note that the strings used here as parameters
-        // to 'get' must correspond to the names assigned during the robot configuration
-        // step (using the FTC Robot Controller app on the phone).
         LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
 
         leftDrive = hardware.parentModule.createDcMotor(0);
@@ -43,7 +40,7 @@ public class DemoBot extends FastIterativeOpMode {
                     (Float left_stick_y, Float right_stick_x) -> {
                         double drive = -left_stick_y / (slow ? 2 : 1);
                         double turn = -right_stick_x / (slow ? 2 : 1);
-                        if(turn != 0) {
+                        if(turn != 0 && slow) {
                             drive = 0;
                         }
                         double leftPower = Range.clip(drive + turn, -1.0, 1.0) ;

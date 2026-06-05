@@ -217,7 +217,7 @@ public class MainBotHardware {
                 }
             };
         } else {
-            throw new RuntimeException("Acceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
+            throw new RuntimeException("Unacceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
         }
 
 //        launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);

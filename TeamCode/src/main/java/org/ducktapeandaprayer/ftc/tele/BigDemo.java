@@ -25,9 +25,6 @@ public class BigDemo extends FastIterativeOpMode {
 
     @Override
     protected void init_internal() {
-        // Initialize the hardware variables. Note that the strings used here as parameters
-        // to 'get' must correspond to the names assigned during the robot configuration
-        // step (using the FTC Robot Controller app on the phone).
         LynxModuleInitializer hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
 
         leftFrontDrive = hardware.parentModule.createDcMotor(0);

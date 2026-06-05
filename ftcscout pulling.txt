@@ -1,0 +1,30 @@
+https://studio.apollographql.com/sandbox/explorer
+
+query Query($season: Int!) {
+  activeTeamsCount(season: $season)
+  eventByCode(season:$season, code: "USILCMP") {
+    teams {
+      team {
+        name
+        number
+        quickStats(season: $season) {
+           tot {
+            value
+          }
+          auto {
+            value
+          }
+          dc {
+            value
+          }
+          eg {
+            value
+          }
+        }
+      }
+    }
+  }
+}
+
+(?:  )+\{\n(?:  )+"team": {\n(?:  )+"name": "([^"]+)",\n(?:  )+"number": (\d+),\n(?:  )+"quickStats": \{\n(?:  )+"tot": \{\n(?:  )+"value": (\d+.(?:\d+))\n(?:  )+},\n(?:  )+"auto": \{\n(?:  )+"value": (\d+.(?:\d+))\n(?:  )+},\n(?:  )+"dc": \{\n(?:  )+"value": (\d+.(?:\d+))\n(?:  )+},\n(?:  )+"eg": \{\n(?:  )+"value": (\d+.(?:\d+))\n(?:  )+}\n(?:  )+}\n(?:  )+}\n(?:  )+},{0,1}\n
+\1,\2,\3,\4,\5,\6\n
