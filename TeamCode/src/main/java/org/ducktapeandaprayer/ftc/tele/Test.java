@@ -6,7 +6,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
-import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
 
@@ -17,8 +16,6 @@ public class Test extends FastIterativeOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     private MainBotHardware hardware;
 
-    private AprilTagDetectionPipeline pipeline;
-
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware = MainBotHardware.getOrCreate(hardwareMap);
@@ -27,8 +24,6 @@ public class Test extends FastIterativeOpMode {
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-
-        pipeline = new AprilTagDetectionPipeline(MainBotHardware.getOrCreate(hardwareMap));
 
     }
 

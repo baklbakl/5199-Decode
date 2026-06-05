@@ -1,10 +1,8 @@
 package org.ducktapeandaprayer.ftc.tele.threadedtele;
 
-import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
-import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
@@ -13,10 +11,7 @@ import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
-import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
-import org.openftc.apriltag.AprilTagDetection;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -26,81 +21,20 @@ public class ThreadedTele extends FastIterativeOpMode {
     private final Map<String, ThreadEx> threads = new HashMap<>();
     private final LoopTimeCalculator timer = new LoopTimeCalculator();
     private OptionDriver optionDriver;
-    private AprilTagDetectionPipeline pipeline;
 
     //Never change these after the threads start
-    public volatile Boolean runVision = true;
-    public volatile Boolean visionDebugInfo = true;
     public volatile Alliance alliance = Alliance.lastAlliance;
     public Boolean timingDebugInfo = true;
 
-    private double lastSeenTagTime = Double.NaN;
-    private String visionTelemetry = "";
 
-    private void updateDetection() {
-        if(!runVision) {
-            return;
-        }
 
-        ArrayList<AprilTagDetection> detections = pipeline.getDetectionsUpdate();
-        if(detections == null) {
-            return;
-        }
-
-        StringBuilder visionDebugSb = new StringBuilder();
-        int aprilTagID = alliance.aprilTagID;
-
-        visionDebugSb.append("Target ID: ");
-        visionDebugSb.append(aprilTagID).append('\n');
-
-        AprilTagDetection targetDetection = null;
-        AprilTagPoseEx tagPose = null;
-        if (!detections.isEmpty()) {
-            for (AprilTagDetection d : detections) {
-                if (d.id == aprilTagID) {
-                    targetDetection = d;
-                    break;
-                }
-            }
-
-            visionDebugSb.append("Detected ").append(detections.size()).append(" april tags\n");
-            if (targetDetection != null) {
-                visionDebugSb.append("Target Found!\n");
-                visionDebugSb.append(AprilTagDetectionPipeline.aprilTagDetectionToString(targetDetection)).append('\n');
-                tagPose = new AprilTagPoseEx(targetDetection.pose);
-                lastSeenTagTime = getRuntime();
-                visionDebugSb.append("Ground distance: ").append(tagPose.groundDistance).append("\n");
-                visionDebugSb.append("Pitch: ").append(Math.toDegrees(tagPose.pitch)).append("\n");
-            } else {
-                visionDebugSb.append("Target not found in frame\n");
-            }
-
-        } else {
-            visionDebugSb.append("No detections\n");
-        }
-
-        if(tagPose != null || getRuntime() - lastSeenTagTime > ControlHubThread.noTagBridgeTime) {
-            for(ThreadEx thread : threads.values()) {
-                thread.updateTagPose(tagPose);
-            }
-        }
-
-        visionDebugSb.append(pipeline.getTimingTelemetry()).append('\n');
-
-        if(visionDebugInfo) {
-            visionTelemetry = visionDebugSb.toString();
-        }
-    }
 
     @Override
     protected void init_internal() {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
-//        pipeline = new AprilTagDetectionPipeline(hardware);
         optionDriver = new OptionDriver();
         try {
             optionDriver.add(new BooleanOption("Loop Timing debug info", "triangle", gamepad1, this.getClass().getField("timingDebugInfo"), this));
-            optionDriver.add(new BooleanOption("Run Vision", "dpad_down", gamepad1, this.getClass().getField("runVision"), this));
-            optionDriver.add(new BooleanOption("Vision debug info", "dpad_up", gamepad1, this.getClass().getField("visionDebugInfo"), this));
             optionDriver.add(new EnumOption<>("Alliance", "cross", gamepad1, this.getClass().getField("alliance"), this, Alliance.class));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
@@ -120,12 +54,6 @@ public class ThreadedTele extends FastIterativeOpMode {
         if(out != null) {
             telemetry.addLine(out);
             telemetry.update();
-
-            if (alliance == Alliance.BLUE) {
-                hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLUE);
-            } else if (alliance == Alliance.RED) {
-                hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
-            }
         }
 
         try {
@@ -135,15 +63,6 @@ public class ThreadedTele extends FastIterativeOpMode {
 
     @Override
     protected void start_internal() {
-        if(hardware.webcamName == null) {
-            runVision = false;
-        }
-
-        if(runVision) {
-            pipeline = new AprilTagDetectionPipeline(hardware);
-
-        }
-
         for(ThreadEx t : threads.values()) {
             t.start();
         }
@@ -154,8 +73,6 @@ public class ThreadedTele extends FastIterativeOpMode {
     @Override
     protected void loop_internal() {
         try {
-            updateDetection();
-
             for(Map.Entry<String, ThreadEx> element : threads.entrySet()) {
                 ThreadEx thread = element.getValue();
                 Throwable err = thread.getErr();
@@ -168,10 +85,6 @@ public class ThreadedTele extends FastIterativeOpMode {
 
                 thread.addTelemetryTo(telemetry);
                 thread.feedWatchdog();
-            }
-
-            if(visionDebugInfo) {
-                telemetry.addLine(visionTelemetry);
             }
 
             if(timingDebugInfo) {

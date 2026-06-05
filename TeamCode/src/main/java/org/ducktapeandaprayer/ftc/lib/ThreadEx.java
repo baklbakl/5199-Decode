@@ -3,7 +3,6 @@ package org.ducktapeandaprayer.ftc.lib;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.VariableWatcher;
-import org.ducktapeandaprayer.ftc.vision.AprilTagPoseEx;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
 import java.util.ArrayList;
@@ -21,9 +20,6 @@ public abstract class ThreadEx extends Thread {
     private AtomicReference<Double> lastWatchDogFeedTime = new AtomicReference<>(Double.NaN);
     private final double watchdogTimeOut = 1.0;
 
-    protected Holder<AprilTagPoseEx> tagPoseUpdate = null;
-    protected final Object tagPoseUpdateLock = new Object();
-
     private Throwable err = null;
     private final Object errLock = new Object();
 
@@ -40,12 +36,6 @@ public abstract class ThreadEx extends Thread {
             }
             RobotLog.ii("ThreadEx", "Thread stopping due to exception");
         });
-    }
-
-    public void updateTagPose(AprilTagPoseEx poseUpdate) {
-        synchronized (tagPoseUpdateLock) {
-            tagPoseUpdate = new Holder<>(poseUpdate);
-        }
     }
 
     public void softStop() {

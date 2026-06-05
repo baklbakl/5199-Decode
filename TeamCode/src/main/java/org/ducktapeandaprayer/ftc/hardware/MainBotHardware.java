@@ -9,12 +9,8 @@ import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.RobotLog;
-import com.qualcomm.robotcore.util.SerialNumber;
-import org.ducktapeandaprayer.ftc.lib.OnCreateHandlers;
 import org.ducktapeandaprayer.ftc.lib.SingletonHelper;
 import org.apache.commons.lang3.tuple.MutablePair;
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.internal.camera.names.WebcamNameImpl;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -28,15 +24,14 @@ public class MainBotHardware {
     //
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(90, 0, 0, 13);
     public static int motorVelocityTolerance = 30;
-    public static double moverDrivePower = 1;
-    public static double moverDriveBallInPower = 0.5; //Was 0.85
-    public static double moverDriveAutoPower = 0.85; //Was 0.85
-    public static double kickerServoUpPos = 0.53;
+    public static double moverInPower = 1;
+    public static double moverShootPower = 0.5; //Was 0.85
+    public static double kickerServoShootPos = 0.53;
+    public static double kickerLastBallPose = 0.53;
     public static double kickerServoDownPos = 0.28;
-    public static double inIntakePower = 1;
+    public static double intakeInPower = 1;
     public static long teleOpLauncherNoVisionVelocity = 1210;
-    public static int launchRequiredSpeedSamples = 10;
-    public static double parentResistorMultiplier = 3.19;
+    public static double resistorMultiplier = 3.19;
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
@@ -86,7 +81,7 @@ public class MainBotHardware {
     public static final int rightRearDriveID = 3;
 
     public static final int intakeDriveID = 2;
-    public static final int launchDriveID = 3;
+    public static final int launchDriveID = 0;
     public static final int moverDriveID = 1;
 
     public static final int paraEncoder0ID = 0;
@@ -94,7 +89,6 @@ public class MainBotHardware {
     public static final int perpEncoderID = 1;
 
     public static final int kickerServoID = 1;
-    public static final int blinkinServoID = 0;
 
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
@@ -118,15 +112,9 @@ public class MainBotHardware {
 
     public final VoltageSensor parentVoltageSensor;
 
-    //True is not pressed, false is
-    public final DigitalChannel childLauncherSwitch;
-    public final DigitalChannel parentLauncherSwitch;
-
-    public final RevBlinkinLedDriver blinkin;
     public final LazyImu lazyImu;
 
     public final HardwareMap hardwareMap;
-    public final WebcamName webcamName;
     public final LynxModuleInitializer modules;
 
 
@@ -182,10 +170,6 @@ public class MainBotHardware {
         kickerServo = child.createServo(kickerServoID);
         kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
 
-        blinkin = new RevBlinkinLedDriver(modules.childModule.servoController, blinkinServoID);
-        modules.childModule.servoController.setServoPwmRange(blinkinServoID, new PwmControl.PwmRange(500, 2500));
-        blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
-
         parallelEncoder0 = parent.createEncoder(paraEncoder0ID);
         parallelEncoder1 = parent.createEncoder(paraEncoder1ID);
         perpendicularEncoder = parent.createEncoder(perpEncoderID);
@@ -220,27 +204,20 @@ public class MainBotHardware {
             throw new RuntimeException("Unacceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
         }
 
-//        launcherColorDistSensor = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensorI2CBus), true);
-//        launcherColorDistSensor2 = new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, colorSensor2I2CBus), true);
-
-        SerialNumber webCamSerial = UsbScanner.getOrCreate(hardwareMap).webCamSerialNumber;
-
-        if(webCamSerial == null) {
-            webcamName = null;
-//            throw new RuntimeException("No webcam found and webcam is required for MainBotHardware");
-        } else {
-            webcamName = WebcamNameImpl.forSerialNumber(webCamSerial, () -> null, OnCreateHandlers.getEventLoopManger().get());
-        }
-
-        childLauncherSwitch = child.createDigitalChannel(0);
-        parentLauncherSwitch = parent.createDigitalChannel(0);
-        parentVoltageSensor = new ProxyVoltageSensor(parent.createAnalogInput(0), parentResistorMultiplier);
-        hardwareMap.put("ProxyVoltageSensor", parentVoltageSensor);
-
         for(Map.Entry<String, VoltageSensor> entry : hardwareMap.voltageSensor.entrySet()) {
             hardwareMap.voltageSensor.remove(entry.getKey());
         }
 
+        for(HardwareDevice device : hardwareMap.getAll(VoltageSensor.class)) {
+            String name = String.valueOf(hardwareMap.getNamesOf(device));
+
+            RobotLog.ii("MainBotHardware", "Removing voltage sensor called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
+            hardwareMap.remove(name, device);
+            device.close();
+        }
+
+        parentVoltageSensor = new ProxyVoltageSensor(child.createAnalogInput(0), resistorMultiplier);
+        hardwareMap.put("ProxyVoltageSensor", parentVoltageSensor);
         hardwareMap.voltageSensor.put("ProxyVoltageSensor", parentVoltageSensor);
     }
 }

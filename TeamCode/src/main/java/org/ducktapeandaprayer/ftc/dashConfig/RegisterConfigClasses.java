@@ -17,13 +17,10 @@ import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.tele.LauncherFeedForwardTester;
 import org.ducktapeandaprayer.ftc.tele.LauncherTuner;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ControlHubThread;
-import org.ducktapeandaprayer.ftc.vision.AprilTagDetectionPipeline;
-import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.tele.Test;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
-import org.ducktapeandaprayer.ftc.vision.PipelineStarter;
 import org.firstinspires.ftc.ftccommon.external.OnCreate;
 
 import java.lang.reflect.Field;
@@ -34,13 +31,10 @@ public class RegisterConfigClasses {
             SplitAuto.class,
             RobotImpl.class,
             Test.class,
-            AutoLaunch.class,
             ExpansionHubThread.class,
             ControlHubThread.class,
-            AprilTagDetectionPipeline.class,
             LauncherTuner.class,
             LauncherFeedForwardTester.class,
-            PipelineStarter.class
     };
 
 //    private static List<Double> testList = null;

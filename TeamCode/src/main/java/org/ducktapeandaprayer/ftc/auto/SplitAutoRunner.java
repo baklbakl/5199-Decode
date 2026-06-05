@@ -53,7 +53,6 @@ public class SplitAutoRunner extends FastIterativeOpMode {
         }
 
         hardware = MainBotHardware.getOrCreate(hardwareMap);
-        hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
 
         splitAuto = new SplitAuto(
                 (startPose) -> {
@@ -70,12 +69,6 @@ public class SplitAutoRunner extends FastIterativeOpMode {
         if(out != null) {
             telemetry.addLine(out);
             telemetry.update();
-
-            if(alliance == Alliance.BLUE) {
-                hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLUE);
-            } else if (alliance == Alliance.RED) {
-                hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.RED);
-            }
 
             builder = splitAuto.fillBuilder(delay, startPos, alliance, score, collectCount, park, gate);
             path = builder.build();
@@ -103,14 +96,14 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
                         ),
                         (TelemetryPacket telemetryPacket) -> {
-                            if(hardware.moverDrive.getPower() != 0) {
-                                if(hardware.parentLauncherSwitch.getState()) {
-                                    hardware.moverDrive.setPower(MainBotHardware.moverDriveAutoPower);
-                                } else {
-                                    hardware.moverDrive.setPower(MainBotHardware.moverDriveBallInPower);
-
-                                }
-                            }
+                            //if(hardware.moverDrive.getPower() != 0) {
+                            //    if(hardware.parentLauncherSwitch.getState()) {
+                            //        hardware.moverDrive.setPower(MainBotHardware.moverDriveAutoPower);
+                            //    } else {
+                            //        hardware.moverDrive.setPower(MainBotHardware.moverShootPower);
+                            //
+                            //    }
+                            //}
 
                             telemetry.addData("x", mecanumDrive.localizer.getPose().position.x);
                             telemetry.addData("y", mecanumDrive.localizer.getPose().position.y);
@@ -130,6 +123,6 @@ public class SplitAutoRunner extends FastIterativeOpMode {
 
 
     protected void stop_internal() {
-        hardware.blinkin.setPattern(RevBlinkinLedDriver.BlinkinPattern.BLACK);
+
     }
 }

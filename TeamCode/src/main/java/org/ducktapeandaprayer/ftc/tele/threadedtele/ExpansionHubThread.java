@@ -3,14 +3,10 @@ package org.ducktapeandaprayer.ftc.tele.threadedtele;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.util.RobotLog;
 import org.apache.commons.lang3.tuple.Pair;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
-import org.ducktapeandaprayer.ftc.hardware.AutoLaunch;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
-import org.ducktapeandaprayer.ftc.lib.TimedEvent;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 
@@ -25,17 +21,15 @@ public class ExpansionHubThread extends ThreadEx {
     // Globals
     //
 
-    public Boolean autoSpeedDebInfo = true;
+    public Boolean autoSpeedDebInfo = false;
 
     private final MainBotHardware hardware;
     private final ThreadedTele threadedTele;
-    private final AutoLaunch autoLaunch;
 
     private String autoSpeedTelemetry = "";
 
     private enum LauncherControlMethod {
         MANUAL,
-        VISION,
         PRESET
     }
 
@@ -73,107 +67,8 @@ public class ExpansionHubThread extends ThreadEx {
         return Double.NaN;
     }
 
-    private enum VisionComputationResultState {
-        NO_TAG_FOUND,
-        OUT_OF_RANGE,
-        IN_RANGE
-    }
-
-    private static class VisionComputationResult {
-        public final VisionComputationResultState state;
-        public final double speed;
-
-        private VisionComputationResult(VisionComputationResultState state, double speed) {
-            this.state = state;
-            this.speed = speed;
-        }
-    }
-
-    private VisionComputationResult lastResult = null;
-    private VisionComputationResult computeLauncherSpeed() {
-        if(!threadedTele.runVision) {
-            return null;
-        }
-
-        StringBuilder visionDebugSb = new StringBuilder();
-
-        VisionComputationResultState state = null;
-        double groundDist = Double.NaN;
-
-        synchronized (tagPoseUpdateLock) {
-            if(tagPoseUpdate == null && lastResult != null) {
-                return lastResult;
-            } else {
-                if(tagPoseUpdate == null || tagPoseUpdate.value == null) {
-                    state = VisionComputationResultState.NO_TAG_FOUND;
-                } else {
-                    groundDist = tagPoseUpdate.value.groundDistance;
-                }
-
-                tagPoseUpdate = null;
-            }
-        }
-
-        double visionTargetSpeed = launchSpeedFromDist(groundDist);
-        visionDebugSb.append("Launcher Vision Target Velocity: ");
-        visionDebugSb.append(visionTargetSpeed).append("\n");
-
-        if(state != VisionComputationResultState.NO_TAG_FOUND) {
-            if (Double.isNaN(visionTargetSpeed)) {
-                state = VisionComputationResultState.OUT_OF_RANGE;
-            } else {
-                state = VisionComputationResultState.IN_RANGE;
-            }
-        }
-
-        if(autoSpeedDebInfo) {
-            autoSpeedTelemetry = visionDebugSb.toString();
-        }
-
-        lastResult = new VisionComputationResult(state, visionTargetSpeed);
-        return lastResult;
-    }
-
-    private void updateLaunchSpeedAndBlinkinVision(VisionComputationResult result) {
-        updateLaunchSpeedAndBlinkinVision(result, false);
-    }
-
-    private void updateLaunchSpeedAndBlinkinVision(VisionComputationResult result, boolean forceStart) {
-        if(launcherControlMethod != LauncherControlMethod.VISION) {
-            throw new RuntimeException("Tried to run a vision only function in non vision control mode");
-        }
-
-        double targetSpeed = 0;
-        switch (result.state) {
-            case NO_TAG_FOUND:
-                targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
-                hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
-
-                break;
-            case OUT_OF_RANGE:
-                targetSpeed = MainBotHardware.teleOpLauncherNoVisionVelocity;
-                hardware.blinkin.setPattern(MainBotHardware.Patterns.outOfLaunchRange);
-
-                break;
-            case IN_RANGE:
-                targetSpeed = result.speed;
-                if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
-                    hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeed);
-                } else {
-                    hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedVisionLocked);
-                }
-                break;
-        }
-
-        if(hardware.launchDrive.getTargetVelocity() != 0 || forceStart) {
-            hardware.launchDrive.setVelocity(targetSpeed);
-        }
-    }
-
     private void startLauncher() {
-        if(launcherControlMethod == LauncherControlMethod.VISION) {
-            updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed(), true);
-        } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
+        if(launcherControlMethod == LauncherControlMethod.PRESET) {
             hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
         } else {
             throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
@@ -182,53 +77,30 @@ public class ExpansionHubThread extends ThreadEx {
 
     private void stopLauncher() {
         hardware.launchDrive.setVelocity(0);
-        if(launcherControlMethod == LauncherControlMethod.VISION) {
-            updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
-        } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
-            hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-        } else {
-            throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
-        }
     }
 
     public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread, Gamepad gamepad1, OptionDriver optionDriver) {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
 
-        this.autoLaunch = new AutoLaunch(
-                hardware,
-                this::startLauncher,
-                () -> {
-                    //stopLauncher();
-                    if(controlHubThread.getAutoAimState() != ControlHubThread.AutoAimState.STOPPED) {
-                        controlHubThread.requestAutoAimStartStop(false);
-                    }
-                },
-                //Disabled or locked auto aim are safe for launch.
-                //We maybe could check for auto speed lock, but it hasn't been an issue and launching may affect the reading and throw things off
-                () -> {
-                    ControlHubThread.AutoAimState state = controlHubThread.getAutoAimState();
-                    return state == ControlHubThread.AutoAimState.LOCKED || state == ControlHubThread.AutoAimState.DISABLED;
-                }
-        );
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         try {
-            optionDriver.add(new BooleanOption("Auto Speed debug info", "dpad_right", gamepad1, this.getClass().getField("autoSpeedDebInfo"), this));
+            //optionDriver.add(new BooleanOption("Auto Speed debug info", "dpad_right", gamepad1, this.getClass().getField("autoSpeedDebInfo"), this));
 
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_bumper"), Gamepad.class.getField("right_bumper"), Boolean::equals, (Boolean left_bumper, Boolean right_bumper) -> {
-                if(autoLaunch.isLaunching()) {
-                    return;
-                }
-
                 if(left_bumper == right_bumper) {
                     hardware.moverDrive.setPower(0);
+                    hardware.intakeDrive.setPower(0);
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
                 } else if(left_bumper) {
-                    if(Math.abs(hardware.kickerServo.getPosition() - MainBotHardware.kickerServoDownPos) < 0.0001) {
-                        hardware.moverDrive.setPower(hardware.childLauncherSwitch.getState() ? MainBotHardware.moverDrivePower : MainBotHardware.moverDriveBallInPower);
-                    }
+                    hardware.moverDrive.setPower(MainBotHardware.moverInPower);
+                    hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
                 } else if(right_bumper) {
-                    hardware.moverDrive.setPower(-MainBotHardware.moverDrivePower);
+                    hardware.moverDrive.setPower(MainBotHardware.moverShootPower);
+                    hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoShootPos);
                 } else {
                     throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
                 }
@@ -236,15 +108,16 @@ public class ExpansionHubThread extends ThreadEx {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("options"), (Boolean options) -> {
                 if(options) {
-                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
-                    hardware.moverDrive.setPower(0);
-                } else if (!gamepad1.circle){
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerLastBallPose);
+                } else if(gamepad1.right_bumper) {
+                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoShootPos);
+                } else {
                     hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
                 }
             }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
-                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL && !autoLaunch.isLaunching()) {
+                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
                     if(hardware.launchDrive.getTargetVelocity() == 0) {
                         startLauncher();
                     } else {
@@ -253,140 +126,47 @@ public class ExpansionHubThread extends ThreadEx {
                 }
             }));
 
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
-                if(autoLaunch.isLaunching()) {
-                    return;
-                }
-
-                if(circle) {
-                    if(!hardware.childLauncherSwitch.getState()
-                            && hardware.launchDrive.isAtTargetVelocity()
-                            && hardware.launchDrive.getTargetVelocity() != 0
-                    ) {
-                        hardware.kickerServo.setPosition(MainBotHardware.kickerServoUpPos);
-                        hardware.moverDrive.setPower(0);
-                    }
-                } else if(!gamepad1.options) {
-                    hardware.kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
-                }
-            }));
-
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
-                float power = left_trigger - right_trigger;
                 if(launcherControlMethod == LauncherControlMethod.MANUAL) {
-                    if(power > 0) {
-                        power /= 2;
-                    }
+                    float power = left_trigger - right_trigger;
                     hardware.launchDrive.setPower(power);
-                } else if(!autoLaunch.isLaunching()) {
-                    hardware.intakeDrive.setPower(power);
-                }
-
-            }));
-
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_stick_button"), Boolean::equals, (Boolean left_stick_button) -> {
-                if(left_stick_button) {
-                    if(launcherControlMethod == LauncherControlMethod.VISION) {
-                        launcherControlMethod = LauncherControlMethod.PRESET;
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-                        hardware.launchDrive.setVelocity(0);
-                    } else if(this.threadedTele.runVision) {
-                        launcherControlMethod = LauncherControlMethod.VISION;
-                        hardware.launchDrive.setVelocity(0);
-                        updateLaunchSpeedAndBlinkinVision(computeLauncherSpeed());
-                    }
                 }
             }));
 
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("right_stick_button"), Boolean::equals, (Boolean right_stick_button) -> {
-                if(right_stick_button) {
+            variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_stick_button"), Gamepad.class.getField("right_stick_button"), Boolean::equals, (Boolean left_stick_button, Boolean right_stick_button) -> {
+                float power = gamepad1.left_trigger - gamepad1.right_trigger;
+                if(left_stick_button && right_stick_button) {
                     if(launcherControlMethod == LauncherControlMethod.MANUAL) {
                         launcherControlMethod = LauncherControlMethod.PRESET;
-                        hardware.intakeDrive.setPower(hardware.launchDrive.getPower());
                         hardware.launchDrive.setVelocity(0);
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-                    } else if(!autoLaunch.isLaunching()) {
+                    } else {
                         launcherControlMethod = LauncherControlMethod.MANUAL;
                         hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                        hardware.launchDrive.setPower(hardware.intakeDrive.getPower());
-                        hardware.intakeDrive.setPower(0);
-                        hardware.blinkin.setPattern(MainBotHardware.Patterns.manualLaunchControl);
+                        hardware.launchDrive.setPower(power);
                     }
                 }
             }));
-
-            //Shoot three with autolaunch
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("cross"), Boolean::equals, (Boolean cross) -> {
-                if(!cross) {
-                    return;
-                }
-
-                if(launcherControlMethod == LauncherControlMethod.MANUAL) {
-                    return;
-                }
-
-                if(autoLaunch.isLaunching()) {
-                    autoLaunch.stopAutoLaunch();
-                    return;
-                }
-
-                if(launcherControlMethod == LauncherControlMethod.VISION && computeLauncherSpeed().state == VisionComputationResultState.OUT_OF_RANGE) {
-                    return;
-                }
-
-                if(controlHubThread.getAutoAimState() == ControlHubThread.AutoAimState.STOPPED) {
-                    controlHubThread.requestAutoAimStartStop(true);
-                }
-                autoLaunch.startAutoLaunching(3);
-            }));
-
 
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
-
-        timedEvents.add(new TimedEvent(launcherVelocityCheckInterval, () -> {
-
-            VisionComputationResult result = computeLauncherSpeed();
-
-            if(launcherControlMethod == LauncherControlMethod.VISION) {
-                updateLaunchSpeedAndBlinkinVision(result);
-
-            } else if(launcherControlMethod == LauncherControlMethod.PRESET) {
-                if(hardware.launchDrive.isAtTargetVelocity() && hardware.launchDrive.getTargetVelocity() != 0) {
-                    hardware.blinkin.setPattern(MainBotHardware.Patterns.correctSpeedNoVision);
-                } else {
-                    hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-                }
-            }
-        }));
     }
 
     @Override
     public void run() {
-        if(threadedTele.runVision) {
-            hardware.blinkin.setPattern(MainBotHardware.Patterns.tagNotFound);
-            launcherControlMethod = LauncherControlMethod.VISION;
-        } else {
-            hardware.blinkin.setPattern(MainBotHardware.Patterns.wrongSpeedNoVisionPattern);
-            launcherControlMethod = LauncherControlMethod.PRESET;
-        }
-
+        launcherControlMethod = LauncherControlMethod.PRESET;
         super.run();
     }
 
     public void tick() {
-//        RobotLog.ii("ExpansionHubThread", "Running!");
-        autoLaunch.tick();
-
-        if(hardware.moverDrive.getPower() > 0) {
-            if(hardware.childLauncherSwitch.getState()) {
-                hardware.moverDrive.setPower(MainBotHardware.moverDrivePower);
-            } else {
-                hardware.moverDrive.setPower(MainBotHardware.moverDriveBallInPower);
-            }
-        }
+        //if(hardware.moverDrive.getPower() > 0) {
+        //    if(hardware.childLauncherSwitch.getState()) {
+        //        hardware.moverDrive.setPower(MainBotHardware.moverInPower);
+        //    } else {
+        //        hardware.moverDrive.setPower(MainBotHardware.moverShootPower);
+        //    }
+        //}
 
         hardware.modules.childModule.module.clearBulkCache();
 
