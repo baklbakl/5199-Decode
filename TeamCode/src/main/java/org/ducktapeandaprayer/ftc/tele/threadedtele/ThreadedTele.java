@@ -87,6 +87,7 @@ public class ThreadedTele extends FastIterativeOpMode {
                 thread.feedWatchdog();
             }
 
+            telemetry.addLine();
             if(timingDebugInfo) {
                 for(Map.Entry<String, ThreadEx> t : threads.entrySet()) {
                     telemetry.addData("Timings for " + t.getKey(), t.getValue().loopTimes);

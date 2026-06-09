@@ -26,13 +26,11 @@ public class UsbScanner {
 
     public final SerialNumber lynxParentUsbSerialNumber;
     public final SerialNumber lynxChildUsbSerialNumber;
-    public final SerialNumber webCamSerialNumber;
 
     private UsbScanner(HardwareMap hardwareMap) {
         try {
             SerialNumber localLynxParentUsbSerialNumber = null;
             SerialNumber localLynxChildUsbSerialNumber = null;
-            SerialNumber localWebCamSerialNumber = null;
             RobotLog.ii("UsbScanner", "Scanning!");
 
 //            if (Device.isRevControlHub()) {
@@ -66,11 +64,6 @@ public class UsbScanner {
                         localLynxParentUsbSerialNumber = sn;
                     }
 
-                } else if (deviceType == DeviceManager.UsbDeviceType.WEBCAM) {
-                    if (localWebCamSerialNumber != null) {
-                        throw new RuntimeException("Multiple Cameras are connected at once. Please disconnect the extra one(s)");
-                    }
-                    localWebCamSerialNumber = sn;
                 }
             }
 
@@ -78,16 +71,9 @@ public class UsbScanner {
                 throw new RuntimeException("No Parent Lynx Module USB Device (Expansion / Control Hub) found. Please check that there is one connected");
             }
 
-            if (localWebCamSerialNumber == null) {
-                RobotLog.ww("UsbScanner", "No webcam found!\n" + Arrays.toString(Thread.currentThread().getStackTrace()));
-                TeamCodeWarningSource.getInstance().setUsbScannerWarning("No webcam found!");
-            } else {
-                TeamCodeWarningSource.getInstance().clearUsbScannerWarning();
-            }
 
             lynxParentUsbSerialNumber = localLynxParentUsbSerialNumber;
             lynxChildUsbSerialNumber = localLynxChildUsbSerialNumber;
-            webCamSerialNumber = localWebCamSerialNumber;
         } catch (RobotCoreException e) {
             throw new RuntimeException(e);
         }
@@ -97,7 +83,7 @@ public class UsbScanner {
     public boolean equals(Object obj) {
         if(obj instanceof UsbScanner) {
             UsbScanner other = (UsbScanner) obj;
-            return other.lynxParentUsbSerialNumber.equals(lynxParentUsbSerialNumber) && (other.webCamSerialNumber == webCamSerialNumber || (other.webCamSerialNumber != null && webCamSerialNumber != null &&  other.webCamSerialNumber.equals(webCamSerialNumber)));
+            return other.lynxParentUsbSerialNumber.equals(lynxParentUsbSerialNumber);
         }
         return false;
     }

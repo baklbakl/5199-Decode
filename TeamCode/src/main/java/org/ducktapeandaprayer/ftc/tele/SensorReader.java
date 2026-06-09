@@ -1,6 +1,10 @@
 package org.ducktapeandaprayer.ftc.tele;
 
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuadImpl;
+import com.qualcomm.hardware.lynx.LynxI2cDeviceSynch;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.hardware.lynx.commands.core.LynxFirmwareVersionManager;
 import com.qualcomm.hardware.rev.RevColorSensorV3;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.*;
@@ -17,6 +21,7 @@ import java.util.List;
 @TeleOp(name = "Sensor Reader", group = MainBotConfig.opmodeGroupName)
 public class SensorReader extends FastIterativeOpMode {
     private final List<DcMotorEx> motors = new ArrayList<>();
+    private final List<OctoQuad> octoQuads = new ArrayList<>();
     private final List<AnalogInput> analogInputs = new ArrayList<>();
     private final List<DigitalChannel> digitalChannels = new ArrayList<>();
     private final ElapsedTime runtime = new ElapsedTime();
@@ -26,6 +31,11 @@ public class SensorReader extends FastIterativeOpMode {
 
     protected void init_internal() {
         hardware = LynxModuleInitializer.getOrCreate(hardwareMap);
+
+        LynxI2cDeviceSynch synch = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, 0);
+        synch.setUserConfiguredName("octoquad");
+        OctoQuad octoQuad = new OctoQuadImpl(synch, true);
+        octoQuads.add(octoQuad);
 
         for(int i = 0; i < LynxConstants.NUMBER_OF_MOTORS; i++) {
             motors.add(hardware.parentModule.createDcMotor(i));
@@ -63,6 +73,8 @@ public class SensorReader extends FastIterativeOpMode {
 
         voltageSensors.add(hardware.parentModule.voltageSensor);
         voltageSensors.add(hardware.childModule.voltageSensor);
+
+
 
 //        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensorI2CBus), true));
 //        colorSensors.add(new RevColorSensorV3(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, hardware.parentModule.module, MainBotHardware.colorSensor2I2CBus), true));
@@ -106,6 +118,24 @@ public class SensorReader extends FastIterativeOpMode {
             sb.append("\n");
             i++;
         }
+
+        for(OctoQuad octoQuad : octoQuads) {
+            OctoQuad.EncoderDataBlock block = null;
+            while(block == null || !block.crcOk) {
+                block = octoQuad.readAllEncoderData();
+            }
+
+            i = 0;
+            for(int pos : block.positions) {
+                sb.append("Octoquad Encoder ");
+                sb.append(i);
+                sb.append(": ");
+                sb.append(pos);
+                sb.append("\n");
+                i++;
+            }
+        }
+
 
         i = 0;
         for(AnalogInput input : analogInputs) {
@@ -166,6 +196,8 @@ public class SensorReader extends FastIterativeOpMode {
     /*
      * Code to run ONCE after the driver hits STOP
      */
+
+    //FIX: Sensor reader opmode gets stuck in stop
     protected void stop_internal() {
     }
 }

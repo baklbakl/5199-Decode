@@ -52,7 +52,16 @@ class AroundCornerConstraint implements VelConstraint {
 //   `gfx.color = Color(colorScheme.TRAJECTORY_PATH_COLOR.red, colorScheme.TRAJECTORY_PATH_COLOR.green, colorScheme.TRAJECTORY_PATH_COLOR.blue, 255)`
 
 public class MeepMeepTesting {
+    private static double toServoPos(double heading) {
+        return heading * 77/29 * 15/48 / Math.toRadians(355) + 0.5;
+    }
+
     public static void main(String[] args) {
+        System.out.println(toServoPos(0));
+        System.out.println(toServoPos(Math.toRadians(213)));
+        System.out.println(toServoPos(-Math.PI / 2));
+
+        if(true) return;
         System.setProperty("sun.java2d.opengl", "true");
 
         MeepMeep meepMeep = new MeepMeep(800);

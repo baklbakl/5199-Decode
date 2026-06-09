@@ -3,7 +3,6 @@ package org.ducktapeandaprayer.ftc.auto;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.*;
 import com.acmerobotics.roadrunner.ftc.Actions;
-import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.GatePush;
@@ -105,6 +104,7 @@ public class SplitAutoRunner extends FastIterativeOpMode {
                             //    }
                             //}
 
+                            hardware.voltageSensor.periodic();
                             telemetry.addData("x", mecanumDrive.localizer.getPose().position.x);
                             telemetry.addData("y", mecanumDrive.localizer.getPose().position.y);
                             telemetry.addData("heading (deg)", Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble()));

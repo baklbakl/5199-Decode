@@ -3,10 +3,14 @@ package org.ducktapeandaprayer.ftc.hardware;
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.LazyImu;
 import com.qualcomm.hardware.bosch.BNO055IMUNew;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuadImpl;
 import com.qualcomm.hardware.lynx.LynxEmbeddedBNO055IMUNew;
+import com.qualcomm.hardware.lynx.LynxI2cDeviceSynch;
+import com.qualcomm.hardware.lynx.LynxVoltageSensor;
 import com.qualcomm.hardware.lynx.commands.core.LynxFirmwareVersionManager;
-import com.qualcomm.hardware.rev.RevBlinkinLedDriver;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
+import com.qualcomm.robotcore.exception.RobotCoreException;
 import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.lib.SingletonHelper;
@@ -22,49 +26,38 @@ public class MainBotHardware {
     //
     // Dashboard options
     //
-    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(90, 0, 0, 13);
+    public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 11);
     public static int motorVelocityTolerance = 30;
-    public static double moverInPower = 1;
-    public static double moverShootPower = 0.5; //Was 0.85
-    public static double kickerServoShootPos = 0.53;
-    public static double kickerLastBallPose = 0.53;
-    public static double kickerServoDownPos = 0.28;
+    public static double transferInPower = 1;
+    public static double rampShootPos = 0.47;
+    public static double rampLastBallPos = 0.40;
+    public static double rampDownPos = 0.545;
     public static double intakeInPower = 1;
-    public static long teleOpLauncherNoVisionVelocity = 1210;
+    public static long teleOpLauncherNoVisionVelocity = 2120;
     public static double resistorMultiplier = 3.19;
+    public static double turretMaxHeading = 2.3;
+    public static double turretCenter = 0.49;
+
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
     public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-            new MutablePair<>(39.0, 1240.0),
-            new MutablePair<>(47.0, 1210.0),
-            new MutablePair<>(55.0, 1210.0),
-            new MutablePair<>(63.0, 1220.0),
-            new MutablePair<>(71.0, 1250.0),
-            new MutablePair<>(79.0, 1280.0),
-            new MutablePair<>(90.0, 1380.0),
-            new MutablePair<>(115.0, 1500.0),
-            new MutablePair<>(120.0, 1530.0),
-            new MutablePair<>(125.0, 1550.0),
-            new MutablePair<>(131.0, 1590.0),
-            new MutablePair<>(140.0, 1630.0),
-            new MutablePair<>(147.0, 1640.0)
+            new MutablePair<>(47.0, 2100.0),
+            new MutablePair<>(54.0, 2100.0),
+            new MutablePair<>(64.0, 2150.0),
+            new MutablePair<>(73.0, 2230.0),
+            new MutablePair<>(80.0, 2340.0),
+            new MutablePair<>(90.0, 2400.0),
+            new MutablePair<>(100.0, 2460.0),
+            new MutablePair<>(110.0, 2560.0)
             ));
 
     //
     // Options
     //
-    public static class Patterns {
-        //Offcolor lets us know that the blinkin is working when we press init
-        public static final RevBlinkinLedDriver.BlinkinPattern off = RevBlinkinLedDriver.BlinkinPattern.COLOR_WAVES_RAINBOW_PALETTE;
-        public static final RevBlinkinLedDriver.BlinkinPattern manualLaunchControl = RevBlinkinLedDriver.BlinkinPattern.VIOLET;
-        public static final RevBlinkinLedDriver.BlinkinPattern correctSpeed = RevBlinkinLedDriver.BlinkinPattern.BLUE;
-        public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedVisionLocked = RevBlinkinLedDriver.BlinkinPattern.GREEN;
-        public static final RevBlinkinLedDriver.BlinkinPattern outOfLaunchRange = RevBlinkinLedDriver.BlinkinPattern.YELLOW;
-        public static final RevBlinkinLedDriver.BlinkinPattern tagNotFound = RevBlinkinLedDriver.BlinkinPattern.RED;
-        public static final RevBlinkinLedDriver.BlinkinPattern wrongSpeedNoVisionPattern = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_RED;
-        public static final RevBlinkinLedDriver.BlinkinPattern correctSpeedNoVision = RevBlinkinLedDriver.BlinkinPattern.HEARTBEAT_BLUE;
-    }
+
+    //Multiply by this to convert from radians to servo pos
+    public static final double turretRatio = 77.0/29 * 15/48 / Math.toRadians(355);
 
     //
     // Hardware ports
@@ -80,15 +73,21 @@ public class MainBotHardware {
     public static final int leftRearDriveID = 2;
     public static final int rightRearDriveID = 3;
 
-    public static final int intakeDriveID = 2;
+    public static final int intakeDriveID = 1;
     public static final int launchDriveID = 0;
-    public static final int moverDriveID = 1;
+    public static final int moverDriveID = 2;
 
     public static final int paraEncoder0ID = 0;
     public static final int paraEncoder1ID = 3;
     public static final int perpEncoderID = 1;
 
+    public static final int turretServoID = 0;
     public static final int kickerServoID = 1;
+
+    //FIX: Update BB ids to be correct
+    public static final int intakeBBID = 0;
+    public static final int transferMiddleBBID = 0;
+    public static final int transferEndBBID = 0;
 
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
@@ -106,17 +105,32 @@ public class MainBotHardware {
 
     public final DcMotorExEx intakeDrive;
     public final DcMotorExEx launchDrive;
-    public final DcMotorExEx moverDrive;
+    public final DcMotorExEx transferDrive;
 
-    public final Servo kickerServo;
+    public final Servo rampServo;
+    public final Servo turretServo;
 
-    public final VoltageSensor parentVoltageSensor;
+    public final ProxyVoltageSensor voltageSensor;
 
     public final LazyImu lazyImu;
+    public final OctoQuad octoQuad;
+
+    public final DigitalChannel intakeBB;
+    public final DigitalChannel transferMiddleBB;
+    //Under shooter
+    public final DigitalChannel transferEndBB;
 
     public final HardwareMap hardwareMap;
     public final LynxModuleInitializer modules;
 
+    public void turretToHeading(double heading) {
+        if(Math.abs(heading) > turretMaxHeading) {
+            heading = Math.signum(heading) * turretMaxHeading;
+        }
+        double pos = turretRatio * heading + turretCenter;
+        RobotLog.ii("MainBotHardware", "Turret: " + pos);
+        turretServo.setPosition(pos);
+    }
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
         MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
@@ -153,11 +167,12 @@ public class MainBotHardware {
         // Note: The settings here assume direct drive on left and right wheels.  Gear Reduction or 90 Deg drives may require direction flips
         leftFrontDrive.setDirection(DcMotor.Direction.FORWARD);
         rightFrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftRearDrive.setDirection(DcMotor.Direction.REVERSE);
-        rightRearDrive.setDirection(DcMotor.Direction.FORWARD);
+        leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
+        rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
         intakeDrive = child.createDcMotor(intakeDriveID);
-        moverDrive = child.createDcMotor(moverDriveID);
+        intakeDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+        transferDrive = child.createDcMotor(moverDriveID);
 
         launchDrive = child.createDcMotor(launchDriveID);
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -167,8 +182,11 @@ public class MainBotHardware {
         launchDrive.setVelocity(0);
         launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
 
-        kickerServo = child.createServo(kickerServoID);
-        kickerServo.setPosition(MainBotHardware.kickerServoDownPos);
+        turretServo = child.createServo(turretServoID);
+        turretToHeading(0);
+
+        rampServo = child.createServo(kickerServoID);
+        rampServo.setPosition(MainBotHardware.rampDownPos);
 
         parallelEncoder0 = parent.createEncoder(paraEncoder0ID);
         parallelEncoder1 = parent.createEncoder(paraEncoder1ID);
@@ -178,31 +196,66 @@ public class MainBotHardware {
         parallelEncoder0.setDirection(DcMotorSimple.Direction.FORWARD);
         parallelEncoder1.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        LynxModuleImuType imuType = parent.module.getImuType();
+        LynxI2cDeviceSynch synch = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
+        synch.setUserConfiguredName("octoquad");
+        octoQuad = new OctoQuadImpl(synch, true);
+        octoQuad.setSingleEncoderDirection(1, OctoQuad.EncoderDirection.REVERSE);
+        octoQuad.setAllLocalizerParameters(
+                0,
+                1,
+                //This number comes from the pinpoint driver
+                13.26291192f,
+                13.26291192f,
+                15,
+                -190,
+                1.0156472633360971f,
+                25
+        );
+        octoQuad.resetLocalizerAndCalibrateIMU();
+        while(octoQuad.getLocalizerStatus() != OctoQuad.LocalizerStatus.RUNNING) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
-        if(imuType == LynxModuleImuType.BNO055) {
-            //This is kind of jank, but it works.
-            lazyImu = new LazyImu() {
-                private IMU imu = null;
+        intakeBB = child.createDigitalChannel(intakeBBID);
+        intakeBB.setMode(DigitalChannel.Mode.INPUT);
+        transferMiddleBB = child.createDigitalChannel(transferMiddleBBID);
+        transferMiddleBB.setMode(DigitalChannel.Mode.INPUT);
+        transferEndBB = child.createDigitalChannel(transferEndBBID);
+        transferEndBB.setMode(DigitalChannel.Mode.INPUT);
 
-                @NotNull
-                @Override
-                public IMU get() {
+        //This is kind of jank, but it works.
+        lazyImu = new LazyImu() {
+            private IMU imu = null;
+
+            @NotNull
+            @Override
+            public IMU get() {
+                LynxModuleImuType imuType = parent.module.getImuType();
+                //ADD: Support for other IMU Type
+                if(imuType == LynxModuleImuType.BNO055) {
                     if(imu == null) {
-                        imu = new LynxEmbeddedBNO055IMUNew(LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0), true);
+                        LynxI2cDeviceSynch synch = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
+                        synch.setUserConfiguredName("IMU");
+                        imu = new LynxEmbeddedBNO055IMUNew(synch, true);
+
                         if(imu.initialize(new BNO055IMUNew.Parameters(new RevHubOrientationOnRobot(logoFacingDirection, usbFacingDirection)))) {
                             imu.resetYaw();
                         } else {
                             throw new RuntimeException("Failed to init IMU");
                         }
                     }
-
-                    return imu;
+                } else {
+                    throw new RuntimeException("Unacceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
                 }
-            };
-        } else {
-            throw new RuntimeException("Unacceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
-        }
+
+                return imu;
+            }
+        };
+
 
         for(Map.Entry<String, VoltageSensor> entry : hardwareMap.voltageSensor.entrySet()) {
             hardwareMap.voltageSensor.remove(entry.getKey());
@@ -216,8 +269,12 @@ public class MainBotHardware {
             device.close();
         }
 
-        parentVoltageSensor = new ProxyVoltageSensor(child.createAnalogInput(0), resistorMultiplier);
-        hardwareMap.put("ProxyVoltageSensor", parentVoltageSensor);
-        hardwareMap.voltageSensor.put("ProxyVoltageSensor", parentVoltageSensor);
+        try {
+            voltageSensor = new ProxyVoltageSensor(child.createAnalogInput(0), new LynxVoltageSensor(hardwareMap.appContext, child.module), resistorMultiplier);
+        } catch (RobotCoreException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        hardwareMap.put("ProxyVoltageSensor", voltageSensor);
+        hardwareMap.voltageSensor.put("ProxyVoltageSensor", voltageSensor);
     }
 }

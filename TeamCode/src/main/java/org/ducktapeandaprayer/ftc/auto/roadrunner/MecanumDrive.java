@@ -207,7 +207,7 @@ public final class MecanumDrive {
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
 
-            double voltage = hardware.parentVoltageSensor.getVoltage();
+            double voltage = hardware.voltageSensor.getVoltage();
 
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
@@ -304,7 +304,7 @@ public final class MecanumDrive {
             driveCommandWriter.write(new DriveCommandMessage(command));
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
-            double voltage = hardware.parentVoltageSensor.getVoltage();
+            double voltage = hardware.voltageSensor.getVoltage();
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
             final FeedForward feedforward = feedForwardFactory.make();

@@ -165,7 +165,7 @@ public class LauncherTuner extends FastIterativeOpMode {
                 if(targetVelocity == 0) {
                     hardware.launchDrive.setPower(0);
                 } else {
-                    hardware.launchDrive.setPower(((targetVelocity - velocity) * internalControlkP + (targetVelocity) * internalControlkV) / hardware.parentVoltageSensor.getVoltage());
+                    hardware.launchDrive.setPower(((targetVelocity - velocity) * internalControlkP + (targetVelocity) * internalControlkV) / hardware.voltageSensor.getVoltage());
                 }
             } else {
                 mt.addData("Current coefficients", currentCoefficients);

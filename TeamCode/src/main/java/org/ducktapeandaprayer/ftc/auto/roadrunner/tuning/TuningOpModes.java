@@ -93,7 +93,7 @@ public final class TuningOpModes {
                         return new DualNum<>(Arrays.asList(dl.getPose().heading.toDouble(), dl.getPoseVelocity().angVel));
 
                     },
-                    hardware.parentVoltageSensor,
+                    hardware.voltageSensor,
                     MecanumDrive.feedForwardFactory,
                     0
             );

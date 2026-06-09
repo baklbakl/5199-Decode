@@ -2,7 +2,6 @@ package org.ducktapeandaprayer.ftc.tele
 
 import com.acmerobotics.dashboard.FtcDashboard
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry
-import com.acmerobotics.roadrunner.AsymMotorFeedforward
 import com.acmerobotics.roadrunner.TestingMotorFeedforward
 import com.acmerobotics.roadrunner.TimeProfile
 import com.acmerobotics.roadrunner.constantProfile
@@ -76,7 +75,7 @@ class LauncherFeedForwardTester : LinearOpMode() {
 
             telemetry.addData("vref", v[0])
 
-            val power = TestingMotorFeedforward(kS, kV, kASpeedUp, kASlowDown, negDec).compute(v) / hardware.parentVoltageSensor.voltage
+            val power = TestingMotorFeedforward(kS, kV, kASpeedUp, kASlowDown, negDec).compute(v) / hardware.voltageSensor.voltage
             telemetry.addData("power", power * maxVel / 2)
             hardware.launchDrive.power = power
 

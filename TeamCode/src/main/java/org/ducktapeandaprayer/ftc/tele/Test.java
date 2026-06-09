@@ -24,7 +24,6 @@ public class Test extends FastIterativeOpMode {
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
         telemetry.update();
-
     }
 
 
