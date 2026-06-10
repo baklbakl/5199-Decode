@@ -186,11 +186,6 @@ public class SensorReader extends FastIterativeOpMode {
 
         telemetry.addLine(sb.toString());
         telemetry.update();
-        try {
-            Thread.sleep(1);
-        } catch (InterruptedException e) {
-//            throw new RuntimeException(e);
-        }
     }
 
     /*

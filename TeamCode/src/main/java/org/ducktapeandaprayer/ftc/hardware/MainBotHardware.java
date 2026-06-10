@@ -1,5 +1,6 @@
 package org.ducktapeandaprayer.ftc.hardware;
 
+import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.ftc.Encoder;
 import com.acmerobotics.roadrunner.ftc.LazyImu;
 import com.qualcomm.hardware.bosch.BNO055IMUNew;
@@ -33,10 +34,12 @@ public class MainBotHardware {
     public static double rampLastBallPos = 0.40;
     public static double rampDownPos = 0.545;
     public static double intakeInPower = 1;
-    public static long teleOpLauncherNoVisionVelocity = 2120;
-    public static double resistorMultiplier = 3.19;
+    public static double launcherPresetVelocity = 2120;
+    public static double resistorMultiplier = 3.38;
     public static double turretMaxHeading = 2.3;
     public static double turretCenter = 0.49;
+    public static double shootTransferOnDelay = 0.3;
+    public static double singleShootHighRampDelay = 0.5;
 
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
@@ -84,10 +87,9 @@ public class MainBotHardware {
     public static final int turretServoID = 0;
     public static final int kickerServoID = 1;
 
-    //FIX: Update BB ids to be correct
-    public static final int intakeBBID = 0;
-    public static final int transferMiddleBBID = 0;
-    public static final int transferEndBBID = 0;
+    public static final int intakeBBID = 2;
+    public static final int transferMiddleBBID = 6;
+    public static final int transferEndBBID = 4;
 
     //The address of the expansion hub when attached via USB or RS485
     public static final int expansionHubAddress = 1;
@@ -115,10 +117,10 @@ public class MainBotHardware {
     public final LazyImu lazyImu;
     public final OctoQuad octoQuad;
 
-    public final DigitalChannel intakeBB;
-    public final DigitalChannel transferMiddleBB;
+    public final BeamBreak intakeBB;
+    public final BeamBreak transferMiddleBB;
     //Under shooter
-    public final DigitalChannel transferEndBB;
+    public final BeamBreak transferEndBB;
 
     public final HardwareMap hardwareMap;
     public final LynxModuleInitializer modules;
@@ -132,20 +134,24 @@ public class MainBotHardware {
         turretServo.setPosition(pos);
     }
 
-    public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
-        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+    public static MainBotHardware getOrCreate(HardwareMap hardwareMap, boolean resetOctoQuad) {
+        MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, resetOctoQuad));
         if(ts.modules != LynxModuleInitializer.getOrCreate(hardwareMap)) {
 //            ts = new MainBotHardware(hardwareMap);
             SingletonHelper.clear(MainBotHardware.class);
         }
-        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap));
+        return SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, resetOctoQuad));
+    }
+
+    public static MainBotHardware getOrCreate(HardwareMap hardwareMap) {
+        return getOrCreate(hardwareMap, true);
     }
 
     public static void clearInstance() {
         SingletonHelper.clear(MainBotHardware.class);
     }
 
-    private MainBotHardware(HardwareMap hardwareMap) {
+    private MainBotHardware(HardwareMap hardwareMap, boolean resetOctoQuad) {
         this.hardwareMap = hardwareMap;
         RobotLog.ii("MainBotHardware", "Initializing mainbothardware");
 
@@ -156,6 +162,34 @@ public class MainBotHardware {
 
         LynxModuleInitializer.LynxModuleControllers parent = modules.parentModule;
         LynxModuleInitializer.LynxModuleControllers child = modules.childModule;
+
+        //OctoQuad is initialized first so nothing jolts while it is calibrating
+        LynxI2cDeviceSynch synch = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
+        synch.setUserConfiguredName("octoquad");
+        octoQuad = new OctoQuadImpl(synch, true);
+        if(resetOctoQuad) {
+            octoQuad.setSingleEncoderDirection(1, OctoQuad.EncoderDirection.REVERSE);
+            octoQuad.setAllLocalizerParameters(
+                    0,
+                    1,
+                    //This number comes from the pinpoint driver
+                    13.26291192f,
+                    13.26291192f,
+                    15,
+                    -190,
+                    1.0156472633360971f,
+                    25
+            );
+
+            octoQuad.resetLocalizerAndCalibrateIMU();
+            while(octoQuad.getLocalizerStatus() != OctoQuad.LocalizerStatus.RUNNING) {
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
 
         leftFrontDrive = parent.createDcMotor(leftFrontDriveID);
         rightFrontDrive = parent.createDcMotor(rightFrontDriveID);
@@ -172,6 +206,8 @@ public class MainBotHardware {
 
         intakeDrive = child.createDcMotor(intakeDriveID);
         intakeDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+        intakeDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
         transferDrive = child.createDcMotor(moverDriveID);
 
         launchDrive = child.createDcMotor(launchDriveID);
@@ -196,36 +232,9 @@ public class MainBotHardware {
         parallelEncoder0.setDirection(DcMotorSimple.Direction.FORWARD);
         parallelEncoder1.setDirection(DcMotorSimple.Direction.REVERSE);
 
-        LynxI2cDeviceSynch synch = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
-        synch.setUserConfiguredName("octoquad");
-        octoQuad = new OctoQuadImpl(synch, true);
-        octoQuad.setSingleEncoderDirection(1, OctoQuad.EncoderDirection.REVERSE);
-        octoQuad.setAllLocalizerParameters(
-                0,
-                1,
-                //This number comes from the pinpoint driver
-                13.26291192f,
-                13.26291192f,
-                15,
-                -190,
-                1.0156472633360971f,
-                25
-        );
-        octoQuad.resetLocalizerAndCalibrateIMU();
-        while(octoQuad.getLocalizerStatus() != OctoQuad.LocalizerStatus.RUNNING) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                throw new RuntimeException(e);
-            }
-        }
-
-        intakeBB = child.createDigitalChannel(intakeBBID);
-        intakeBB.setMode(DigitalChannel.Mode.INPUT);
-        transferMiddleBB = child.createDigitalChannel(transferMiddleBBID);
-        transferMiddleBB.setMode(DigitalChannel.Mode.INPUT);
-        transferEndBB = child.createDigitalChannel(transferEndBBID);
-        transferEndBB.setMode(DigitalChannel.Mode.INPUT);
+        intakeBB = new BeamBreak(child.createDigitalChannel(intakeBBID));
+        transferMiddleBB = new BeamBreak(child.createDigitalChannel(transferMiddleBBID));
+        transferEndBB = new BeamBreak(child.createDigitalChannel(transferEndBBID));
 
         //This is kind of jank, but it works.
         lazyImu = new LazyImu() {
@@ -276,5 +285,31 @@ public class MainBotHardware {
         }
         hardwareMap.put("ProxyVoltageSensor", voltageSensor);
         hardwareMap.voltageSensor.put("ProxyVoltageSensor", voltageSensor);
+    }
+
+    public void setOctoQuadPose(Pose2d pose) {
+        setOctoQuadPose(pose.position.x, pose.position.y, (float) pose.heading.toDouble());
+    }
+
+    public void setOctoQuadPose(double x, double y, float heading) {
+        octoQuad.setLocalizerPose((int) (x * 25.4), (int) (y * 25.4), heading);
+    }
+
+    public OctoQuad.LocalizerDataBlock readOctoQuadLocalizerData() {
+        OctoQuad.LocalizerDataBlock block = null;
+        while(block == null || !block.crcOk) {
+            block = octoQuad.readLocalizerData();
+        }
+        return block;
+    }
+
+    public static Pose2d makeOctoQuadPose(OctoQuad.LocalizerDataBlock block) {
+        return new Pose2d(block.posX_mm / 25.4, block.posY_mm / 25.4, block.heading_rad);
+    }
+
+    public void tickBBs() {
+        intakeBB.tick();
+        transferMiddleBB.tick();
+        transferEndBB.tick();
     }
 }

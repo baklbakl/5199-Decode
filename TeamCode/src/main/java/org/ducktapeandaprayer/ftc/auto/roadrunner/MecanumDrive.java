@@ -36,13 +36,10 @@ import java.lang.Math;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Supplier;
 
 public final class MecanumDrive {
     public static class Params {
-        // drive model parameters
-//        public double inPerTick = (48.0 / 25.4 * Math.PI) / 2000;
-        // 126.5 42370
-        public double inPerTick = 0.002985603021005428;
         public double lateralMultiplier = 1.24;
         public double trackWidth = 13.65;
 
@@ -87,7 +84,7 @@ public final class MecanumDrive {
     public final MecanumKinematics kinematics = new MecanumKinematics(
             PARAMS.trackWidth, PARAMS.lateralMultiplier);
 
-    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV / PARAMS.inPerTick, PARAMS.kASpeedUp / PARAMS.inPerTick, PARAMS.kASlowDown / PARAMS.inPerTick);
+    public final static FeedforwardFactory feedForwardFactory = () -> new AsymMotorFeedforward(PARAMS.kS, PARAMS.kV, PARAMS.kASpeedUp, PARAMS.kASlowDown);
 
     public final TurnConstraints defaultTurnConstraints = new TurnConstraints(
             PARAMS.maxAngVel, -PARAMS.maxAngAccel, PARAMS.maxAngAccel);
@@ -109,12 +106,17 @@ public final class MecanumDrive {
     private final DownsampledWriter driveCommandWriter = new DownsampledWriter("DRIVE_COMMAND", 50_000_000);
     private final DownsampledWriter mecanumCommandWriter = new DownsampledWriter("MECANUM_COMMAND", 50_000_000);
 
-    public MainBotHardware hardware;
+    public final MainBotHardware hardware;
+    public final Supplier<Double> voltageSupplier;
 
-    public MecanumDrive(MainBotHardware hardware, Pose2d pose) {
+    public MecanumDrive(MainBotHardware hardware, Pose2d pose, Supplier<Double> voltageSupplier) {
         this.hardware = hardware;
 
-        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.AUTO);
+        if(voltageSupplier == null) {
+            this.voltageSupplier = hardware.voltageSensor::getVoltage;
+        } else {
+            this.voltageSupplier = voltageSupplier;
+        }
 
         leftFront = hardware.leftFrontDrive;
         leftBack = hardware.leftRearDrive;
@@ -126,13 +128,17 @@ public final class MecanumDrive {
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        localizer = new ThreeDeadWheelLocalizer(hardware, PARAMS.inPerTick, pose);
+        localizer = new OctoQuadLocalizer(hardware, pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
     }
 
     public MecanumDrive(HardwareMap hardwareMap, Pose2d pose) {
-        this(MainBotHardware.getOrCreate(hardwareMap), pose);
+        //Passing null as the voltageSupplier here and then dealing with it in the other constructor is a gross hack,
+        // but it works so IDC
+        this(MainBotHardware.getOrCreate(hardwareMap), pose, null);
+        hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
+        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.OFF);
     }
 
     public void setDrivePowers(PoseVelocity2d powers) {
@@ -207,7 +213,7 @@ public final class MecanumDrive {
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
 
-            double voltage = hardware.voltageSensor.getVoltage();
+            double voltage = voltageSupplier.get();
 
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
@@ -304,7 +310,7 @@ public final class MecanumDrive {
             driveCommandWriter.write(new DriveCommandMessage(command));
 
             MecanumKinematics.WheelVelocities<Time> wheelVels = kinematics.inverse(command);
-            double voltage = hardware.voltageSensor.getVoltage();
+            double voltage = voltageSupplier.get();
 //            final MotorFeedforward feedforward = new MotorFeedforward(PARAMS.kS,
 //                    PARAMS.kV / PARAMS.inPerTick, PARAMS.kA / PARAMS.inPerTick);
             final FeedForward feedforward = feedForwardFactory.make();

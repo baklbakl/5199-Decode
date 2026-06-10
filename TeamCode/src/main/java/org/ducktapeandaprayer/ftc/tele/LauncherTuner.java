@@ -69,10 +69,10 @@ public class LauncherTuner extends FastIterativeOpMode {
         try {
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, gamepad1.getClass().getField("dpad_up"), Boolean::equals, (dpad_up) -> {
                 if(dpad_up && mode != ControlMode.MANUAL) {
-                    if(targetVelocity == MainBotHardware.teleOpLauncherNoVisionVelocity) {
+                    if(targetVelocity == MainBotHardware.launcherPresetVelocity) {
                         targetVelocity = 0;
                     } else {
-                        targetVelocity = MainBotHardware.teleOpLauncherNoVisionVelocity;
+                        targetVelocity = MainBotHardware.launcherPresetVelocity;
 
                     }
 

@@ -1,8 +1,10 @@
 package org.ducktapeandaprayer.ftc.auto;
 
 public interface RobotInterface {
-    void launch(int numToLaunch);
-    void setLauncherSpeed(double speed);
+    void launch();
+    boolean launching();
+    void startLauncher();
+    void stopLauncher();
     void intake();
     void stopIntake();
 }

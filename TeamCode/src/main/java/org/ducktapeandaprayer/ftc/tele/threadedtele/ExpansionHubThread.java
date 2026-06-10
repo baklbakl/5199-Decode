@@ -6,8 +6,11 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import org.apache.commons.lang3.tuple.Pair;
+import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
+import org.ducktapeandaprayer.ftc.lib.TwoOfThree;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
@@ -25,7 +28,7 @@ public class ExpansionHubThread extends ThreadEx {
     // Dash options
     //
     //FIX: Figure out the correct turret offset
-    public static double turretOffset = -2.0;
+    public static double turretOffset = -52.0 /*mm*/ / 25.4;
     public static Vector2d goalTargetPos = new Vector2d(-66, 66);
 
     //
@@ -49,6 +52,9 @@ public class ExpansionHubThread extends ThreadEx {
     private final List<LauncherControlMethod> launcherControlMethodElements = new ArrayList<>();
     private LauncherControlMethod launcherControlMethod;
     private boolean turretTracking = true;
+    private final ElapsedTime timer = new ElapsedTime();
+    private double shootingStartTimeForTransfer = Double.NaN;
+    private double shootingStartTimeForRamp = Double.NaN;
 
     private enum State {
         STOPPED,
@@ -58,6 +64,7 @@ public class ExpansionHubThread extends ThreadEx {
     }
 
     private void toState(State state) {
+        this.state = state;
         switch (state) {
             case STOPPED:
                 hardware.transferDrive.setPower(0);
@@ -75,8 +82,10 @@ public class ExpansionHubThread extends ThreadEx {
                 hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
                 break;
             case SHOOTING:
-                hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-                hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+                //hardware.transferDrive.setPower(MainBotHardware.transferInPower);
+                //hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+                shootingStartTimeForTransfer = timer.time();
+                shootingStartTimeForRamp = shootingStartTimeForTransfer;
                 hardware.rampServo.setPosition(MainBotHardware.rampShootPos);
                 break;
         }
@@ -121,7 +130,7 @@ public class ExpansionHubThread extends ThreadEx {
 
     private void startLauncher() {
         if(launcherControlMethod == LauncherControlMethod.PRESET) {
-            hardware.launchDrive.setVelocity(MainBotHardware.teleOpLauncherNoVisionVelocity);
+            hardware.launchDrive.setVelocity(MainBotHardware.launcherPresetVelocity);
         } else if(launcherControlMethod == LauncherControlMethod.ODOMETRY) {
             //hardware.launchDrive.setVelocity(computeOdoLauncherSpeed());
             //This will get automatically set in the tick method
@@ -129,10 +138,6 @@ public class ExpansionHubThread extends ThreadEx {
         } else {
             throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
         }
-    }
-
-    private boolean twoOfThree(boolean one, boolean two, boolean three) {
-        return one ? (two || three) : (two && three);
     }
 
     public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread, Gamepad gamepad1, OptionDriver optionDriver) {
@@ -155,7 +160,7 @@ public class ExpansionHubThread extends ThreadEx {
                     Gamepad.class.getField("square"),
                     Gamepad.class.getField("right_bumper"),
                     Boolean::equals, (Boolean left_bumper, Boolean square, Boolean right_bumper) -> {
-                if(twoOfThree(left_bumper, square, right_bumper) || (!left_bumper && !square && !right_bumper)) {
+                if(TwoOfThree.twoOfThree(left_bumper, square, right_bumper) || (!left_bumper && !square && !right_bumper)) {
                     toState(State.STOPPED);
                 } else if(square) {
                     toState(State.OUTTAKE);
@@ -218,17 +223,23 @@ public class ExpansionHubThread extends ThreadEx {
 
     @Override
     public void run() {
-        if(threadedTele.alliance == Alliance.BLUE) {
+        if(threadedTele.getAlliance() == Alliance.BLUE) {
             correctedGoalTargetPose = new Vector2d(goalTargetPos.x, -goalTargetPos.y);
-        } else if(threadedTele.alliance == Alliance.RED) {
+        } else if(threadedTele.getAlliance() == Alliance.RED) {
             correctedGoalTargetPose = goalTargetPos;
         }
+
+        timer.reset();
+        startOdoLauncher = true;
 
         super.run();
     }
 
     public void tick() {
-        Pose2d robotPose = new Pose2d(controlHubThread.getxMM() / 25.4, controlHubThread.getyMM() / 25.4, controlHubThread.getHeading());
+        hardware.modules.childModule.module.clearBulkCache();
+        hardware.tickBBs();
+
+        Pose2d robotPose = controlHubThread.robotPose.get();
         Pose2d turretPose = robotPose.plus(new Twist2d(new Vector2d(turretOffset, 0), 0));
         double distToGoal = correctedGoalTargetPose.minus(turretPose.position).norm();
         double autoSpeed = launchSpeedFromDist(distToGoal);
@@ -247,17 +258,20 @@ public class ExpansionHubThread extends ThreadEx {
             hardware.launchDrive.setVelocity(autoSpeed);
         }
 
-        double fieldThetaToGoal = Math.atan2(correctedGoalTargetPose.y - robotPose.position.y, correctedGoalTargetPose.x - robotPose.position.x);
-        double turretTheta = fieldThetaToGoal - (robotPose.heading.toDouble() + Math.PI * 2) % (Math.PI * 2);
+        double fieldThetaToGoal = Math.atan2(correctedGoalTargetPose.y - turretPose.position.y, correctedGoalTargetPose.x - turretPose.position.x);
+        double turretTheta = (fieldThetaToGoal - turretPose.heading.toDouble() + Math.PI * 2) % (Math.PI * 2);
+        if(turretTheta > Math.PI) {
+            turretTheta -= 2 * Math.PI;
+        }
         if(autoLockDebInfo) {
             telemetry.append("Turret tracking: ");
             telemetry.append(turretTracking);
             telemetry.append("\n");
             telemetry.append("Field angle to goal: ");
-            telemetry.append(fieldThetaToGoal);
+            telemetry.append(Math.toDegrees(fieldThetaToGoal));
             telemetry.append("\n");
             telemetry.append("Turret target theta: ");
-            telemetry.append(turretTheta);
+            telemetry.append(Math.toDegrees(turretTheta));
             telemetry.append("\n");
         }
 
@@ -272,12 +286,12 @@ public class ExpansionHubThread extends ThreadEx {
 
             case INTAKE:
                 //If transfer full stop it. If robot full stop intaking and rumble controller
-                if(!hardware.transferMiddleBB.getState() && !hardware.transferEndBB.getState()) {
+                if(hardware.transferMiddleBB.getState() == BeamBreak.State.FULL && hardware.transferEndBB.getState() == BeamBreak.State.FULL) {
                     hardware.transferDrive.setPower(0);
 
-                    if(!hardware.intakeBB.getState()) {
+                    if(hardware.intakeBB.getState() == BeamBreak.State.FULL) {
                         hardware.intakeDrive.setPower(0);
-                        gamepad1.rumble(500);
+                        gamepad1.rumble(200);
                         state = State.STOPPED;
                     }
                 }
@@ -285,18 +299,31 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
 
             case SHOOTING:
-                if(hardware.intakeBB.getState() && hardware.transferMiddleBB.getState()) {
-                    if(hardware.transferEndBB.getState()) {
-                        toState(State.STOPPED);
-                    } else {
-                        hardware.rampServo.setPosition(MainBotHardware.rampLastBallPos);
-                    }
+                //Shooting start time is Double.NaN when not waiting to start the transfer and 1 - NaN = NaN and NaN >= any number = false, so this works
+                double time = timer.seconds();
+                if(time - shootingStartTimeForTransfer >= MainBotHardware.shootTransferOnDelay) {
+                    hardware.transferDrive.setPower(MainBotHardware.transferInPower);
+                    hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+                    shootingStartTimeForTransfer = Double.NaN;
+                }
+
+                if(hardware.intakeBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY && time - shootingStartTimeForRamp >= MainBotHardware.singleShootHighRampDelay) {
+                    hardware.rampServo.setPosition(MainBotHardware.rampLastBallPos);
+                    shootingStartTimeForRamp = Double.NaN;
                 }
                 break;
         }
 
+        telemetry.append("\nState: ");
+        telemetry.append(state);
+        telemetry.append("\nIntake BB: ");
+        telemetry.append(hardware.intakeBB.getState());
+        telemetry.append("\nTransfer Middle BB: ");
+        telemetry.append(hardware.transferMiddleBB.getState());
+        telemetry.append("\nTransfer End BB: ");
+        telemetry.append(hardware.transferEndBB.getState());
+        telemetry.append("\n\n");
 
-        hardware.modules.childModule.module.clearBulkCache();
         hardware.voltageSensor.periodic();
 
         telemetry.append("Launcher Target Speed: ");

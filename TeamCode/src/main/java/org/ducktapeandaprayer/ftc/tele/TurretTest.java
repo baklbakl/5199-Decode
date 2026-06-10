@@ -20,6 +20,8 @@ import java.util.ArrayList;
 
 @TeleOp(name = "Turret Test", group = MainBotConfig.opmodeGroupName)
 public class TurretTest extends FastIterativeOpMode {
+    //public static double targetHeading = MainBotHardware.turretMaxHeading;
+    public static double targetHeading = Math.PI / 2;
     private MainBotHardware hardware = null;
     private ArrayList<VariableWatcher> variableWatchers = new ArrayList<>();
 
@@ -37,9 +39,9 @@ public class TurretTest extends FastIterativeOpMode {
                 if(dpad_down) {
                     hardware.turretToHeading(0);
                 } else if(dpad_left) {
-                    hardware.turretToHeading(MainBotHardware.turretMaxHeading);
+                    hardware.turretToHeading(targetHeading);
                 } else if(dpad_right) {
-                    hardware.turretToHeading(-MainBotHardware.turretMaxHeading);
+                    hardware.turretToHeading(-targetHeading);
                 }
             }));
         } catch (NoSuchFieldException e) {

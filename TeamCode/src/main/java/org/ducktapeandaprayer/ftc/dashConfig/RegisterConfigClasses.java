@@ -12,8 +12,9 @@ import com.acmerobotics.dashboard.message.Message;
 import com.acmerobotics.dashboard.message.MessageDeserializer;
 import com.google.gson.GsonBuilder;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
-import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
+import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
+import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
 import org.ducktapeandaprayer.ftc.tele.LauncherFeedForwardTester;
 import org.ducktapeandaprayer.ftc.tele.LauncherTuner;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ControlHubThread;
@@ -29,12 +30,13 @@ public class RegisterConfigClasses {
     private static final Class<?>[] classesToAdd = {
             MainBotConfig.class,
             SplitAuto.class,
-            RobotImpl.class,
+            RobotImplThread.class,
             Test.class,
             ExpansionHubThread.class,
             ControlHubThread.class,
             LauncherTuner.class,
             LauncherFeedForwardTester.class,
+            BeamBreak.class,
     };
 
 //    private static List<Double> testList = null;

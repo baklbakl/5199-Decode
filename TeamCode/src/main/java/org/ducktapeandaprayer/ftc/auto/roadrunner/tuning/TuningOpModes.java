@@ -44,7 +44,7 @@ public final class TuningOpModes {
 
         DriveViewFactory dvf = hardwareMap -> {
             MainBotHardware hardware = MainBotHardware.getOrCreate(hardwareMap);
-            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0));
+            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0), hardware.voltageSensor::getVoltage);
 
             List<EncoderGroup> encoderGroups = new ArrayList<>();
             List<EncoderRef> parEncs = new ArrayList<>(), perpEncs = new ArrayList<>();
@@ -64,7 +64,7 @@ public final class TuningOpModes {
 
             return new DriveView(
                     DriveType.MECANUM,
-                    MecanumDrive.PARAMS.inPerTick,
+                    1,
                     MecanumDrive.PARAMS.maxWheelVel,
                     MecanumDrive.PARAMS.minProfileAccel,
                     MecanumDrive.PARAMS.maxProfileAccel,

@@ -4,7 +4,6 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
-import org.ducktapeandaprayer.ftc.auto.RobotImpl;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
@@ -53,9 +52,9 @@ public class Test extends FastIterativeOpMode {
      */
     public void start_internal() {
         runtime.reset();
-        hardware.launchDrive.setVelocity(SplitAuto.launchVelocity);
-        RobotImpl robot = new RobotImpl(hardware, this::opModeIsActive);
-        robot.launch(3);
+        //hardware.launchDrive.setVelocity(SplitAuto.launchVelocity);
+        //RobotImpl robot = new RobotImpl(hardware, this::opModeIsActive);
+        //robot.launch(3);
     }
 
     /*

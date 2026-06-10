@@ -13,6 +13,8 @@ import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
 
+import java.util.concurrent.atomic.AtomicReference;
+
 import static java.lang.Math.abs;
 
 public class ControlHubThread extends ThreadEx {
@@ -27,9 +29,7 @@ public class ControlHubThread extends ThreadEx {
     private final MainBotHardware hardware;
     private final ThreadedTele threadedTele;
 
-    private volatile short xMM = 0;
-    private volatile short yMM = 0;
-    private volatile float heading = 0;
+    public final AtomicReference<Pose2d> robotPose = new AtomicReference<>(null);
 
     private void computeSetWheelSpeeds(double forward, double strafe, double turning) {
 
@@ -57,7 +57,7 @@ public class ControlHubThread extends ThreadEx {
 
     private void resetPose(boolean resetHeading) {
         Pose2d correctedStartPose = startPose;
-        if(threadedTele.alliance == Alliance.BLUE) {
+        if(threadedTele.getAlliance() == Alliance.BLUE) {
             correctedStartPose = new Pose2d(new Vector2d(startPose.position.x, -startPose.position.y), startPose.heading);
         }
         float heading;
@@ -66,7 +66,7 @@ public class ControlHubThread extends ThreadEx {
         } else {
             heading = hardware.octoQuad.readLocalizerData().heading_rad;
         }
-        hardware.octoQuad.setLocalizerPose((int) (correctedStartPose.position.x * 25.4), (int) (correctedStartPose.position.y * 25.4), heading);
+        hardware.setOctoQuadPose(correctedStartPose.position.x, correctedStartPose.position.y, heading);
     }
 
     public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, Gamepad gamepad1, OptionDriver optionDriver) {
@@ -99,18 +99,6 @@ public class ControlHubThread extends ThreadEx {
         }
     }
 
-    public float getHeading() {
-        return heading;
-    }
-
-    public short getxMM() {
-        return xMM;
-    }
-
-    public short getyMM() {
-        return yMM;
-    }
-
     @Override
     public void run() {
         resetPose(true);
@@ -118,23 +106,20 @@ public class ControlHubThread extends ThreadEx {
     }
 
     public void tick() {
-        OctoQuad.LocalizerDataBlock block = null;
-        while(block == null || !block.crcOk) {
-            block = hardware.octoQuad.readLocalizerData();
-        }
-        xMM = block.posX_mm;
-        yMM = block.posY_mm;
-        heading = block.heading_rad;
+        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData();
+        Pose2d newPose = MainBotHardware.makeOctoQuadPose(block);
 
         telemetry.append("Octoquad x: ");
-        telemetry.append(xMM / 25.4);
+        telemetry.append(newPose.position.x);
         telemetry.append("\nOctoquad y: ");
-        telemetry.append(yMM/ 25.4);
+        telemetry.append(newPose.position.y);
         telemetry.append("\nOctoquad heading: ");
-        telemetry.append(heading);
+        telemetry.append(newPose.heading.toDouble());
         telemetry.append("\nOctoquad heading vel: ");
         telemetry.append(block.velHeading_radS);
         telemetry.append("\n");
+
+        robotPose.set(newPose);
 
         updateTelemetry();
         hardware.modules.parentModule.module.clearBulkCache();
