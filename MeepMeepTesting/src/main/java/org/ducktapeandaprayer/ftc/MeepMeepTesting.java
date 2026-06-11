@@ -52,16 +52,7 @@ class AroundCornerConstraint implements VelConstraint {
 //   `gfx.color = Color(colorScheme.TRAJECTORY_PATH_COLOR.red, colorScheme.TRAJECTORY_PATH_COLOR.green, colorScheme.TRAJECTORY_PATH_COLOR.blue, 255)`
 
 public class MeepMeepTesting {
-    private static double toServoPos(double heading) {
-        return heading * 77/29 * 15/48 / Math.toRadians(355) + 0.5;
-    }
-
     public static void main(String[] args) {
-        System.out.println(toServoPos(0));
-        System.out.println(toServoPos(Math.toRadians(213)));
-        System.out.println(toServoPos(-Math.PI / 2));
-
-        if(true) return;
         System.setProperty("sun.java2d.opengl", "true");
 
         MeepMeep meepMeep = new MeepMeep(800);
@@ -71,23 +62,10 @@ public class MeepMeepTesting {
                 .setConstraints(45, 50, 3, 3, 12.5)
                 .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
                 .build();
-        RoadRunnerBotEntity botTwo = new DefaultBotBuilder(meepMeep)
-                // Required: Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                .setConstraints(45, 55, 3, 3, 12.5)
-                .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
-                .build();
-        RoadRunnerBotEntity botGR = new DefaultBotBuilder(meepMeep)
-                // Required: Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                .setConstraints(45, 55, 3, 3, 12.5)
-                .setDimensions(MainBotConfig.robotChassisWidth, MainBotConfig.robotChassisLength)
-                .build();
-
-
-
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
         Alliance alliance = Alliance.RED;
-        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.AUDIENCE, alliance, true, 3, true, GatePush.AFTER_ONE);
+        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, true, 3, true, GatePush.AFTER_ONE);
 
         Action action = builder.build();
         bot.runAction(
@@ -98,10 +76,7 @@ public class MeepMeepTesting {
 //                        .splineToConstantHeading(new Vector2d(10, 10), Math.toRadians(180))
 //                        .splineToConstantHeading(new Vector2d(-30, 10), Math.toRadians(180))
 //                        .build()
-
                 action
-
-
         );
 
         meepMeep.setBackground(MeepMeep.Background.FIELD_DECODE_JUICE_DARK)

@@ -38,6 +38,10 @@ public abstract class ThreadEx extends Thread {
         });
     }
 
+    public String optionDriverUpdateCallback() {
+        return null;
+    }
+
     public void softStop() {
         stop.set(true);
     }

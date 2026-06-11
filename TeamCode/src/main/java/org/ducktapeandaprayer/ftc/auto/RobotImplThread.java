@@ -1,29 +1,32 @@
 package org.ducktapeandaprayer.ftc.auto;
 
 import com.qualcomm.hardware.lynx.LynxModule;
-import com.qualcomm.robotcore.util.ElapsedTime;
-import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
+import com.qualcomm.robotcore.util.RobotLog;
+import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
+import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 
 import java.util.concurrent.atomic.AtomicReference;
 
 public class RobotImplThread extends ThreadEx implements RobotInterface {
-    public static int speedDipThresh = 200;
-
     private final MainBotHardware hardware;
-    private final ElapsedTime timer = new ElapsedTime();
-    private double shootingStartTime = Double.NaN;
+    private final AutoShoot autoShoot;
+    private final AutoIntake autoIntake;
 
     private volatile boolean requestLaunchingStart = false;
     private volatile boolean launching = false;
     private final AtomicReference<Double> requestLauncherSpeed = new AtomicReference<>(Double.NaN);
-    private final AtomicReference<Double> requestIntakeSpeed = new AtomicReference<>(Double.NaN);
+    private final AtomicReference<Boolean> requestIntake = new AtomicReference<>(null);
     private final AtomicReference<Double> voltage = new AtomicReference<>(Double.NaN);
+
+    private boolean intaking = false;
 
     public RobotImplThread(MainBotHardware hardware) {
         this.hardware = hardware;
         this.hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        this.autoShoot = new AutoShoot(hardware);
+        this.autoIntake = new AutoIntake(hardware);
     }
 
     @Override
@@ -43,41 +46,23 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
                 throw new RuntimeException("Can't start lauching while launching, but stupid because we didn't catch it outside this thread");
             }
 
-            shootingStartTime = timer.time();
-            hardware.rampServo.setPosition(MainBotHardware.rampShootPos);
-            hardware.transferDrive.setPower(0);
-            hardware.intakeDrive.setPower(0);
+            autoShoot.startShooting();
             launching = true;
             requestLaunchingStart = false;
             //ADD: Check to make sure we have some artifacts before starting launching. Also add a launching timeout
         }
 
         if(launching) {
-            if(timer.seconds() - shootingStartTime >= MainBotHardware.shootTransferOnDelay) {
-                hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-                hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
-                shootingStartTime = Double.NaN;
+            launching = !autoShoot.tick();
+            //We just finished
+            if(!launching) {
+                autoShoot.stopShooting();
             }
 
-            if(hardware.intakeBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY) {
-                hardware.rampServo.setPosition(MainBotHardware.rampLastBallPos);
-            }
-
-            //Deal with dumb rounding
-            if(Math.abs(hardware.rampServo.getPosition() - MainBotHardware.rampLastBallPos) < 0.01 && hardware.launchDrive.getTargetVelocity() - hardware.launchDrive.getVelocity() > speedDipThresh) {
-                launching = false;
-                hardware.transferDrive.setPower(0);
-                hardware.intakeDrive.setPower(0);
-                hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
-            }
         //We must be intaking or idling in which case then we should stop the intake and transfer when they are full
-        } else if(hardware.transferMiddleBB.getState() == BeamBreak.State.FULL && hardware.transferEndBB.getState() == BeamBreak.State.FULL) {
-            hardware.transferDrive.setPower(0);
-
-            if(hardware.intakeBB.getState() == BeamBreak.State.FULL) {
-                hardware.intakeDrive.setPower(0);
-            }
-
+        } else if(intaking) {
+            intaking = !autoIntake.tick();
+            //No cleanup needed here. When intaking is done, everything is stopped
         }
 
         synchronized (requestLauncherSpeed) {
@@ -88,12 +73,18 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
             }
         }
 
-        synchronized (requestIntakeSpeed) {
-            double speed = requestIntakeSpeed.get();
-            if(!Double.isNaN(speed)) {
-                hardware.intakeDrive.setPower(speed);
-                hardware.transferDrive.setPower(speed);
-                requestIntakeSpeed.set(Double.NaN);
+        synchronized (requestIntake) {
+            Boolean request = requestIntake.get();
+            if(request != null) {
+                if(request) {
+                    autoIntake.startIntaking();
+                    intaking = true;
+                } else if(intaking) {
+                    hardware.restIntakeTransfer();
+                    intaking = false;
+                }
+
+                requestIntake.set(null);
             }
         }
     }
@@ -104,17 +95,17 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
             throw new RuntimeException("Can't start lauching while launching");
         }
         requestLaunchingStart = true;
-
     }
 
     @Override
     public boolean launching() {
-        return launching;
+        return launching || requestLaunchingStart;
     }
 
     @Override
     public void startLauncher() {
         requestLauncherSpeed.set(MainBotHardware.launcherPresetVelocity);
+        RobotLog.ii("RobotThreadImpl", "Launcher request speed: " + requestLauncherSpeed.get());
     }
 
     @Override
@@ -127,7 +118,7 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
         if(launching) {
             throw new RuntimeException("Can't mess with intake while launching");
         }
-        requestIntakeSpeed.set(MainBotHardware.intakeInPower);
+        requestIntake.set(true);
     }
 
     @Override
@@ -135,7 +126,7 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
         if(launching) {
             throw new RuntimeException("Can't mess with intake while launching");
         }
-        requestIntakeSpeed.set(0.0);
+        requestIntake.set(false);
     }
 
     public double getVoltage() {

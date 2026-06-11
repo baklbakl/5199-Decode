@@ -8,6 +8,8 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.apache.commons.lang3.tuple.Pair;
+import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
+import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.TwoOfThree;
@@ -41,6 +43,8 @@ public class ExpansionHubThread extends ThreadEx {
     private final Gamepad gamepad1;
     private final ThreadedTele threadedTele;
     private final ControlHubThread controlHubThread;
+    private final AutoShoot autoShoot;
+    private final AutoIntake autoIntake;
 
     private Vector2d correctedGoalTargetPose;
 
@@ -52,9 +56,6 @@ public class ExpansionHubThread extends ThreadEx {
     private final List<LauncherControlMethod> launcherControlMethodElements = new ArrayList<>();
     private LauncherControlMethod launcherControlMethod;
     private boolean turretTracking = true;
-    private final ElapsedTime timer = new ElapsedTime();
-    private double shootingStartTimeForTransfer = Double.NaN;
-    private double shootingStartTimeForRamp = Double.NaN;
 
     private enum State {
         STOPPED,
@@ -63,18 +64,14 @@ public class ExpansionHubThread extends ThreadEx {
         SHOOTING,
     }
 
-    private void toState(State state) {
-        this.state = state;
-        switch (state) {
+    private void toState(State newState) {
+        if(newState == state) return;
+        switch (newState) {
             case STOPPED:
-                hardware.transferDrive.setPower(0);
-                hardware.intakeDrive.setPower(0);
-                hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
+                hardware.restIntakeTransfer();
                 break;
             case INTAKE:
-                hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-                hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
-                hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
+                autoIntake.startIntaking();
                 break;
             case OUTTAKE:
                 hardware.transferDrive.setPower(-MainBotHardware.transferInPower);
@@ -82,13 +79,10 @@ public class ExpansionHubThread extends ThreadEx {
                 hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
                 break;
             case SHOOTING:
-                //hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-                //hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
-                shootingStartTimeForTransfer = timer.time();
-                shootingStartTimeForRamp = shootingStartTimeForTransfer;
-                hardware.rampServo.setPosition(MainBotHardware.rampShootPos);
+                autoShoot.startShooting();
                 break;
         }
+        this.state = newState;
     }
 
     private State state = State.STOPPED;
@@ -140,16 +134,20 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
 
-    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread, Gamepad gamepad1, OptionDriver optionDriver) {
+    public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread) {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
         this.controlHubThread = controlHubThread;
-        this.gamepad1 = gamepad1;
+        this.gamepad1 = threadedTele.gamepad1;
+        this.autoShoot = new AutoShoot(hardware);
+        this.autoIntake = new AutoIntake(hardware);
 
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         launcherControlMethodElements.addAll(EnumSet.allOf(LauncherControlMethod.class));
         launcherControlMethod = LauncherControlMethod.ODOMETRY;
+
+        OptionDriver optionDriver = threadedTele.getOptionDriver();
 
         try {
             optionDriver.add(new BooleanOption("Auto lock debug info", "dpad_right", gamepad1, this.getClass().getField("autoLockDebInfo"), this));
@@ -229,7 +227,6 @@ public class ExpansionHubThread extends ThreadEx {
             correctedGoalTargetPose = goalTargetPos;
         }
 
-        timer.reset();
         startOdoLauncher = true;
 
         super.run();
@@ -240,44 +237,49 @@ public class ExpansionHubThread extends ThreadEx {
         hardware.tickBBs();
 
         Pose2d robotPose = controlHubThread.robotPose.get();
-        Pose2d turretPose = robotPose.plus(new Twist2d(new Vector2d(turretOffset, 0), 0));
-        double distToGoal = correctedGoalTargetPose.minus(turretPose.position).norm();
-        double autoSpeed = launchSpeedFromDist(distToGoal);
+        if(robotPose != null) {
+            Pose2d turretPose = robotPose.plus(new Twist2d(new Vector2d(turretOffset, 0), 0));
+            double distToGoal = correctedGoalTargetPose.minus(turretPose.position).norm();
+            double autoSpeed = launchSpeedFromDist(distToGoal);
 
-        if(autoLockDebInfo) {
-            telemetry.append("Dist to goal: ");
-            telemetry.append(distToGoal);
-            telemetry.append("\n");
-            telemetry.append("Launcher Auto Speed Target: ");
-            telemetry.append(autoSpeed);
-            telemetry.append("\n");
+            if(autoLockDebInfo) {
+                telemetry.append("Dist to goal: ");
+                telemetry.append(distToGoal);
+                telemetry.append("\n");
+                telemetry.append("Launcher Auto Speed Target: ");
+                telemetry.append(autoSpeed);
+                telemetry.append("\n");
+            }
+
+            if(launcherControlMethod == LauncherControlMethod.ODOMETRY && (hardware.launchDrive.getTargetVelocity() != 0) || startOdoLauncher) {
+                startOdoLauncher = false;
+                hardware.launchDrive.setVelocity(autoSpeed);
+            }
+
+            double fieldThetaToGoal = Math.atan2(correctedGoalTargetPose.y - turretPose.position.y, correctedGoalTargetPose.x - turretPose.position.x);
+            double turretTheta = (fieldThetaToGoal - turretPose.heading.toDouble() + Math.PI * 2) % (Math.PI * 2);
+            if(turretTheta > Math.PI) {
+                turretTheta -= 2 * Math.PI;
+            }
+            if(autoLockDebInfo) {
+                telemetry.append("Turret tracking: ");
+                telemetry.append(turretTracking);
+                telemetry.append("\n");
+                telemetry.append("Field angle to goal: ");
+                telemetry.append(Math.toDegrees(fieldThetaToGoal));
+                telemetry.append("\n");
+                telemetry.append("Turret target theta: ");
+                telemetry.append(Math.toDegrees(turretTheta));
+                telemetry.append("\n");
+            }
+
+            if(turretTracking) {
+                hardware.turretToHeading(turretTheta);
+            }
         }
 
-        if(launcherControlMethod == LauncherControlMethod.ODOMETRY && (hardware.launchDrive.getTargetVelocity() != 0) || startOdoLauncher) {
-            startOdoLauncher = false;
-            hardware.launchDrive.setVelocity(autoSpeed);
-        }
 
-        double fieldThetaToGoal = Math.atan2(correctedGoalTargetPose.y - turretPose.position.y, correctedGoalTargetPose.x - turretPose.position.x);
-        double turretTheta = (fieldThetaToGoal - turretPose.heading.toDouble() + Math.PI * 2) % (Math.PI * 2);
-        if(turretTheta > Math.PI) {
-            turretTheta -= 2 * Math.PI;
-        }
-        if(autoLockDebInfo) {
-            telemetry.append("Turret tracking: ");
-            telemetry.append(turretTracking);
-            telemetry.append("\n");
-            telemetry.append("Field angle to goal: ");
-            telemetry.append(Math.toDegrees(fieldThetaToGoal));
-            telemetry.append("\n");
-            telemetry.append("Turret target theta: ");
-            telemetry.append(Math.toDegrees(turretTheta));
-            telemetry.append("\n");
-        }
-
-        if(turretTracking) {
-            hardware.turretToHeading(turretTheta);
-        }
+        Boolean autoShootState = null;
 
         switch(state) {
             case STOPPED:
@@ -285,37 +287,21 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
 
             case INTAKE:
-                //If transfer full stop it. If robot full stop intaking and rumble controller
-                if(hardware.transferMiddleBB.getState() == BeamBreak.State.FULL && hardware.transferEndBB.getState() == BeamBreak.State.FULL) {
-                    hardware.transferDrive.setPower(0);
-
-                    if(hardware.intakeBB.getState() == BeamBreak.State.FULL) {
-                        hardware.intakeDrive.setPower(0);
-                        gamepad1.rumble(200);
-                        state = State.STOPPED;
-                    }
+                if(autoIntake.tick()) {
+                    gamepad1.rumble(200);
+                    state = State.STOPPED;
                 }
-
                 break;
 
             case SHOOTING:
-                //Shooting start time is Double.NaN when not waiting to start the transfer and 1 - NaN = NaN and NaN >= any number = false, so this works
-                double time = timer.seconds();
-                if(time - shootingStartTimeForTransfer >= MainBotHardware.shootTransferOnDelay) {
-                    hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-                    hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
-                    shootingStartTimeForTransfer = Double.NaN;
-                }
-
-                if(hardware.intakeBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY && time - shootingStartTimeForRamp >= MainBotHardware.singleShootHighRampDelay) {
-                    hardware.rampServo.setPosition(MainBotHardware.rampLastBallPos);
-                    shootingStartTimeForRamp = Double.NaN;
-                }
+                autoShootState = autoShoot.tick();
                 break;
         }
 
         telemetry.append("\nState: ");
         telemetry.append(state);
+        telemetry.append("\nAutoShootState: ");
+        telemetry.append(autoShootState);
         telemetry.append("\nIntake BB: ");
         telemetry.append(hardware.intakeBB.getState());
         telemetry.append("\nTransfer Middle BB: ");

@@ -36,9 +36,13 @@ public final class ThreeDeadWheelLocalizer implements Localizer {
 
 
     public ThreeDeadWheelLocalizer(MainBotHardware hardware, double inPerTick, Pose2d initialPose) {
-        par0 = hardware.parallelEncoder0;
-        par1 = hardware.parallelEncoder1;
-        perp = hardware.perpendicularEncoder;
+        //par0 = hardware.parallelEncoder0;
+        //par1 = hardware.parallelEncoder1;
+        //perp = hardware.perpendicularEncoder;
+
+        par0 = null;
+        par1 = null;
+        perp = null;
 
         this.inPerTick = inPerTick;
 

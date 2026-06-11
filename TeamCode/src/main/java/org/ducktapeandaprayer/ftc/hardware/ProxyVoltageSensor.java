@@ -55,7 +55,11 @@ public class ProxyVoltageSensor implements VoltageSensor {
 
     @Override
     public double getVoltage() {
-        if(timer.seconds() > fallbackVoltageSensorTimeout) {
+        double time;
+        synchronized (timer) {
+            time = timer.seconds();
+        }
+        if(time > fallbackVoltageSensorTimeout) {
             //RobotLog.ii("ProxyVoltageSensor","Read Fallback");
             return fallbackVoltageSensor.getVoltage();
         } else {
@@ -71,7 +75,9 @@ public class ProxyVoltageSensor implements VoltageSensor {
 
     public void periodic() {
         //RobotLog.ii("ProxyVoltageSensor","Tick");
-        timer.reset();
+        synchronized (timer) {
+            timer.reset();
+        }
     }
 
 }

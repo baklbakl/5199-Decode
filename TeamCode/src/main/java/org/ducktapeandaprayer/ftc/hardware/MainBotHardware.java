@@ -37,9 +37,12 @@ public class MainBotHardware {
     public static double launcherPresetVelocity = 2120;
     public static double resistorMultiplier = 3.38;
     public static double turretMaxHeading = 2.3;
-    public static double turretCenter = 0.49;
+    public static double turretCenter = 0.495;
     public static double shootTransferOnDelay = 0.3;
     public static double singleShootHighRampDelay = 0.5;
+    //This number comes from the pinpoint driver
+    public static float encoderTicksPerMM = 13.26291192f;
+    public static double axonRange = 320;
 
 
     //MUST BE IN ORDER OF DISTANCE!!!!!
@@ -59,9 +62,6 @@ public class MainBotHardware {
     // Options
     //
 
-    //Multiply by this to convert from radians to servo pos
-    public static final double turretRatio = 77.0/29 * 15/48 / Math.toRadians(355);
-
     //
     // Hardware ports
     //
@@ -80,9 +80,8 @@ public class MainBotHardware {
     public static final int launchDriveID = 0;
     public static final int moverDriveID = 2;
 
-    public static final int paraEncoder0ID = 0;
-    public static final int paraEncoder1ID = 3;
-    public static final int perpEncoderID = 1;
+    public static final int xEncoderIndex = 0;
+    public static final int yEncoderIndex = 1;
 
     public static final int turretServoID = 0;
     public static final int kickerServoID = 1;
@@ -97,13 +96,48 @@ public class MainBotHardware {
     //
     // Actual hardware
     //
+    private Container container = null;
+    public Container getContainer() {
+        return container;
+    }
+
+    public class Container {
+        public final DcMotorExEx leftFrontDrive;
+        public final DcMotorExEx rightFrontDrive;
+        public final DcMotorExEx leftRearDrive;
+        public final DcMotorExEx rightRearDrive;
+
+        public final DcMotorExEx intakeDrive;
+        public final DcMotorExEx launchDrive;
+        public final DcMotorExEx transferDrive;
+
+        public final Servo rampServo;
+        public final Servo turretServo;
+
+        public final ProxyVoltageSensor voltageSensor;
+
+        public final LazyImu lazyImu;
+        public final OctoQuad octoQuad;
+
+        public final BeamBreak intakeBB;
+        public final BeamBreak transferMiddleBB;
+        //Under shooter
+        public final BeamBreak transferEndBB;
+
+        public final HardwareMap hardwareMap;
+        public final LynxModuleInitializer modules;
+
+        private Container(HardwareMap hardwareMap, LynxModuleInitializer modules, OctoQuad octoQuad) {
+            this.octoQuad = octoQuad;
+            this.hardwareMap = hardwareMap;
+            this.modules = modules;
+        }
+    }
 
     public final DcMotorExEx leftFrontDrive;
     public final DcMotorExEx rightFrontDrive;
     public final DcMotorExEx leftRearDrive;
     public final DcMotorExEx rightRearDrive;
-
-    public final Encoder parallelEncoder0, parallelEncoder1, perpendicularEncoder;
 
     public final DcMotorExEx intakeDrive;
     public final DcMotorExEx launchDrive;
@@ -129,8 +163,10 @@ public class MainBotHardware {
         if(Math.abs(heading) > turretMaxHeading) {
             heading = Math.signum(heading) * turretMaxHeading;
         }
+        //Multiply by this to convert from radians to servo pos
+        double turretRatio = 77.0/29 * 15/48 / Math.toRadians(axonRange);
         double pos = turretRatio * heading + turretCenter;
-        RobotLog.ii("MainBotHardware", "Turret: " + pos);
+        //RobotLog.ii("MainBotHardware", "Turret: " + pos);
         turretServo.setPosition(pos);
     }
 
@@ -168,13 +204,15 @@ public class MainBotHardware {
         synch.setUserConfiguredName("octoquad");
         octoQuad = new OctoQuadImpl(synch, true);
         if(resetOctoQuad) {
+            octoQuad.resetEverything();
+            octoQuad.setCachingMode(OctoQuad.CachingMode.MANUAL);
+            octoQuad.setAllVelocitySampleIntervals(10);
             octoQuad.setSingleEncoderDirection(1, OctoQuad.EncoderDirection.REVERSE);
             octoQuad.setAllLocalizerParameters(
-                    0,
-                    1,
-                    //This number comes from the pinpoint driver
-                    13.26291192f,
-                    13.26291192f,
+                    xEncoderIndex,
+                    yEncoderIndex,
+                    encoderTicksPerMM,
+                    encoderTicksPerMM,
                     15,
                     -190,
                     1.0156472633360971f,
@@ -224,45 +262,13 @@ public class MainBotHardware {
         rampServo = child.createServo(kickerServoID);
         rampServo.setPosition(MainBotHardware.rampDownPos);
 
-        parallelEncoder0 = parent.createEncoder(paraEncoder0ID);
-        parallelEncoder1 = parent.createEncoder(paraEncoder1ID);
-        perpendicularEncoder = parent.createEncoder(perpEncoderID);
-
-        perpendicularEncoder.setDirection(DcMotorSimple.Direction.REVERSE);
-        parallelEncoder0.setDirection(DcMotorSimple.Direction.FORWARD);
-        parallelEncoder1.setDirection(DcMotorSimple.Direction.REVERSE);
-
         intakeBB = new BeamBreak(child.createDigitalChannel(intakeBBID));
         transferMiddleBB = new BeamBreak(child.createDigitalChannel(transferMiddleBBID));
         transferEndBB = new BeamBreak(child.createDigitalChannel(transferEndBBID));
 
         //This is kind of jank, but it works.
-        lazyImu = new LazyImu() {
-            private IMU imu = null;
-
-            @NotNull
-            @Override
-            public IMU get() {
-                LynxModuleImuType imuType = parent.module.getImuType();
-                //ADD: Support for other IMU Type
-                if(imuType == LynxModuleImuType.BNO055) {
-                    if(imu == null) {
-                        LynxI2cDeviceSynch synch = LynxFirmwareVersionManager.createLynxI2cDeviceSynch(hardwareMap.appContext, parent.module, 0);
-                        synch.setUserConfiguredName("IMU");
-                        imu = new LynxEmbeddedBNO055IMUNew(synch, true);
-
-                        if(imu.initialize(new BNO055IMUNew.Parameters(new RevHubOrientationOnRobot(logoFacingDirection, usbFacingDirection)))) {
-                            imu.resetYaw();
-                        } else {
-                            throw new RuntimeException("Failed to init IMU");
-                        }
-                    }
-                } else {
-                    throw new RuntimeException("Unacceptable type of IMU in parent module: \"" + imuType + "\". Only \"" + LynxModuleImuType.BNO055 + "\" is acceptable");
-                }
-
-                return imu;
-            }
+        lazyImu = () -> {
+            throw new RuntimeException("We don't support the lazy IMU");
         };
 
 
@@ -311,5 +317,11 @@ public class MainBotHardware {
         intakeBB.tick();
         transferMiddleBB.tick();
         transferEndBB.tick();
+    }
+
+    public void restIntakeTransfer() {
+        transferDrive.setPower(0);
+        intakeDrive.setPower(0);
+        rampServo.setPosition(MainBotHardware.rampDownPos);
     }
 }

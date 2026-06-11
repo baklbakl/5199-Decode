@@ -11,7 +11,7 @@ import java.util.Map;
 public class ThreadedOpMode extends FastIterativeOpMode {
     private final Map<String, ThreadEx> threads = new HashMap<>();
 
-    public Map<String, ThreadEx> getThreads() {
+    protected Map<String, ThreadEx> getThreads() {
         return threads;
     }
 
@@ -30,7 +30,7 @@ public class ThreadedOpMode extends FastIterativeOpMode {
         return alliance;
     }
 
-    public void setAlliance(Alliance alliance) {
+    protected void setAlliance(Alliance alliance) {
         this.alliance = alliance;
     }
 
@@ -47,11 +47,6 @@ public class ThreadedOpMode extends FastIterativeOpMode {
         threads.clear();
     }
 
-    //Returns true if the telemetry was modified
-    public String optionDriverUpdateCallback() {
-        return null;
-    }
-
     @Override
     protected void init_loop_internal() {
         String out = optionDriver.tick();
@@ -59,10 +54,18 @@ public class ThreadedOpMode extends FastIterativeOpMode {
             telemetry.addLine(out);
             telemetry.update();
 
-            String telem = optionDriverUpdateCallback();
-            if(telem != null) {
+            StringBuilder sb = new StringBuilder();
+            for(ThreadEx thread : threads.values()) {
+                String message = thread.optionDriverUpdateCallback();
+                if(message != null) {
+                    sb.append(message);
+                }
+            }
+
+            String threadTelemCompiled = sb.toString();
+            if(!threadTelemCompiled.isEmpty()) {
                 telemetry.addLine(out);
-                telemetry.addLine(telem);
+                telemetry.addLine(threadTelemCompiled);
                 telemetry.update();
             }
         }

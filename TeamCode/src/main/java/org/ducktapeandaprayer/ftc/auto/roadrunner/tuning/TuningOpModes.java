@@ -9,6 +9,8 @@ import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeManager;
 import com.qualcomm.robotcore.eventloop.opmode.OpModeRegistrar;
 
+import org.ducktapeandaprayer.ftc.auto.roadrunner.OctoQuadEncoderGroup;
+import org.ducktapeandaprayer.ftc.auto.roadrunner.OctoQuadLocalizer;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.firstinspires.ftc.robotcore.internal.opmode.OpModeMeta;
 import org.ducktapeandaprayer.ftc.auto.roadrunner.MecanumDrive;
@@ -48,23 +50,21 @@ public final class TuningOpModes {
 
             List<EncoderGroup> encoderGroups = new ArrayList<>();
             List<EncoderRef> parEncs = new ArrayList<>(), perpEncs = new ArrayList<>();
-            if (!(md.localizer instanceof ThreeDeadWheelLocalizer)) {
+            if (!(md.localizer instanceof OctoQuadLocalizer)) {
                 throw new RuntimeException("unknown localizer: " + md.localizer.getClass().getName());
             }
 
-            ThreeDeadWheelLocalizer dl = (ThreeDeadWheelLocalizer) md.localizer;
+            OctoQuadLocalizer dl = (OctoQuadLocalizer) md.localizer;
 
-            encoderGroups.add(new LynxQuadratureEncoderGroup(
-                    Arrays.asList(hardware.modules.parentModule.module, hardware.modules.childModule.module),
-                    Arrays.asList(dl.par0, dl.par1, dl.perp)
+            encoderGroups.add(new OctoQuadEncoderGroup(
+                   hardware.octoQuad, MainBotHardware.xEncoderIndex, MainBotHardware.yEncoderIndex
             ));
             parEncs.add(new EncoderRef(0, 0));
-            parEncs.add(new EncoderRef(0, 1));
-            perpEncs.add(new EncoderRef(0, 2));
+            perpEncs.add(new EncoderRef(0, 1));
 
             return new DriveView(
                     DriveType.MECANUM,
-                    1,
+                    1 / (MainBotHardware.encoderTicksPerMM * 25.4),
                     MecanumDrive.PARAMS.maxWheelVel,
                     MecanumDrive.PARAMS.minProfileAccel,
                     MecanumDrive.PARAMS.maxProfileAccel,

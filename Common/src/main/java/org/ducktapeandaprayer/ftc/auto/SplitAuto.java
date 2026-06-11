@@ -1,13 +1,11 @@
 package org.ducktapeandaprayer.ftc.auto;
 
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.*;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.GatePush;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
-import org.jetbrains.annotations.NotNull;
 
 import java.lang.Math;
 import java.lang.reflect.Field;
@@ -26,17 +24,14 @@ public class SplitAuto {
     public static double intakeSpeed = 10;
     public static double intakeStartY = 30;
     public static double intakeLineUpY = 28;
-    public static double intakeEndY = 43;
-    public static double gateY = 52;
+    public static double intakeEndY = 45;
+    public static double gateY = 56;
     public static double gateOneX = -4.5;
-    public static double gateTwoX = 3;
+    public static double gateTwoX = 6;
     public static double gatePushWait = 0.5;
-    public static double[] spikeXs = new double[] {-10, 10, 34};
+    public static double[] spikeXs = new double[] {10, -10, 38};
     public static double goalParkX = -63;
     public static double goalParkY = 7;
-
-    public static double backLaunchPosHeading = 158;
-
 
     private final Function<Pose2d, TrajectoryActionBuilder> createPathBuilder;
     private final RobotInterface robot;
@@ -55,7 +50,7 @@ public class SplitAuto {
 
         switch (startPos) {
             case GOAL:
-                autoStartPosition = new Pose2d(-71 + 2.5 + MainBotConfig.robotChassisLength/2, 71 - 24 - MainBotConfig.robotChassisWidth / 2, Math.toRadians(180));
+                autoStartPosition = new Pose2d(-71 + 13, 71 - 31, Math.toRadians(180));
                 break;
             case CLASSIFIER:
                 autoStartPosition = new Pose2d(-71 + 20 + MainBotConfig.robotChassisWidth/2, 71 - 7.5 - MainBotConfig.robotChassisLength / 2, Math.toRadians(90));
@@ -67,7 +62,7 @@ public class SplitAuto {
                 throw new RuntimeException("Incomplete startPos switch");
         }
 
-        TrajectoryActionBuilder pathBuilder = null;
+        TrajectoryActionBuilder pathBuilder;
 
         if(alliance == Alliance.BLUE) {
             pathBuilder = createPathBuilder.apply(
@@ -81,11 +76,7 @@ public class SplitAuto {
                             )
                     ).value()
             );
-        } else if(alliance == Alliance.RED) {
-            pathBuilder = createPathBuilder.apply(autoStartPosition);
-        }
 
-        if(alliance == Alliance.BLUE) {
             try {
                 Field beginEndVelField = pathBuilder.getClass().getDeclaredField("beginEndVel");
                 beginEndVelField.setAccessible(true);
@@ -104,6 +95,10 @@ public class SplitAuto {
             } catch (IllegalAccessException | NoSuchFieldException e) {
                 throw new RuntimeException(e);
             }
+        } else if(alliance == Alliance.RED) {
+            pathBuilder = createPathBuilder.apply(autoStartPosition);
+        } else {
+            throw new RuntimeException("Screw you intellij");
         }
 
         if(delay == Delay.FIVE) {
@@ -119,7 +114,7 @@ public class SplitAuto {
                 Pose2d firstLaunchPos = collectCount == 0 ? launchPosEnd : launchPos;
 
                 pathBuilder = pathBuilder
-                        .stopAndAdd(() -> robot.startLauncher())
+                        .stopAndAdd(robot::startLauncher)
                         .setReversed(true)
                         //heading.real = cos(theta) and heading.imag = sin(theta). Control click on heading for a good comment with more info
                         .splineTo(firstLaunchPos.position.plus(new Vector2d(firstLaunchPos.heading.real * launchLineUpDist, firstLaunchPos.heading.imag * launchLineUpDist)), firstLaunchPos.heading.plus(Math.PI))
@@ -145,12 +140,16 @@ public class SplitAuto {
                             || (count == 1 && (gate == GatePush.AFTER_TWO || gate == GatePush.AFTER_BOTH))
                     ) {
                         pathBuilder = pathBuilder
-                                .splineToConstantHeading(new Vector2d(count == 0 ? gateOneX : gateTwoX, gateY), Math.toRadians(90))
+                                .splineToConstantHeading(new Vector2d(count == 0 ? gateTwoX : gateOneX, gateY), Math.toRadians(90))
                                 .waitSeconds(gatePushWait);
+                        if(count == 0) {
+                            pathBuilder = pathBuilder
+                                    .setReversed(true)
+                                    .splineToSplineHeading(new Pose2d(gateTwoX, intakeEndY, Math.toRadians(90)), Math.toRadians(270));
+                        }
                     }
 
                     pathBuilder = pathBuilder
-
                             .setReversed(true);
 
                     if(count == (collectCount - 1)) {
@@ -166,7 +165,7 @@ public class SplitAuto {
                 }
             }
 
-            pathBuilder = pathBuilder.stopAndAdd(() -> robot.stopLauncher());
+            pathBuilder = pathBuilder.stopAndAdd(robot::stopLauncher);
         }
 
         if(park) {

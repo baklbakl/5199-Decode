@@ -69,27 +69,26 @@ public class ControlHubThread extends ThreadEx {
         hardware.setOctoQuadPose(correctedStartPose.position.x, correctedStartPose.position.y, heading);
     }
 
-    public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, Gamepad gamepad1, OptionDriver optionDriver) {
+    public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele) {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
         hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
 
         try {
-            //ADD: Relocalize in corner button
             //Movement
-            super.variablesWatched.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
+            super.variablesWatched.add(new TripleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
                     (Float left_stick_x_f, Float left_stick_y_f, Float right_stick_x) -> {
                         computeSetWheelSpeeds(-left_stick_y_f, left_stick_x_f, right_stick_x);
                     }
             ));
 
-            super.variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("options"), Boolean::equals, (Boolean options) -> {
+            super.variablesWatched.add(new SingleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getField("options"), Boolean::equals, (Boolean options) -> {
                 if(options) {
                     resetPose(false);
                 }
             }));
 
-            super.variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("share"), Boolean::equals, (Boolean share) -> {
+            super.variablesWatched.add(new SingleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getField("share"), Boolean::equals, (Boolean share) -> {
                 if(share) {
                     resetPose(true);
                 }

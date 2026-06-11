@@ -41,38 +41,42 @@ import java.util.function.Supplier;
 public final class MecanumDrive {
     public static class Params {
         public double lateralMultiplier = 1.24;
-        public double trackWidth = 13.65;
+        public double trackWidth = 13;
 
         // feedforward parameters (in tick units)
         //ADD: different feedforwards for strafing and 45 degrees
         public double kS = 0.8;
 //        public double kSForward = 1;
 //        public double kSStrafe = 2;
-        public double kV = 0.00054;
+        public double kV = 0.115;
 //        public double kVForward = 0.00056;
 //        public double kVStrafe = 0.00064;
-        public double kASpeedUp = 0.00012;
+        public double kASpeedUp = 0.033;
 //        public double kASpeedUpStrafe = 0.00012;
 //        public double kASpeedUpForward = 0.000075;
-        public double kASlowDown = 0.0002;
+        public double kASlowDown = 0.06;
 //        public double kASlowDownStrafe = 0.00013;
 //        public double kASlowDownForward = 0.00033;
 
         // path profile parameters (in inches)
-        //Max wheel vel is 55. This means 55 in / sec for feedforward and 50 in / sec for strafe ish
+        //Forward: 85, 110, -110
+        //Strafe: 60, 100, -100
         public double maxWheelVel = 50;
         //These probably could be 65, but they are 60 to play it safe
         public double minProfileAccel = -45;
         public double maxProfileAccel = 45;
 
+        //Robot can do 8, 8
         // turn profile parameters (in radians)
         public double maxAngVel = 3; // shared with path
         public double maxAngAccel = 3;
 
+
+
         // path controller gains
         public double axialGain = 3;
-        public double lateralGain = 10;
-        public double headingGain = 4.5; // shared with turn
+        public double lateralGain = 6;
+        public double headingGain = 6; // shared with turn
 
         public double axialVelGain = 0;
         public double lateralVelGain = 0.0;
