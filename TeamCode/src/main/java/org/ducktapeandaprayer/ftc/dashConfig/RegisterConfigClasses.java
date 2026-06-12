@@ -14,6 +14,7 @@ import com.google.gson.GsonBuilder;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
+import org.ducktapeandaprayer.ftc.auto.pidtopoint.Follower;
 import org.ducktapeandaprayer.ftc.tele.Test;
 import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
@@ -32,6 +33,7 @@ public class RegisterConfigClasses {
             SplitAuto.class,
             AutoShoot.class,
             Test.class,
+            Follower.class,
             ExpansionHubThread.class,
             ControlHubThread.class,
             LauncherTuner.class,

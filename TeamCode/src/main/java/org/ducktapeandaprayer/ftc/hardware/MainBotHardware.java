@@ -154,6 +154,11 @@ public class MainBotHardware {
             leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
             rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
 
+            container.leftFrontDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            container.rightFrontDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            container.leftRearDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            container.rightRearDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
             intakeDrive = child.createDcMotor(intakeDriveID);
             intakeDrive.setDirection(DcMotorSimple.Direction.REVERSE);
             intakeDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
