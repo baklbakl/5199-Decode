@@ -46,7 +46,8 @@ public final class TuningOpModes {
 
         DriveViewFactory dvf = hardwareMap -> {
             MainBotHardware hardware = MainBotHardware.getOrCreate(hardwareMap);
-            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0), hardware.voltageSensor::getVoltage);
+            MainBotHardware.Container container = hardware.getContainer();
+            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0), container.voltageSensor::getVoltage);
 
             List<EncoderGroup> encoderGroups = new ArrayList<>();
             List<EncoderRef> parEncs = new ArrayList<>(), perpEncs = new ArrayList<>();
@@ -57,7 +58,7 @@ public final class TuningOpModes {
             OctoQuadLocalizer dl = (OctoQuadLocalizer) md.localizer;
 
             encoderGroups.add(new OctoQuadEncoderGroup(
-                   hardware.octoQuad, MainBotHardware.xEncoderIndex, MainBotHardware.yEncoderIndex
+                   container.octoQuad, MainBotHardware.xEncoderIndex, MainBotHardware.yEncoderIndex
             ));
             parEncs.add(new EncoderRef(0, 0));
             perpEncs.add(new EncoderRef(0, 1));
@@ -85,7 +86,7 @@ public final class TuningOpModes {
                     Collections.emptyList() /*rightEncs*/,
                     parEncs,
                     perpEncs,
-                    md.hardware.lazyImu,
+                    container.lazyImu,
                     (view) -> {
                         dl.update();
 //                        RobotLog.ii("TuningOpModes", String.valueOf(dl.getPoseVelocity().angVel));
@@ -93,7 +94,7 @@ public final class TuningOpModes {
                         return new DualNum<>(Arrays.asList(dl.getPose().heading.toDouble(), dl.getPoseVelocity().angVel));
 
                     },
-                    hardware.voltageSensor,
+                    container.voltageSensor,
                     MecanumDrive.feedForwardFactory,
                     0
             );

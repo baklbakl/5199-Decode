@@ -11,6 +11,7 @@ public class SuperSplitAutoRunner extends ThreadedOpMode {
         super.init_internal();
 
         MainBotHardware hardware = MainBotHardware.getOrCreate(hardwareMap);
+        hardware.getContainer();
 
         RobotImplThread robotImpl = new RobotImplThread(hardware);
         RoadRunnerThread roadRunnerThread = new RoadRunnerThread(hardware, this, robotImpl);

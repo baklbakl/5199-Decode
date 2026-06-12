@@ -29,7 +29,7 @@ public class LocalizationTest extends LinearOpMode {
         par0InitalTicks = localizer.par0.getPositionAndVelocity().position;
         par1InitalTicks = localizer.par1.getPositionAndVelocity().position;
         perpInitalTicks = localizer.perp.getPositionAndVelocity().position;
-        IMUInital = drive.hardware.lazyImu.get().getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
+        IMUInital = drive.hardware.getContainer().lazyImu.get().getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES);
 
         while (opModeIsActive()) {
             drive.setDrivePowers(new PoseVelocity2d(
@@ -52,7 +52,7 @@ public class LocalizationTest extends LinearOpMode {
             telemetry.addData("par0 ticks", localizer.par0.getPositionAndVelocity().position - par0InitalTicks);
             telemetry.addData("par1 ticks", localizer.par1.getPositionAndVelocity().position - par1InitalTicks);
             telemetry.addData("perp ticks", localizer.perp.getPositionAndVelocity().position - perpInitalTicks);
-            telemetry.addData("IMU Heading (deg)", drive.hardware.lazyImu.get().getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES) - IMUInital);
+            telemetry.addData("IMU Heading (deg)", drive.hardware.getContainer().lazyImu.get().getRobotYawPitchRollAngles().getYaw(AngleUnit.DEGREES) - IMUInital);
             telemetry.update();
 
             TelemetryPacket packet = new TelemetryPacket();

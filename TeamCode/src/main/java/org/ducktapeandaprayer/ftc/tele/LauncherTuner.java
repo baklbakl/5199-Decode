@@ -26,6 +26,7 @@ public class LauncherTuner extends FastIterativeOpMode {
     public static int underSpeedRequired = 10;
 
     private MainBotHardware hardware = null;
+    private MainBotHardware.Container container = null;
     private List<VariableWatcher> variablesWatched = new ArrayList<>();
     private MultipleTelemetry mt = null;
     private PIDFCoefficients currentCoefficients = null;
@@ -61,8 +62,9 @@ public class LauncherTuner extends FastIterativeOpMode {
     protected void init_internal() {
         //We don't enable bulk caching because it is faster to read a single value without it.
         hardware = MainBotHardware.getOrCreate(hardwareMap);
+        container = hardware.getContainer();
         mt = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
-        currentCoefficients = new PIDFCoefficients(hardware.launchDrive.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER));
+        currentCoefficients = new PIDFCoefficients(container.launchDrive.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER));
         dashboardTelemetry = FtcDashboard.getInstance().getTelemetry();
         runtime = new ElapsedTime();
 
@@ -77,7 +79,7 @@ public class LauncherTuner extends FastIterativeOpMode {
                     }
 
                     if(mode == ControlMode.LYNX_PIDF) {
-                        hardware.launchDrive.setVelocity(targetVelocity);
+                        container.launchDrive.setVelocity(targetVelocity);
                     }
 
                 }
@@ -85,8 +87,8 @@ public class LauncherTuner extends FastIterativeOpMode {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, gamepad1.getClass().getField("dpad_down"), Boolean::equals, (dpad_down) -> {
                 if(dpad_down) {
-                    hardware.launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MainBotHardware.launcherCoefficients);
-                    currentCoefficients = new PIDFCoefficients(hardware.launchDrive.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER));
+                    container.launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, MainBotHardware.launcherCoefficients);
+                    currentCoefficients = new PIDFCoefficients(container.launchDrive.getPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER));
                 }
             }));
 
@@ -98,16 +100,16 @@ public class LauncherTuner extends FastIterativeOpMode {
 
                     switch (mode) {
                         case MANUAL:
-                            hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                            hardware.launchDrive.setPower(gamepad1.left_trigger - gamepad1.right_trigger);
+                            container.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                            container.launchDrive.setPower(gamepad1.left_trigger - gamepad1.right_trigger);
                             break;
                         case LYNX_PIDF:
-                            hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                            container.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                             targetVelocity = 0;
-                            hardware.launchDrive.setVelocity(0);
+                            container.launchDrive.setVelocity(0);
                             break;
                         case INTERNAL_PIDF:
-                            hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                            container.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
                             targetVelocity = 0;
                             break;
                     }
@@ -116,7 +118,7 @@ public class LauncherTuner extends FastIterativeOpMode {
 
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, gamepad1.getClass().getField("left_trigger"), gamepad1.getClass().getField("right_trigger"), Float::equals, (left_trigger, right_trigger) -> {
                 if(mode == ControlMode.MANUAL) {
-                    hardware.launchDrive.setPower(left_trigger - right_trigger);
+                    container.launchDrive.setPower(left_trigger - right_trigger);
                 }
             }));
 
@@ -152,7 +154,7 @@ public class LauncherTuner extends FastIterativeOpMode {
         }
 
         long thisNanos = runtime.nanoseconds();
-        double velocity = hardware.launchDrive.getVelocity();
+        double velocity = container.launchDrive.getVelocity();
 
         mt.addLine(mode.toString());
 
@@ -163,9 +165,9 @@ public class LauncherTuner extends FastIterativeOpMode {
         } else {
             if(mode == ControlMode.INTERNAL_PIDF) {
                 if(targetVelocity == 0) {
-                    hardware.launchDrive.setPower(0);
+                    container.launchDrive.setPower(0);
                 } else {
-                    hardware.launchDrive.setPower(((targetVelocity - velocity) * internalControlkP + (targetVelocity) * internalControlkV) / hardware.voltageSensor.getVoltage());
+                    container.launchDrive.setPower(((targetVelocity - velocity) * internalControlkP + (targetVelocity) * internalControlkV) / container.voltageSensor.getVoltage());
                 }
             } else {
                 mt.addData("Current coefficients", currentCoefficients);

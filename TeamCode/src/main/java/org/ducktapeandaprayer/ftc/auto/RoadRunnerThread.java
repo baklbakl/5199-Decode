@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class RoadRunnerThread extends ThreadEx {
     private final MainBotHardware hardware;
+    private final MainBotHardware.Container container;
     private final ThreadedOpMode opMode;
     private final SplitAuto splitAuto;
     private Action path = null;
@@ -44,7 +45,9 @@ public class RoadRunnerThread extends ThreadEx {
     public RoadRunnerThread(MainBotHardware hardware, ThreadedOpMode opMode, RobotImplThread robot) {
         this.hardware = hardware;
         this.opMode = opMode;
-        this.hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+
+        this.container = this.hardware.getContainer();
+        container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         OptionDriver optionDriver = this.opMode.getOptionDriver();
         Gamepad gamepad1 = this.opMode.gamepad1;
 
@@ -89,7 +92,7 @@ public class RoadRunnerThread extends ThreadEx {
 
                 ),
                 (TelemetryPacket telemetryPacket) -> {
-                    hardware.voltageSensor.periodic();
+                    container.voltageSensor.periodic();
                     telemetry.append("x: ").append(mecanumDrive.localizer.getPose().position.x).append("\n");
                     telemetry.append("y: ").append(mecanumDrive.localizer.getPose().position.y).append("\n");
                     telemetry.append("heading (deg): ").append(Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble())).append("\n");
@@ -109,7 +112,7 @@ public class RoadRunnerThread extends ThreadEx {
 
     @Override
     public void tick() {
-        hardware.modules.parentModule.module.clearBulkCache();
+        container.modules.parentModule.module.clearBulkCache();
 
         if (!runAgain || Thread.currentThread().isInterrupted()) {
             opMode.requestOpModeStop();

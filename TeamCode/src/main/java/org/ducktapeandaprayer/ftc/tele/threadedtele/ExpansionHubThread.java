@@ -29,7 +29,6 @@ public class ExpansionHubThread extends ThreadEx {
     //
     // Dash options
     //
-    //FIX: Figure out the correct turret offset
     public static double turretOffset = -52.0 /*mm*/ / 25.4;
     public static Vector2d goalTargetPos = new Vector2d(-66, 66);
 
@@ -39,7 +38,8 @@ public class ExpansionHubThread extends ThreadEx {
 
     public Boolean autoLockDebInfo = true;
 
-    private final MainBotHardware hardware;
+    private final MainBotHardware mainBotHardware;
+    private MainBotHardware.Container hardware;
     private final Gamepad gamepad1;
     private final ThreadedTele threadedTele;
     private final ControlHubThread controlHubThread;
@@ -68,7 +68,7 @@ public class ExpansionHubThread extends ThreadEx {
         if(newState == state) return;
         switch (newState) {
             case STOPPED:
-                hardware.restIntakeTransfer();
+                mainBotHardware.restIntakeTransfer();
                 break;
             case INTAKE:
                 autoIntake.startIntaking();
@@ -135,14 +135,12 @@ public class ExpansionHubThread extends ThreadEx {
     }
 
     public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread) {
-        this.hardware = hardwareArg;
+        this.mainBotHardware = hardwareArg;
         this.threadedTele = threadedTele;
         this.controlHubThread = controlHubThread;
         this.gamepad1 = threadedTele.gamepad1;
-        this.autoShoot = new AutoShoot(hardware);
-        this.autoIntake = new AutoIntake(hardware);
-
-        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        this.autoShoot = new AutoShoot(mainBotHardware);
+        this.autoIntake = new AutoIntake(mainBotHardware);
 
         launcherControlMethodElements.addAll(EnumSet.allOf(LauncherControlMethod.class));
         launcherControlMethod = LauncherControlMethod.ODOMETRY;
@@ -186,7 +184,7 @@ public class ExpansionHubThread extends ThreadEx {
                 if(circle) {
                     turretTracking = !turretTracking;
                     if(!turretTracking) {
-                        hardware.turretToHeading(0);
+                        mainBotHardware.turretToHeading(0);
                     }
                 }
             }));
@@ -221,6 +219,9 @@ public class ExpansionHubThread extends ThreadEx {
 
     @Override
     public void run() {
+        hardware = mainBotHardware.getContainer();
+        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+
         if(threadedTele.getAlliance() == Alliance.BLUE) {
             correctedGoalTargetPose = new Vector2d(goalTargetPos.x, -goalTargetPos.y);
         } else if(threadedTele.getAlliance() == Alliance.RED) {
@@ -234,7 +235,7 @@ public class ExpansionHubThread extends ThreadEx {
 
     public void tick() {
         hardware.modules.childModule.module.clearBulkCache();
-        hardware.tickBBs();
+        mainBotHardware.tickBBs();
 
         Pose2d robotPose = controlHubThread.robotPose.get();
         if(robotPose != null) {
@@ -274,7 +275,7 @@ public class ExpansionHubThread extends ThreadEx {
             }
 
             if(turretTracking) {
-                hardware.turretToHeading(turretTheta);
+                mainBotHardware.turretToHeading(turretTheta);
             }
         }
 

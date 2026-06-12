@@ -25,36 +25,40 @@ public class AutoShoot {
         shootingStartTimeForTimeout = shootingStartTimeForTransfer;
         shootingStartTimeForMeasurement = shootingStartTimeForTransfer;
         rampLastBallPosStartTime = Double.NaN;
-        if(Math.abs(hardware.rampServo.getPosition() - MainBotHardware.rampShootPos) < 0.01) {
-            hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-            hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+
+        MainBotHardware.Container container = this.hardware.getContainer();
+        if(Math.abs(container.rampServo.getPosition() - MainBotHardware.rampShootPos) < 0.01) {
+            container.transferDrive.setPower(MainBotHardware.transferInPower);
+            container.intakeDrive.setPower(MainBotHardware.intakeInPower);
             shootingStartTimeForTransfer = Double.NaN;
         } else {
-            hardware.rampServo.setPosition(MainBotHardware.rampShootPos);
-            hardware.transferDrive.setPower(0);
-            hardware.intakeDrive.setPower(0);
+            container.rampServo.setPosition(MainBotHardware.rampShootPos);
+            container.transferDrive.setPower(0);
+            container.intakeDrive.setPower(0);
         }
     }
 
     public void stopShooting() {
-        hardware.transferDrive.setPower(0);
-        hardware.intakeDrive.setPower(0);
-        hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
+        MainBotHardware.Container container = this.hardware.getContainer();
+        container.transferDrive.setPower(0);
+        container.intakeDrive.setPower(0);
+        container.rampServo.setPosition(MainBotHardware.rampDownPos);
     }
 
     //Returns true when done
     public boolean tick() {
+        MainBotHardware.Container container = this.hardware.getContainer();
         double time = timer.seconds();
         //Shooting start time is Double.NaN when not waiting to start the transfer and 1 - NaN = NaN and NaN >= any number = false, so this works
         if(time - shootingStartTimeForTransfer >= MainBotHardware.shootTransferOnDelay) {
-            hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-            hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
+            container.transferDrive.setPower(MainBotHardware.transferInPower);
+            container.intakeDrive.setPower(MainBotHardware.intakeInPower);
             shootingStartTimeForTransfer = Double.NaN;
         }
 
         if(time - shootingStartTimeForRamp >= MainBotHardware.singleShootHighRampDelay) {
-            if(hardware.intakeBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY) {
-                hardware.rampServo.setPosition(MainBotHardware.rampLastBallPos);
+            if(container.intakeBB.getState() == BeamBreak.State.EMPTY && container.transferMiddleBB.getState() == BeamBreak.State.EMPTY) {
+                container.rampServo.setPosition(MainBotHardware.rampLastBallPos);
                 shootingStartTimeForRamp = Double.NaN;
                 rampLastBallPosStartTime = time;
             } else {
@@ -69,7 +73,7 @@ public class AutoShoot {
             return true;
         }
 
-        if(Math.abs(hardware.rampServo.getPosition() - MainBotHardware.rampLastBallPos) < 0.01
+        if(Math.abs(container.rampServo.getPosition() - MainBotHardware.rampLastBallPos) < 0.01
                 && time - rampLastBallPosStartTime > lastBallTime) {
             rampLastBallPosStartTime = Double.NaN;
             shootingStartTimeForTimeout = Double.NaN;

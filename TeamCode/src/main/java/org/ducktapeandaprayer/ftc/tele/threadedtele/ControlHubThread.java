@@ -8,8 +8,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
 
@@ -27,7 +25,9 @@ public class ControlHubThread extends ThreadEx {
     // Global Variables
     //
     private final MainBotHardware hardware;
+    private MainBotHardware.Container container;
     private final ThreadedTele threadedTele;
+    private final boolean resetOctoQuadPoseOnStart;
 
     public final AtomicReference<Pose2d> robotPose = new AtomicReference<>(null);
 
@@ -49,10 +49,10 @@ public class ControlHubThread extends ThreadEx {
             rightBackPower  /= max;
         }
 
-        hardware.leftFrontDrive.setPower(leftFrontPower);
-        hardware.leftRearDrive.setPower(leftBackPower);
-        hardware.rightFrontDrive.setPower(rightFrontPower);
-        hardware.rightRearDrive.setPower(rightBackPower);
+        container.leftFrontDrive.setPower(leftFrontPower);
+        container.leftRearDrive.setPower(leftBackPower);
+        container.rightFrontDrive.setPower(rightFrontPower);
+        container.rightRearDrive.setPower(rightBackPower);
     }
 
     private void resetPose(boolean resetHeading) {
@@ -64,15 +64,15 @@ public class ControlHubThread extends ThreadEx {
         if(resetHeading) {
             heading = (float) correctedStartPose.heading.toDouble();
         } else {
-            heading = hardware.octoQuad.readLocalizerData().heading_rad;
+            heading = container.octoQuad.readLocalizerData().heading_rad;
         }
         hardware.setOctoQuadPose(correctedStartPose.position.x, correctedStartPose.position.y, heading);
     }
 
-    public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele) {
+    public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, boolean resetOctoQuadPoseOnStart) {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
-        hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        this.resetOctoQuadPoseOnStart = resetOctoQuadPoseOnStart;
 
         try {
             //Movement
@@ -100,7 +100,12 @@ public class ControlHubThread extends ThreadEx {
 
     @Override
     public void run() {
-        resetPose(true);
+        container = hardware.getContainer();
+        container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        if(resetOctoQuadPoseOnStart) {
+            resetPose(true);
+        }
+
         super.run();
     }
 
@@ -121,6 +126,6 @@ public class ControlHubThread extends ThreadEx {
         robotPose.set(newPose);
 
         updateTelemetry();
-        hardware.modules.parentModule.module.clearBulkCache();
+        container.modules.parentModule.module.clearBulkCache();
     }
 }

@@ -115,17 +115,18 @@ public final class MecanumDrive {
 
     public MecanumDrive(MainBotHardware hardware, Pose2d pose, Supplier<Double> voltageSupplier) {
         this.hardware = hardware;
+        MainBotHardware.Container container = this.hardware.getContainer();
 
         if(voltageSupplier == null) {
-            this.voltageSupplier = hardware.voltageSensor::getVoltage;
+            this.voltageSupplier = container.voltageSensor::getVoltage;
         } else {
             this.voltageSupplier = voltageSupplier;
         }
 
-        leftFront = hardware.leftFrontDrive;
-        leftBack = hardware.leftRearDrive;
-        rightBack = hardware.rightRearDrive;
-        rightFront = hardware.rightFrontDrive;
+        leftFront = container.leftFrontDrive;
+        leftBack = container.leftRearDrive;
+        rightBack = container.rightRearDrive;
+        rightFront = container.rightFrontDrive;
 
         leftFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         leftBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -141,8 +142,9 @@ public final class MecanumDrive {
         //Passing null as the voltageSupplier here and then dealing with it in the other constructor is a gross hack,
         // but it works so IDC
         this(MainBotHardware.getOrCreate(hardwareMap), pose, null);
-        hardware.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
-        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.OFF);
+        MainBotHardware.Container container = this.hardware.getContainer();
+        container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
+        container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.OFF);
     }
 
     public void setDrivePowers(PoseVelocity2d powers) {

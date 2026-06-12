@@ -14,13 +14,12 @@ import com.google.gson.GsonBuilder;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
+import org.ducktapeandaprayer.ftc.tele.Test;
 import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
-import org.ducktapeandaprayer.ftc.tele.LauncherFeedForwardTester;
 import org.ducktapeandaprayer.ftc.tele.LauncherTuner;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ControlHubThread;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
-import org.ducktapeandaprayer.ftc.tele.Test;
 import org.apache.commons.lang3.tuple.MutablePair;
 import org.ducktapeandaprayer.ftc.tele.threadedtele.ExpansionHubThread;
 import org.firstinspires.ftc.ftccommon.external.OnCreate;
@@ -36,7 +35,7 @@ public class RegisterConfigClasses {
             ExpansionHubThread.class,
             ControlHubThread.class,
             LauncherTuner.class,
-            LauncherFeedForwardTester.class,
+            //LauncherFeedForwardTester.class,
             BeamBreak.class,
     };
 

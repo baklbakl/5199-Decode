@@ -52,10 +52,12 @@ public class MainBotHardware {
             new MutablePair<>(54.0, 2100.0),
             new MutablePair<>(64.0, 2150.0),
             new MutablePair<>(73.0, 2230.0),
-            new MutablePair<>(80.0, 2340.0),
-            new MutablePair<>(90.0, 2400.0),
-            new MutablePair<>(100.0, 2460.0),
-            new MutablePair<>(110.0, 2560.0)
+            //new MutablePair<>(80.0, 2340.0),
+            new MutablePair<>(80.0, 2260.0),
+            new MutablePair<>(90.0, 2340.0),
+            new MutablePair<>(100.0, 2520.0),
+            new MutablePair<>(110.0, 2660.0),
+            new MutablePair<>(120.0, 2780.0)
             ));
 
     //
@@ -98,6 +100,9 @@ public class MainBotHardware {
     //
     private Container container = null;
     public Container getContainer() {
+        if(container == null) {
+            container = new Container(hardwareMap, modules, octoQuad);
+        }
         return container;
     }
 
@@ -117,7 +122,6 @@ public class MainBotHardware {
         public final ProxyVoltageSensor voltageSensor;
 
         public final LazyImu lazyImu;
-        public final OctoQuad octoQuad;
 
         public final BeamBreak intakeBB;
         public final BeamBreak transferMiddleBB;
@@ -126,38 +130,84 @@ public class MainBotHardware {
 
         public final HardwareMap hardwareMap;
         public final LynxModuleInitializer modules;
+        public final OctoQuad octoQuad;
 
+        //Things that could move get inited here. This only should be called when movment is allowable
         private Container(HardwareMap hardwareMap, LynxModuleInitializer modules, OctoQuad octoQuad) {
             this.octoQuad = octoQuad;
             this.hardwareMap = hardwareMap;
             this.modules = modules;
+
+            LynxModuleInitializer.LynxModuleControllers parent = modules.parentModule;
+            LynxModuleInitializer.LynxModuleControllers child = modules.childModule;
+
+            leftFrontDrive = parent.createDcMotor(leftFrontDriveID);
+            rightFrontDrive = parent.createDcMotor(rightFrontDriveID);
+            leftRearDrive = parent.createDcMotor(leftRearDriveID);
+            rightRearDrive = parent.createDcMotor(rightRearDriveID);
+
+            // To drive forward, most robots need the motor on one side to be reversed, because the axles point in opposite directions.
+            // Pushing the left stick forward MUST make robot go forward. So adjust these two lines based on your first test drive.
+            // Note: The settings here assume direct drive on left and right wheels.  Gear Reduction or 90 Deg drives may require direction flips
+            leftFrontDrive.setDirection(DcMotor.Direction.FORWARD);
+            rightFrontDrive.setDirection(DcMotor.Direction.REVERSE);
+            leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
+            rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
+
+            intakeDrive = child.createDcMotor(intakeDriveID);
+            intakeDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+            intakeDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+
+            transferDrive = child.createDcMotor(moverDriveID);
+
+            launchDrive = child.createDcMotor(launchDriveID);
+            launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+            launchDrive.setDirection(DcMotorSimple.Direction.FORWARD);
+            launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
+            launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+            launchDrive.setVelocity(0);
+            launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+
+            turretServo = child.createServo(turretServoID);
+            turretServo.setPosition(turretCenter);
+
+            rampServo = child.createServo(kickerServoID);
+            rampServo.setPosition(MainBotHardware.rampDownPos);
+
+            intakeBB = new BeamBreak(child.createDigitalChannel(intakeBBID));
+            transferMiddleBB = new BeamBreak(child.createDigitalChannel(transferMiddleBBID));
+            transferEndBB = new BeamBreak(child.createDigitalChannel(transferEndBBID));
+
+            //This is kind of jank, but it works.
+            lazyImu = () -> {
+                throw new RuntimeException("We don't support the lazy IMU");
+            };
+
+            for(Map.Entry<String, VoltageSensor> entry : hardwareMap.voltageSensor.entrySet()) {
+                hardwareMap.voltageSensor.remove(entry.getKey());
+            }
+
+            for(HardwareDevice device : hardwareMap.getAll(VoltageSensor.class)) {
+                String name = String.valueOf(hardwareMap.getNamesOf(device));
+
+                RobotLog.ii("MainBotHardware", "Removing voltage sensor called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
+                hardwareMap.remove(name, device);
+                device.close();
+            }
+
+            try {
+                voltageSensor = new ProxyVoltageSensor(child.createAnalogInput(0), new LynxVoltageSensor(hardwareMap.appContext, child.module), resistorMultiplier);
+            } catch (RobotCoreException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            hardwareMap.put("ProxyVoltageSensor", voltageSensor);
+            hardwareMap.voltageSensor.put("ProxyVoltageSensor", voltageSensor);
         }
     }
 
-    public final DcMotorExEx leftFrontDrive;
-    public final DcMotorExEx rightFrontDrive;
-    public final DcMotorExEx leftRearDrive;
-    public final DcMotorExEx rightRearDrive;
-
-    public final DcMotorExEx intakeDrive;
-    public final DcMotorExEx launchDrive;
-    public final DcMotorExEx transferDrive;
-
-    public final Servo rampServo;
-    public final Servo turretServo;
-
-    public final ProxyVoltageSensor voltageSensor;
-
-    public final LazyImu lazyImu;
-    public final OctoQuad octoQuad;
-
-    public final BeamBreak intakeBB;
-    public final BeamBreak transferMiddleBB;
-    //Under shooter
-    public final BeamBreak transferEndBB;
-
-    public final HardwareMap hardwareMap;
-    public final LynxModuleInitializer modules;
+    private final OctoQuad octoQuad;
+    private final HardwareMap hardwareMap;
+    private final LynxModuleInitializer modules;
 
     public void turretToHeading(double heading) {
         if(Math.abs(heading) > turretMaxHeading) {
@@ -167,7 +217,7 @@ public class MainBotHardware {
         double turretRatio = 77.0/29 * 15/48 / Math.toRadians(axonRange);
         double pos = turretRatio * heading + turretCenter;
         //RobotLog.ii("MainBotHardware", "Turret: " + pos);
-        turretServo.setPosition(pos);
+        getContainer().turretServo.setPosition(pos);
     }
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap, boolean resetOctoQuad) {
@@ -228,69 +278,6 @@ public class MainBotHardware {
                 }
             }
         }
-
-        leftFrontDrive = parent.createDcMotor(leftFrontDriveID);
-        rightFrontDrive = parent.createDcMotor(rightFrontDriveID);
-        leftRearDrive = parent.createDcMotor(leftRearDriveID);
-        rightRearDrive = parent.createDcMotor(rightRearDriveID);
-
-        // To drive forward, most robots need the motor on one side to be reversed, because the axles point in opposite directions.
-        // Pushing the left stick forward MUST make robot go forward. So adjust these two lines based on your first test drive.
-        // Note: The settings here assume direct drive on left and right wheels.  Gear Reduction or 90 Deg drives may require direction flips
-        leftFrontDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightFrontDrive.setDirection(DcMotor.Direction.REVERSE);
-        leftRearDrive.setDirection(DcMotor.Direction.FORWARD);
-        rightRearDrive.setDirection(DcMotor.Direction.REVERSE);
-
-        intakeDrive = child.createDcMotor(intakeDriveID);
-        intakeDrive.setDirection(DcMotorSimple.Direction.REVERSE);
-        intakeDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-        transferDrive = child.createDcMotor(moverDriveID);
-
-        launchDrive = child.createDcMotor(launchDriveID);
-        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        launchDrive.setDirection(DcMotorSimple.Direction.FORWARD);
-        launchDrive.setPIDFCoefficients(DcMotor.RunMode.RUN_USING_ENCODER, launcherCoefficients);
-        launchDrive.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        launchDrive.setVelocity(0);
-        launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        turretServo = child.createServo(turretServoID);
-        turretToHeading(0);
-
-        rampServo = child.createServo(kickerServoID);
-        rampServo.setPosition(MainBotHardware.rampDownPos);
-
-        intakeBB = new BeamBreak(child.createDigitalChannel(intakeBBID));
-        transferMiddleBB = new BeamBreak(child.createDigitalChannel(transferMiddleBBID));
-        transferEndBB = new BeamBreak(child.createDigitalChannel(transferEndBBID));
-
-        //This is kind of jank, but it works.
-        lazyImu = () -> {
-            throw new RuntimeException("We don't support the lazy IMU");
-        };
-
-
-        for(Map.Entry<String, VoltageSensor> entry : hardwareMap.voltageSensor.entrySet()) {
-            hardwareMap.voltageSensor.remove(entry.getKey());
-        }
-
-        for(HardwareDevice device : hardwareMap.getAll(VoltageSensor.class)) {
-            String name = String.valueOf(hardwareMap.getNamesOf(device));
-
-            RobotLog.ii("MainBotHardware", "Removing voltage sensor called : \"" + name + "\" Class: " + device.getClass().getCanonicalName() + " from hardwaremap");
-            hardwareMap.remove(name, device);
-            device.close();
-        }
-
-        try {
-            voltageSensor = new ProxyVoltageSensor(child.createAnalogInput(0), new LynxVoltageSensor(hardwareMap.appContext, child.module), resistorMultiplier);
-        } catch (RobotCoreException | InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-        hardwareMap.put("ProxyVoltageSensor", voltageSensor);
-        hardwareMap.voltageSensor.put("ProxyVoltageSensor", voltageSensor);
     }
 
     public void setOctoQuadPose(Pose2d pose) {
@@ -314,14 +301,16 @@ public class MainBotHardware {
     }
 
     public void tickBBs() {
-        intakeBB.tick();
-        transferMiddleBB.tick();
-        transferEndBB.tick();
+        Container hardware = getContainer();
+        hardware.intakeBB.tick();
+        hardware.transferMiddleBB.tick();
+        hardware.transferEndBB.tick();
     }
 
     public void restIntakeTransfer() {
-        transferDrive.setPower(0);
-        intakeDrive.setPower(0);
-        rampServo.setPosition(MainBotHardware.rampDownPos);
+        Container hardware = getContainer();
+        hardware.transferDrive.setPower(0);
+        hardware.intakeDrive.setPower(0);
+        hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
     }
 }

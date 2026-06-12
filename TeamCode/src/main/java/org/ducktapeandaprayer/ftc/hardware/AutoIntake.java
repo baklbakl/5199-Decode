@@ -8,19 +8,21 @@ public class AutoIntake {
     }
 
     public void startIntaking() {
-        hardware.transferDrive.setPower(MainBotHardware.transferInPower);
-        hardware.intakeDrive.setPower(MainBotHardware.intakeInPower);
-        hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
+        MainBotHardware.Container container = this.hardware.getContainer();
+        container.transferDrive.setPower(MainBotHardware.transferInPower);
+        container.intakeDrive.setPower(MainBotHardware.intakeInPower);
+        container.rampServo.setPosition(MainBotHardware.rampDownPos);
     }
 
     public boolean tick() {
+        MainBotHardware.Container container = this.hardware.getContainer();
         //If transfer full stop it. If robot full stop intaking and rumble controller
-        if(hardware.transferMiddleBB.getState() == BeamBreak.State.FULL && hardware.transferEndBB.getState() == BeamBreak.State.FULL) {
-            hardware.transferDrive.setPower(0);
+        if(container.transferMiddleBB.getState() == BeamBreak.State.FULL && container.transferEndBB.getState() == BeamBreak.State.FULL) {
+            container.transferDrive.setPower(0);
 
-            if(hardware.intakeBB.getState() == BeamBreak.State.FULL) {
-                hardware.intakeDrive.setPower(0);
-                hardware.rampServo.setPosition(MainBotHardware.rampShootPos);
+            if(container.intakeBB.getState() == BeamBreak.State.FULL) {
+                container.intakeDrive.setPower(0);
+                container.rampServo.setPosition(MainBotHardware.rampShootPos);
                 return true;
             }
         }

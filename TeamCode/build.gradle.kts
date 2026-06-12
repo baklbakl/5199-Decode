@@ -41,11 +41,11 @@ android {
     }
 
     defaultConfig {
-        signingConfig = signingConfigs["debug"];
+        signingConfig = signingConfigs["debug"]
         applicationId = "com.qualcomm.ftcrobotcontroller"
 
         //noinspection ExpiredTargetSdkVersion
-        versionCode = getIntProperty(project, "SDK_VERSION_CODE");
+        versionCode = getIntProperty(project, "SDK_VERSION_CODE")
         val pointVersion = getStringProperty(project, "SDK_POINT_VERSION")
 
         versionName = getStringProperty(project, "SDK_MAJOR_VERSION") + "." + getStringProperty(
@@ -76,7 +76,7 @@ dependencies {
 
     implementation(project(":RoadRunner:ftc"))
 
-    implementation("com.acmerobotics.dashboard:dashboard:"  + getStringProperty(project, "dashboardVersion")) {
+    implementation("com.acmerobotics.dashboard:dashboard:" + getStringProperty(project, "dashboardVersion")) {
         exclude("org.firstinspires.ftc", "*")
     }
 }

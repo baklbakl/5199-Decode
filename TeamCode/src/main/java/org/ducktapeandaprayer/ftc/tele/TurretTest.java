@@ -23,11 +23,13 @@ public class TurretTest extends FastIterativeOpMode {
     //public static double targetHeading = MainBotHardware.turretMaxHeading;
     public static double targetHeading = Math.PI / 2;
     private MainBotHardware hardware = null;
+    private MainBotHardware.Container container = null;
     private ArrayList<VariableWatcher> variableWatchers = new ArrayList<>();
 
     protected void init_internal() {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
-        hardware.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
+        container = hardware.getContainer();
+        container.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
         try {
             variableWatchers.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right) -> {
@@ -67,7 +69,7 @@ public class TurretTest extends FastIterativeOpMode {
      */
 
     protected void loop_internal() {
-        hardware.modules.clearBulkCache();
+        container.modules.clearBulkCache();
         for(VariableWatcher watcher : variableWatchers) {
             watcher.tick();
         }

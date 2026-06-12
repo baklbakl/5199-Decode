@@ -11,6 +11,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class RobotImplThread extends ThreadEx implements RobotInterface {
     private final MainBotHardware hardware;
+    private final MainBotHardware.Container container;
     private final AutoShoot autoShoot;
     private final AutoIntake autoIntake;
 
@@ -24,7 +25,9 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
 
     public RobotImplThread(MainBotHardware hardware) {
         this.hardware = hardware;
-        this.hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+
+        this.container = hardware.getContainer();
+        container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         this.autoShoot = new AutoShoot(hardware);
         this.autoIntake = new AutoIntake(hardware);
     }
@@ -36,10 +39,10 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
 
     @Override
     public void tick() {
-        hardware.modules.childModule.module.clearBulkCache();
+        container.modules.childModule.module.clearBulkCache();
         hardware.tickBBs();
 
-        voltage.set(hardware.voltageSensor.getVoltage());
+        voltage.set(container.voltageSensor.getVoltage());
 
         if(requestLaunchingStart) {
             if(launching) {
@@ -68,7 +71,7 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
         synchronized (requestLauncherSpeed) {
             double speed = requestLauncherSpeed.get();
             if(!Double.isNaN(speed)) {
-                hardware.launchDrive.setVelocity(speed);
+                container.launchDrive.setVelocity(speed);
                 requestLauncherSpeed.set(Double.NaN);
             }
         }

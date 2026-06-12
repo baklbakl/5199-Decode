@@ -38,8 +38,9 @@ class LauncherFeedForwardTester : LinearOpMode() {
 
     override fun runOpMode() {
         val hardware = MainBotHardware.getOrCreate(hardwareMap)
-        hardware.launchDrive.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
-        hardware.launchDrive.zeroPowerBehavior = brake;
+        val container = hardware.container
+        container.launchDrive.mode = DcMotor.RunMode.RUN_WITHOUT_ENCODER
+        container.launchDrive.zeroPowerBehavior = brake;
 
         telemetry = MultipleTelemetry(telemetry, FtcDashboard.getInstance().telemetry)
 
@@ -59,7 +60,7 @@ class LauncherFeedForwardTester : LinearOpMode() {
         var startTs = System.nanoTime() / 1e9
 
         while (!isStopRequested) {
-            telemetry.addData("v", hardware.launchDrive.getVelocity())
+            telemetry.addData("v", container.launchDrive.getVelocity())
 
             val ts = System.nanoTime() / 1e9
             val t = ts - startTs
@@ -75,9 +76,9 @@ class LauncherFeedForwardTester : LinearOpMode() {
 
             telemetry.addData("vref", v[0])
 
-            val power = TestingMotorFeedforward(kS, kV, kASpeedUp, kASlowDown, negDec).compute(v) / hardware.voltageSensor.voltage
+            val power = TestingMotorFeedforward(kS, kV, kASpeedUp, kASlowDown, negDec).compute(v) / container.voltageSensor.voltage
             telemetry.addData("power", power * maxVel / 2)
-            hardware.launchDrive.power = power
+            container.launchDrive.power = power
 
             telemetry.addData("min", -maxVel)
             telemetry.addData("max", maxVel)

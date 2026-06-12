@@ -13,12 +13,19 @@ public class ThreadedTele extends ThreadedOpMode {
     protected void init_internal() {
         super.setAlliance(Alliance.lastAlliance);
         super.init_internal();
-        hardware = MainBotHardware.getOrCreate(hardwareMap, Alliance.lastAlliance == null);
+        boolean resetOctoQuad = Alliance.lastAlliance == null;
+        hardware = MainBotHardware.getOrCreate(hardwareMap, resetOctoQuad);
         Alliance.lastAlliance = null;
 
-        ControlHubThread controlHubThread = new ControlHubThread(hardware, this);
+        ControlHubThread controlHubThread = new ControlHubThread(hardware, this, resetOctoQuad);
         ExpansionHubThread expansionHubThread = new ExpansionHubThread(hardware, this, controlHubThread);
         super.getThreads().put("control hub thread", controlHubThread);
         super.getThreads().put("expansion hub thread", expansionHubThread);
+    }
+
+    @Override
+    protected void start_internal() {
+        hardware.getContainer();
+        super.start_internal();
     }
 }
