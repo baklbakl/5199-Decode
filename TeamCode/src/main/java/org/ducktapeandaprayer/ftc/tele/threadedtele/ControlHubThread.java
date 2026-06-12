@@ -5,12 +5,17 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import org.ducktapeandaprayer.ftc.auto.pidtopoint.Follower;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.lang.Math.abs;
@@ -24,12 +29,43 @@ public class ControlHubThread extends ThreadEx {
     //
     // Global Variables
     //
+    public boolean followerDebugInfo;
+
     private final MainBotHardware hardware;
     private MainBotHardware.Container container;
     private final ThreadedTele threadedTele;
     private final boolean resetOctoQuadPoseOnStart;
+    private final Follower follower;
 
     public final AtomicReference<Pose2d> robotPose = new AtomicReference<>(null);
+
+    public enum FollowerStateRequestType {
+        FOLLOW,
+        CANCEL,
+    }
+
+    private class FollowerStateRequest {
+        private final FollowerStateRequestType requestType;
+        private final List<Pose2d> points;
+
+        private FollowerStateRequest(FollowerStateRequestType requestType, List<Pose2d> points) {
+            this.requestType = requestType;
+            this.points = points;
+        }
+    }
+    private final AtomicReference<FollowerStateRequest> followerStateRequest = new AtomicReference<>(null);
+
+    public void requestFollowerCancel() {
+        followerStateRequest.set(new FollowerStateRequest(FollowerStateRequestType.CANCEL, null));
+    }
+
+    public void requestFollowerFollow(List<Pose2d> points) {
+        ArrayList<Pose2d> pointsCopy = new ArrayList<>();
+        for(Pose2d pose : points) {
+            pointsCopy.add(pose);
+        }
+        followerStateRequest.set(new FollowerStateRequest(FollowerStateRequestType.FOLLOW, Collections.unmodifiableList(pointsCopy)));
+    }
 
     private void computeSetWheelSpeeds(double forward, double strafe, double turning) {
 
@@ -73,12 +109,17 @@ public class ControlHubThread extends ThreadEx {
         this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
         this.resetOctoQuadPoseOnStart = resetOctoQuadPoseOnStart;
+        this.follower = new Follower(hardware);
+        follower.setPaused(false);
 
         try {
+            threadedTele.getOptionDriver().add(new BooleanOption("Follower Debug Info", "dpad_down", threadedTele.gamepad1, this.getClass().getField("followerDebugInfo"), this));
             //Movement
             super.variablesWatched.add(new TripleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
                     (Float left_stick_x_f, Float left_stick_y_f, Float right_stick_x) -> {
-                        computeSetWheelSpeeds(-left_stick_y_f, left_stick_x_f, right_stick_x);
+                        if(follower.isCanceled()) {
+                            computeSetWheelSpeeds(-left_stick_y_f, left_stick_x_f, right_stick_x);
+                        }
                     }
             ));
 
@@ -124,6 +165,29 @@ public class ControlHubThread extends ThreadEx {
         telemetry.append("\n");
 
         robotPose.set(newPose);
+
+        FollowerStateRequest followerStateRequest = this.followerStateRequest.get();
+        if(followerStateRequest != null) {
+            this.followerStateRequest.set(null);
+            switch (followerStateRequest.requestType) {
+                case FOLLOW:
+                    if(followerStateRequest.points == null) {
+                        throw new NullPointerException("Points cannot be null when requesting a start of the a trajectory");
+                    }
+                    follower.followTrajectory(followerStateRequest.points, false);
+                    break;
+                case CANCEL:
+                    follower.cancel();
+                    computeSetWheelSpeeds(-threadedTele.gamepad1.left_stick_y, threadedTele.gamepad1.left_stick_x, threadedTele.gamepad1.right_stick_x);
+                    break;
+            }
+        }
+
+        if(followerDebugInfo) {
+            telemetry.append(follower.tick(block));
+        } else {
+            follower.tick(block);
+        }
 
         updateTelemetry();
         container.modules.parentModule.module.clearBulkCache();

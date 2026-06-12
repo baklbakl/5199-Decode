@@ -1,5 +1,7 @@
 package org.ducktapeandaprayer.ftc.tele.threadedtele;
 
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
@@ -8,6 +10,20 @@ import org.ducktapeandaprayer.ftc.lib.*;
 @TeleOp(name = "1ThreadedTele", group = MainBotConfig.opmodeGroupName)
 public class ThreadedTele extends ThreadedOpMode {
     public MainBotHardware hardware = null;
+
+    public Vector2d invertIfBlue(Vector2d vector) {
+        if(getAlliance() == Alliance.BLUE) {
+            return new Vector2d(vector.x, -vector.y);
+        }
+        return vector;
+    }
+
+    public Pose2d invertIfBlue(Pose2d pose) {
+        if(getAlliance() == Alliance.BLUE) {
+            return new Pose2d(invertIfBlue(pose.position), pose.heading.inverse());
+        }
+        return pose;
+    }
 
     @Override
     protected void init_internal() {

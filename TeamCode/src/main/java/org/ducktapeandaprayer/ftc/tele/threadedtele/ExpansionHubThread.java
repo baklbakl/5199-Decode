@@ -169,6 +169,13 @@ public class ExpansionHubThread extends ThreadEx {
                 }
             }));
 
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_down"), (Boolean dpad_down) -> {
+                if(dpad_down) {
+                    controlHubThread.requestFollowerFollow(List.of(new Pose2d(goalTargetPos, Math.PI)));
+                } else {
+                    controlHubThread.requestFollowerCancel();
+                }
+            }));
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
                 if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
@@ -221,12 +228,7 @@ public class ExpansionHubThread extends ThreadEx {
     public void run() {
         hardware = mainBotHardware.getContainer();
         hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-
-        if(threadedTele.getAlliance() == Alliance.BLUE) {
-            correctedGoalTargetPose = new Vector2d(goalTargetPos.x, -goalTargetPos.y);
-        } else if(threadedTele.getAlliance() == Alliance.RED) {
-            correctedGoalTargetPose = goalTargetPos;
-        }
+        correctedGoalTargetPose = threadedTele.invertIfBlue(goalTargetPos);
 
         startOdoLauncher = true;
 
@@ -262,6 +264,7 @@ public class ExpansionHubThread extends ThreadEx {
             if(turretTheta > Math.PI) {
                 turretTheta -= 2 * Math.PI;
             }
+
             if(autoLockDebInfo) {
                 telemetry.append("Turret tracking: ");
                 telemetry.append(turretTracking);
