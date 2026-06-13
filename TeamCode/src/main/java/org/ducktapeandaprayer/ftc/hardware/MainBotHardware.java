@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public class MainBotHardware {
     //
@@ -293,11 +294,26 @@ public class MainBotHardware {
         octoQuad.setLocalizerPose((int) (x * 25.4), (int) (y * 25.4), heading);
     }
 
-    public OctoQuad.LocalizerDataBlock readOctoQuadLocalizerData() {
+    private int failedOctoquadReadAttempts = 0;
+    private final int octoquadMaxRetryAttempts = 10;
+
+    public OctoQuad.LocalizerDataBlock readOctoQuadLocalizerData(Supplier<Boolean> isStopRequested) {
+        failedOctoquadReadAttempts = 0;
         OctoQuad.LocalizerDataBlock block = null;
-        while(block == null || !block.crcOk) {
+        while((block == null || !block.crcOk)) {
+            if(isStopRequested == null) {
+                if(failedOctoquadReadAttempts >= octoquadMaxRetryAttempts) {
+                    block = null;
+                    break;
+                }
+                failedOctoquadReadAttempts++;
+            } else if(isStopRequested.get()) {
+               block = null;
+               break;
+            }
             block = octoQuad.readLocalizerData();
         }
+
         return block;
     }
 

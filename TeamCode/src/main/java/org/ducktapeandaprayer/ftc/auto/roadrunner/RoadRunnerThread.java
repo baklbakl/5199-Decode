@@ -1,4 +1,4 @@
-package org.ducktapeandaprayer.ftc.auto;
+package org.ducktapeandaprayer.ftc.auto.roadrunner;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.canvas.Canvas;
@@ -6,10 +6,11 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.*;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
+import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.GatePush;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
-import org.ducktapeandaprayer.ftc.auto.roadrunner.MecanumDrive;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
@@ -64,7 +65,7 @@ public class RoadRunnerThread extends ThreadEx {
 
         splitAuto = new SplitAuto(
                 (startPose) -> {
-                    mecanumDrive = new MecanumDrive(hardware, startPose, robot::getVoltage);
+                    mecanumDrive = new MecanumDrive(hardware, startPose, robot::getVoltage, opMode::isStopRequested);
                     return mecanumDrive.actionBuilder(startPose);
                 },
                 robot

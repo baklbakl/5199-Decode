@@ -47,7 +47,7 @@ public final class TuningOpModes {
         DriveViewFactory dvf = hardwareMap -> {
             MainBotHardware hardware = MainBotHardware.getOrCreate(hardwareMap);
             MainBotHardware.Container container = hardware.getContainer();
-            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0), container.voltageSensor::getVoltage);
+            MecanumDrive md = new MecanumDrive(hardware, new Pose2d(0, 0, 0), container.voltageSensor::getVoltage, null);
 
             List<EncoderGroup> encoderGroups = new ArrayList<>();
             List<EncoderRef> parEncs = new ArrayList<>(), perpEncs = new ArrayList<>();

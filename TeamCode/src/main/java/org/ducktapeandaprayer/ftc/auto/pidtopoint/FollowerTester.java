@@ -82,7 +82,7 @@ public class FollowerTester extends FastIterativeOpMode {
             watcher.tick();
         }
 
-        telemetry.addLine(follower.tick(hardware.readOctoQuadLocalizerData()));
+        telemetry.addLine(follower.tick(hardware.readOctoQuadLocalizerData(this::opModeIsActive)));
         telemetry.update();
     }
 

@@ -13,10 +13,13 @@ import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigu
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
 import com.qualcomm.robotcore.hardware.usb.RobotUsbDevice;
 import com.qualcomm.robotcore.util.Device;
+import com.qualcomm.robotcore.util.LastKnown;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.lib.SingletonHelper;
 import org.ducktapeandaprayer.ftc.lib.TeamCodeWarningSource;
 
+import java.lang.reflect.Field;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -24,6 +27,8 @@ import java.util.Set;
 import static org.ducktapeandaprayer.ftc.lib.OnCreateHandlers.*;
 
 public class LynxModuleInitializer {
+    private final double newLastKnownTime = 3000;
+
     public enum UseRS485 {
         FORCE,
         FALLBACK,
@@ -56,6 +61,20 @@ public class LynxModuleInitializer {
     public final LynxModuleControllers childModule;
     private final UsbScanner scanner;
 
+    private static final Field msFreshnessField;
+    private static final Field moduleControllersField;
+
+    static {
+        try {
+            msFreshnessField = LastKnown.class.getDeclaredField("msFreshness");
+            msFreshnessField.setAccessible(true);
+            moduleControllersField = LynxModule.class.getDeclaredField("controllers");
+            moduleControllersField.setAccessible(true);
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public class LynxModuleControllers {
         public final LynxModule module;
         public final LynxDcMotorControllerEx motorController;
@@ -63,6 +82,15 @@ public class LynxModuleInitializer {
         public final LynxServoController servoController;
         public final LynxAnalogInputController analogInputController;
         public final LynxVoltageSensor voltageSensor;
+
+
+        private void fixupLastKnown(LastKnown<?> lastKnown) {
+            try {
+                msFreshnessField.setDouble(lastKnown, newLastKnownTime);
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
 
         public LynxModuleControllers(LynxModule module) {
             this.module = module;
@@ -75,6 +103,30 @@ public class LynxModuleInitializer {
             } catch (RobotCoreException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
+
+            //This fixes up all the last known values in the controllers to be a larger, more sensible number
+            try {
+                List<LynxController> moduleControllers = (List<LynxController>) moduleControllersField.get(this.module);
+
+                for(LynxController controller : moduleControllers) {
+                    Field[] controllerFields = controller.getClass().getDeclaredFields();
+                    for(Field controlerField : controllerFields) {
+                        controlerField.setAccessible(true);
+                        Object object = controlerField.get(controller);
+                        if(object instanceof LastKnown[]) {
+                            LastKnown<?>[] lastKnowns = (LastKnown<?>[]) object;
+                            for(LastKnown<?> lastKnown : lastKnowns) {
+                                fixupLastKnown(lastKnown);
+                            }
+                        } else if(object instanceof LastKnown) {
+                            fixupLastKnown((LastKnown<?>) object);
+                        }
+                    }
+                }
+            } catch (IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+
         }
 
         public DcMotorExEx createDcMotor(int id) {

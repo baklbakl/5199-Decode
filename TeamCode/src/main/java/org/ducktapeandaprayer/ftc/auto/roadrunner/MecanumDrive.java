@@ -113,7 +113,7 @@ public final class MecanumDrive {
     public final MainBotHardware hardware;
     public final Supplier<Double> voltageSupplier;
 
-    public MecanumDrive(MainBotHardware hardware, Pose2d pose, Supplier<Double> voltageSupplier) {
+    public MecanumDrive(MainBotHardware hardware, Pose2d pose, Supplier<Double> voltageSupplier, Supplier<Boolean> isStopRequested) {
         this.hardware = hardware;
         MainBotHardware.Container container = this.hardware.getContainer();
 
@@ -133,7 +133,7 @@ public final class MecanumDrive {
         rightBack.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         rightFront.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        localizer = new OctoQuadLocalizer(hardware, pose);
+        localizer = new OctoQuadLocalizer(hardware, pose, isStopRequested);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
     }
@@ -141,7 +141,7 @@ public final class MecanumDrive {
     public MecanumDrive(HardwareMap hardwareMap, Pose2d pose) {
         //Passing null as the voltageSupplier here and then dealing with it in the other constructor is a gross hack,
         // but it works so IDC
-        this(MainBotHardware.getOrCreate(hardwareMap), pose, null);
+        this(MainBotHardware.getOrCreate(hardwareMap), pose, null, null);
         MainBotHardware.Container container = this.hardware.getContainer();
         container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.OFF);

@@ -1,11 +1,13 @@
-package org.ducktapeandaprayer.ftc.auto;
+package org.ducktapeandaprayer.ftc.auto.pidtopoint;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import org.ducktapeandaprayer.ftc.auto.roadrunner.RoadRunnerThread;
+import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
 
-@Autonomous(name = "Super Split Auto")
-public class SuperSplitAutoRunner extends ThreadedOpMode {
+@Autonomous(name = "PID To Point Auto")
+public class PidToPointAuto extends ThreadedOpMode {
     @Override
     protected void init_internal() {
         super.init_internal();

@@ -161,7 +161,7 @@ public class ControlHubThread extends ThreadEx {
     }
 
     public void tick() {
-        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData();
+        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData(threadedTele::isStopRequested);
         Pose2d newPose = MainBotHardware.makeOctoQuadPose(block);
 
         telemetry.append("Octoquad x: ");

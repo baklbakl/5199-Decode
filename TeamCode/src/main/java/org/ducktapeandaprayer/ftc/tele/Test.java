@@ -18,8 +18,8 @@ public class Test extends FastIterativeOpMode {
 
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-        //hardware = MainBotHardware.getOrCreate(hardwareMap);
-        //container = hardware.getContainer();
+        hardware = MainBotHardware.getOrCreate(hardwareMap);
+        container = hardware.getContainer();
         //hardware.setOctoQuadPose(startPoint);
         //follower = new Follower(hardware);
         //follower.setPaused(true);
@@ -69,6 +69,7 @@ public class Test extends FastIterativeOpMode {
         //    watcher.tick();
         //}
         //
+        hardware.readOctoQuadLocalizerData(this::isStopRequested);
         //telemetry.addLine(follower.tick(hardware.readOctoQuadLocalizerData()));
         //telemetry.update();
     }

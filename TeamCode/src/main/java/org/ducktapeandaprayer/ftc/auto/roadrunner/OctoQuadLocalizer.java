@@ -2,23 +2,21 @@ package org.ducktapeandaprayer.ftc.auto.roadrunner;
 
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.PoseVelocity2d;
-import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
-import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.UnnormalizedAngleUnit;
 
-import java.util.Objects;
+import java.util.function.Supplier;
 
 public final class OctoQuadLocalizer implements Localizer {
     public final MainBotHardware hardware;
     private Pose2d pose;
+    private final Supplier<Boolean> isStopRequested;
 
-    public OctoQuadLocalizer(MainBotHardware hardware, Pose2d initialPose) {
+    public OctoQuadLocalizer(MainBotHardware hardware, Pose2d initialPose, Supplier<Boolean> isStopRequested) {
         this.hardware = hardware;
+        this.isStopRequested = isStopRequested;
         hardware.setOctoQuadPose(initialPose);
         pose = initialPose;
     }
@@ -40,7 +38,7 @@ public final class OctoQuadLocalizer implements Localizer {
 
     @Override
     public PoseVelocity2d update() {
-        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData();
+        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData(isStopRequested);
         pose = MainBotHardware.makeOctoQuadPose(block);
         velocity = new PoseVelocity2d(new Vector2d(block.velX_mmS / 25.4, block.velY_mmS / 25.4), block.velHeading_radS);
         return velocity;
