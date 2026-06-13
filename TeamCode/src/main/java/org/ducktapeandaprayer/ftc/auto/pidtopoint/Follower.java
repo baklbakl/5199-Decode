@@ -82,25 +82,26 @@ public class Follower {
             Pose2d targetPose = points.get(targetPoint);
             Pose2d robotPose = MainBotHardware.makeOctoQuadPose(dataBlock);
             Pose2d poseError = new Pose2d(targetPose.position.x - robotPose.position.x, targetPose.position.y - robotPose.position.y, targetPose.heading.minus(robotPose.heading));
-            double headingError = poseError.heading.toDouble();
-            double headingPower = -1 * headingError * kPHeading;
 
-            if(Math.abs(headingError) < headingDoneThresh) {
-                headingPower = 0;
-            }
+            //Simple proportional controller for translational
+            double translationError = poseError.position.norm();
+            double proportionalPower = kS + translationError * kPTranslation;
+            double translationalPower = proportionalPower;
 
-            double angleToTarget = (Math.atan2(poseError.position.y, poseError.position.x) + Math.PI * 2) % (Math.PI * 2);
+            double headingToTarget = (Math.atan2(poseError.position.y, poseError.position.x) + Math.PI * 2) % (Math.PI * 2);
 
             PoseVelocity2d robotVelocity = new PoseVelocity2d(new Vector2d(dataBlock.velX_mmS / 25.4, dataBlock.velY_mmS / 25.4), dataBlock.velHeading_radS);
-            //Target vel is always zero
+            //Target vel is always zero for now
             double velError = robotVelocity.linearVel.norm() - 0;
-            double velAngle = (Math.atan2(robotVelocity.linearVel.y, robotVelocity.linearVel.x) + Math.PI * 2) % (Math.PI * 2);
-            double velAngleError = Math.abs(velAngle - angleToTarget);
-            velAngleError = velAngleError > Math.PI ? Math.PI * 2 - velAngleError : velAngleError;
-            double velErrorSignToTarget = velAngleError > Math.PI / 2 ? -1 : 1;
-            //double velCorrectionPower = -velErrorSignToTarget * Math.pow(velError * kDfake, velocityPower) / Math.pow(Math.abs(translationError), kDfakePPower);
+            //Figure out if we should brake by opposing the proportional error or going with it. Right now the velocity
+            // correction only acts in the direction of the proportional error.
+            double velHeading = (Math.atan2(robotVelocity.linearVel.y, robotVelocity.linearVel.x) + Math.PI * 2) % (Math.PI * 2);
+            double velHeadingError = Math.abs(velHeading - headingToTarget);
+            velHeadingError = velHeadingError > Math.PI ? Math.PI * 2 - velHeadingError : velHeadingError;
+            double velErrorSignToTarget = velHeadingError > Math.PI / 2 ? -1 : 1;
+
+            //Apply breaking that starts at a set distance from the target and increases linearly as we approach it.
             double velCorrectionPower;
-            double translationError = poseError.position.norm();
             double brakeDistanceLeft = brakeDistance - translationError;
             if(brakeDistanceLeft > 0) {
                 velCorrectionPower = -velErrorSignToTarget * Math.pow(velError * kDfake, velocityPower) * (brakeDistanceLeft / brakeDistance);
@@ -108,15 +109,21 @@ public class Follower {
                 velCorrectionPower = 0;
             }
 
-            double proportionalPower = kS + translationError * kPTranslation;
-            //Vel based breaking may need to be in a different direction to pose error
-            double power = proportionalPower;
-
-            //last point turn on breaking
+            //If this is the last point in the chain turn on breaking
             if(targetPoint + 1 == points.size()) {
-                power += velCorrectionPower;
+                translationalPower += velCorrectionPower;
             }
 
+            //Simple kP for heading
+            double headingError = poseError.heading.toDouble();
+            double headingPower = -1 * headingError * kPHeading;
+
+            if(Math.abs(headingError) < headingDoneThresh) {
+                headingPower = 0;
+            }
+
+            //If our translation has finished then move onto the next point, hold the end point, or finish the path.
+            // Right now we don't wait for heading to achieve its setpoint before moving on.
             if(Math.abs(translationError) < doneThresh) {
                 targetPoint++;
                 if(targetPoint >= points.size()) {
@@ -125,22 +132,28 @@ public class Follower {
                         points = null;
                         headingPower = 0;
                     }
-                    power = 0;
+                    translationalPower = 0;
                 }
             }
 
-            if(power == 0) {
+            //Apply kS to rotation if there is no kS from translation (translation power is zero)
+            if(translationalPower == 0) {
                 headingPower += Math.signum(headingPower) * kS;
             }
 
-            double voltageCompPower = power / voltage;
+            double voltageCompTranslationPower = translationalPower / voltage;
+            //Rotate the direction of translation required to the robot's frame. Rotation2d.times() adds two rotations.
+            // Rotation2d.inverse() is a unary minus, so in total we get headingToTarget - robotPose.heading;
+            Rotation2d robotRotationToTarget = Rotation2d.fromDouble(headingToTarget).times(robotPose.heading.inverse());
+            //Rotation2d robotRotationToTarget = Rotation2d.fromDouble(Rotation2d.fromDouble(headingToTarget).minus(robotPose.heading));
+
+            //Find the forward and strafe components of the translation. .real and .imag are just cos() and sin().
+            // Roadrunner's rotation class stores rotations as the sin() and cos() of their angle
+            double forwardPower = robotRotationToTarget.real * voltageCompTranslationPower;
+            double strafePower = robotRotationToTarget.imag * voltageCompTranslationPower * strafeMultiplier;
             double voltageCompHeadingPower = headingPower / voltage;
 
-            //Rotation2d robotRotationToTarget = rotationToTarget.times(robotPose.heading);
-            Rotation2d robotRotationToTarget = Rotation2d.fromDouble(Rotation2d.fromDouble(angleToTarget).minus(robotPose.heading));
-
-            double forwardPower = robotRotationToTarget.real * voltageCompPower;
-            double strafePower = robotRotationToTarget.imag * voltageCompPower * strafeMultiplier;
+            //Cap our wheel power at one while making sure all the wheels retain their relative power levels
             double maxPower = Math.abs(forwardPower) + Math.abs(strafePower) + Math.abs(voltageCompHeadingPower);
             if(maxPower > 1) {
                 forwardPower /= maxPower;
@@ -148,6 +161,7 @@ public class Follower {
                 headingPower /= maxPower;
             }
 
+            //Standard Mecanum kinematics
             double leftFrontPower  = forwardPower - strafePower + voltageCompHeadingPower;
             double rightFrontPower = forwardPower + strafePower - voltageCompHeadingPower;
             double leftBackPower   = forwardPower + strafePower + voltageCompHeadingPower;
@@ -172,20 +186,20 @@ public class Follower {
                 dashTelem.addData("Pose error x", poseError.position.x);
                 dashTelem.addData("Pose error y", poseError.position.y);
                 dashTelem.addData("heading error", headingError);
-                dashTelem.addData("heading power", headingPower);
+                dashTelem.addData("heading translationalPower", headingPower);
                 dashTelem.addData("translation error", translationError);
                 dashTelem.addData("vel error", velError);
-                dashTelem.addData("vel angle", velAngle);
-                dashTelem.addData("angle to target", angleToTarget);
-                dashTelem.addData("vel angle error", velAngleError);
+                dashTelem.addData("vel angle", velHeading);
+                dashTelem.addData("angle to target", headingToTarget);
+                dashTelem.addData("vel angle error", velHeadingError);
                 dashTelem.addData("vel error sign to target", velErrorSignToTarget);
-                dashTelem.addData("vel correction power", velCorrectionPower);
-                dashTelem.addData("proportional power", proportionalPower);
-                dashTelem.addData("translation power", power);
-                dashTelem.addData("forward power", forwardPower);
-                dashTelem.addData("strafe power", strafePower);
-                dashTelem.addData("left front power", leftFrontPower);
-                dashTelem.addData("right front power", rightFrontPower);
+                dashTelem.addData("vel correction translationalPower", velCorrectionPower);
+                dashTelem.addData("proportional translationalPower", proportionalPower);
+                dashTelem.addData("translation translationalPower", translationalPower);
+                dashTelem.addData("forward translationalPower", forwardPower);
+                dashTelem.addData("strafe translationalPower", strafePower);
+                dashTelem.addData("left front translationalPower", leftFrontPower);
+                dashTelem.addData("right front translationalPower", rightFrontPower);
                 dashTelem.update();
 
                 StringBuilder telemetry = new StringBuilder();
@@ -199,20 +213,20 @@ public class Follower {
                 telemetry.append("Pose error x: ").append(poseError.position.x).append('\n');
                 telemetry.append("Pose error y: ").append(poseError.position.y).append('\n');
                 telemetry.append("heading error: ").append(headingError).append('\n');
-                telemetry.append("heading power: ").append(headingPower).append('\n');
+                telemetry.append("heading translationalPower: ").append(headingPower).append('\n');
                 telemetry.append("translation error: ").append(translationError).append('\n');
                 telemetry.append("vel error: ").append(velError).append('\n');
-                telemetry.append("vel angle: ").append(velAngle).append('\n');
-                telemetry.append("angle to target: ").append(angleToTarget).append('\n');
-                telemetry.append("vel angle error: ").append(velAngleError).append('\n');
+                telemetry.append("vel angle: ").append(velHeading).append('\n');
+                telemetry.append("angle to target: ").append(headingToTarget).append('\n');
+                telemetry.append("vel angle error: ").append(velHeadingError).append('\n');
                 telemetry.append("vel error sign to target: ").append(velErrorSignToTarget).append('\n');
-                telemetry.append("vel correction power: ").append(velCorrectionPower).append('\n');
-                telemetry.append("proportional power: ").append(proportionalPower).append('\n');
-                telemetry.append("translation power: ").append(power).append('\n');
-                telemetry.append("forward power: ").append(forwardPower).append('\n');
-                telemetry.append("strafe power: ").append(strafePower).append('\n');
-                telemetry.append("left front power: ").append(leftFrontPower).append('\n');
-                telemetry.append("right front power: ").append(rightFrontPower).append('\n');
+                telemetry.append("vel correction translationalPower: ").append(velCorrectionPower).append('\n');
+                telemetry.append("proportional translationalPower: ").append(proportionalPower).append('\n');
+                telemetry.append("translation translationalPower: ").append(translationalPower).append('\n');
+                telemetry.append("forward translationalPower: ").append(forwardPower).append('\n');
+                telemetry.append("strafe translationalPower: ").append(strafePower).append('\n');
+                telemetry.append("left front translationalPower: ").append(leftFrontPower).append('\n');
+                telemetry.append("right front translationalPower: ").append(rightFrontPower).append('\n');
                 return telemetry.toString();
             }
         }

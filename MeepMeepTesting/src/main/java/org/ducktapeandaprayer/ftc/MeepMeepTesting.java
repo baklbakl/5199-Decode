@@ -53,6 +53,12 @@ class AroundCornerConstraint implements VelConstraint {
 
 public class MeepMeepTesting {
     public static void main(String[] args) {
+        double headingToTarget = Math.PI;
+        Rotation2d robotPose = Rotation2d.fromDouble(Math.PI / 2);
+        System.out.println(Rotation2d.fromDouble(headingToTarget).times(robotPose.inverse()));
+        System.out.println(Rotation2d.fromDouble(Rotation2d.fromDouble(headingToTarget).minus(robotPose)));
+        if(true) return;
+
         System.setProperty("sun.java2d.opengl", "true");
 
         MeepMeep meepMeep = new MeepMeep(800);
