@@ -62,10 +62,20 @@ public class ControlHubThread extends ThreadEx {
     public void requestFollowerFollow(List<Pose2d> points) {
         ArrayList<Pose2d> pointsCopy = new ArrayList<>();
         for(Pose2d pose : points) {
-            pointsCopy.add(pose);
+            pointsCopy.add(threadedTele.invertIfBlue(pose));
         }
         followerStateRequest.set(new FollowerStateRequest(FollowerStateRequestType.FOLLOW, Collections.unmodifiableList(pointsCopy)));
     }
+
+    public boolean isFollowerRequestPending() {
+        return followerStateRequest.get() != null;
+    }
+
+    private volatile boolean followerRunning;
+    public boolean isFollowerRunning() {
+        return followerRunning;
+    }
+
 
     private void computeSetWheelSpeeds(double forward, double strafe, double turning) {
 
@@ -168,7 +178,6 @@ public class ControlHubThread extends ThreadEx {
 
         FollowerStateRequest followerStateRequest = this.followerStateRequest.get();
         if(followerStateRequest != null) {
-            this.followerStateRequest.set(null);
             switch (followerStateRequest.requestType) {
                 case FOLLOW:
                     if(followerStateRequest.points == null) {
@@ -181,13 +190,19 @@ public class ControlHubThread extends ThreadEx {
                     computeSetWheelSpeeds(-threadedTele.gamepad1.left_stick_y, threadedTele.gamepad1.left_stick_x, threadedTele.gamepad1.right_stick_x);
                     break;
             }
+            this.followerStateRequest.set(null);
         }
+
+        followerRunning = !follower.isCanceled();
 
         if(followerDebugInfo) {
             telemetry.append(follower.tick(block));
+            telemetry.append("Follower running: ").append(followerRunning).append('\n');
         } else {
             follower.tick(block);
         }
+
+
 
         updateTelemetry();
         container.modules.parentModule.module.clearBulkCache();

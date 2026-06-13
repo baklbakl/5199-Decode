@@ -15,7 +15,6 @@ public class Follower {
     public static double kPTranslation = 0.6;
     public static double kPHeading = 10;
     public static double headingDoneThresh = 0.02;
-    public static double headingCorrectionMaxPower = 0.5;
     public static double kS = 2;
     public static double doneThresh = 1;
     public static double kDfake = 0.12;
@@ -28,6 +27,7 @@ public class Follower {
     private boolean pause = false;
     private int targetPoint = 0;
     private boolean holdEnd = false;
+    private boolean enableTelemetry = false;
 
     public Follower(MainBotHardware hardware) {
         this.hardware = hardware;
@@ -49,6 +49,10 @@ public class Follower {
 
     public void resetTrajectory() {
         targetPoint = 0;
+    }
+
+    public void setTelemetryEnabled(boolean enabled) {
+        enableTelemetry = enabled;
     }
 
     public void cancel() {
@@ -77,24 +81,18 @@ public class Follower {
             double voltage = container.voltageSensor.getVoltage();
             Pose2d targetPose = points.get(targetPoint);
             Pose2d robotPose = MainBotHardware.makeOctoQuadPose(dataBlock);
-            PoseVelocity2d robotVelocity = new PoseVelocity2d(new Vector2d(dataBlock.velX_mmS / 25.4, dataBlock.velY_mmS / 25.4), dataBlock.velHeading_radS);
-            Pose2d poseError = targetPose.minusExp(robotPose);
+            Pose2d poseError = new Pose2d(targetPose.position.x - robotPose.position.x, targetPose.position.y - robotPose.position.y, targetPose.heading.minus(robotPose.heading));
             double headingError = poseError.heading.toDouble();
             double headingPower = -1 * headingError * kPHeading;
-            headingPower /= voltage;
-            if(Math.abs(headingPower) > headingCorrectionMaxPower) {
-                headingPower = Math.signum(headingPower) * headingCorrectionMaxPower;
-            }
 
             if(Math.abs(headingError) < headingDoneThresh) {
                 headingPower = 0;
             }
 
             double angleToTarget = (Math.atan2(poseError.position.y, poseError.position.x) + Math.PI * 2) % (Math.PI * 2);
-            Rotation2d rotationToTarget = Rotation2d.fromDouble(angleToTarget);
 
-            double translationError = poseError.position.norm();
-            //Target vel is zero
+            PoseVelocity2d robotVelocity = new PoseVelocity2d(new Vector2d(dataBlock.velX_mmS / 25.4, dataBlock.velY_mmS / 25.4), dataBlock.velHeading_radS);
+            //Target vel is always zero
             double velError = robotVelocity.linearVel.norm() - 0;
             double velAngle = (Math.atan2(robotVelocity.linearVel.y, robotVelocity.linearVel.x) + Math.PI * 2) % (Math.PI * 2);
             double velAngleError = Math.abs(velAngle - angleToTarget);
@@ -102,6 +100,7 @@ public class Follower {
             double velErrorSignToTarget = velAngleError > Math.PI / 2 ? -1 : 1;
             //double velCorrectionPower = -velErrorSignToTarget * Math.pow(velError * kDfake, velocityPower) / Math.pow(Math.abs(translationError), kDfakePPower);
             double velCorrectionPower;
+            double translationError = poseError.position.norm();
             double brakeDistanceLeft = brakeDistance - translationError;
             if(brakeDistanceLeft > 0) {
                 velCorrectionPower = -velErrorSignToTarget * Math.pow(velError * kDfake, velocityPower) * (brakeDistanceLeft / brakeDistance);
@@ -111,7 +110,12 @@ public class Follower {
 
             double proportionalPower = kS + translationError * kPTranslation;
             //Vel based breaking may need to be in a different direction to pose error
-            double power = proportionalPower + velCorrectionPower;
+            double power = proportionalPower;
+
+            //last point turn on breaking
+            if(targetPoint + 1 == points.size()) {
+                power += velCorrectionPower;
+            }
 
             if(Math.abs(translationError) < doneThresh) {
                 targetPoint++;
@@ -126,27 +130,28 @@ public class Follower {
             }
 
             if(power == 0) {
-                headingPower += Math.signum(headingPower) * kS / voltage;
-                if(Math.abs(headingPower) > headingCorrectionMaxPower) {
-                    headingPower = Math.signum(headingPower) * headingCorrectionMaxPower;
-                }
+                headingPower += Math.signum(headingPower) * kS;
             }
 
-            double powerVoltageComp = power / voltage;
+            double voltageCompPower = power / voltage;
+            double voltageCompHeadingPower = headingPower / voltage;
 
-            double forwardPower = rotationToTarget.real * powerVoltageComp;
-            double strafePower = rotationToTarget.imag * powerVoltageComp * strafeMultiplier;
-            double maxTranslationPower = Math.abs(forwardPower) + Math.abs(strafePower);
-            double maxAllowedTranslationPower = 1 - headingPower;
-            if(maxTranslationPower > maxAllowedTranslationPower) {
-                forwardPower *= maxAllowedTranslationPower / maxTranslationPower;
-                strafePower *= maxAllowedTranslationPower / maxTranslationPower;
+            //Rotation2d robotRotationToTarget = rotationToTarget.times(robotPose.heading);
+            Rotation2d robotRotationToTarget = Rotation2d.fromDouble(Rotation2d.fromDouble(angleToTarget).minus(robotPose.heading));
+
+            double forwardPower = robotRotationToTarget.real * voltageCompPower;
+            double strafePower = robotRotationToTarget.imag * voltageCompPower * strafeMultiplier;
+            double maxPower = Math.abs(forwardPower) + Math.abs(strafePower) + Math.abs(voltageCompHeadingPower);
+            if(maxPower > 1) {
+                forwardPower /= maxPower;
+                strafePower /= maxPower;
+                headingPower /= maxPower;
             }
 
-            double leftFrontPower  = forwardPower - strafePower + headingPower;
-            double rightFrontPower = forwardPower + strafePower - headingPower;
-            double leftBackPower   = forwardPower + strafePower + headingPower;
-            double rightBackPower  = forwardPower - strafePower - headingPower;
+            double leftFrontPower  = forwardPower - strafePower + voltageCompHeadingPower;
+            double rightFrontPower = forwardPower + strafePower - voltageCompHeadingPower;
+            double leftBackPower   = forwardPower + strafePower + voltageCompHeadingPower;
+            double rightBackPower  = forwardPower - strafePower - voltageCompHeadingPower;
 
             if(!pause) {
                 container.leftFrontDrive.setPower(leftFrontPower);
@@ -155,43 +160,61 @@ public class Follower {
                 container.rightRearDrive.setPower(rightBackPower);
             }
 
-            Telemetry dashTelem = FtcDashboard.getInstance().getTelemetry();
-            dashTelem.addData("Paused", pause);
-            dashTelem.addData("Target pose", targetPose);
-            dashTelem.addData("Target point index", targetPoint);
-            dashTelem.addData("Pose error", poseError);
-            dashTelem.addData("heading error", headingError);
-            dashTelem.addData("heading power", headingPower);
-            dashTelem.addData("translation error", translationError);
-            dashTelem.addData("vel error", velError);
-            dashTelem.addData("velErrorSignToTarge", velErrorSignToTarget);
-            dashTelem.addData("vel correction power", velCorrectionPower);
-            dashTelem.addData("proportional power", proportionalPower);
-            dashTelem.addData("translation power", power);
-            dashTelem.addData("forward power", forwardPower);
-            dashTelem.addData("strafe power", strafePower);
-            dashTelem.addData("left front power", leftFrontPower);
-            dashTelem.addData("right front power", rightFrontPower);
-            dashTelem.update();
+            if(enableTelemetry) {
+                Telemetry dashTelem = FtcDashboard.getInstance().getTelemetry();
+                dashTelem.addData("Paused", pause);
+                dashTelem.addData("Target pose", targetPose);
+                dashTelem.addData("Target point index", targetPoint);
+                dashTelem.addData("Robot x", robotPose.position.x);
+                dashTelem.addData("Robot y", robotPose.position.y);
+                dashTelem.addData("Robot heading", robotPose.heading.toDouble());
+                dashTelem.addData("Robot RotationToTarget", robotRotationToTarget.toDouble());
+                dashTelem.addData("Pose error x", poseError.position.x);
+                dashTelem.addData("Pose error y", poseError.position.y);
+                dashTelem.addData("heading error", headingError);
+                dashTelem.addData("heading power", headingPower);
+                dashTelem.addData("translation error", translationError);
+                dashTelem.addData("vel error", velError);
+                dashTelem.addData("vel angle", velAngle);
+                dashTelem.addData("angle to target", angleToTarget);
+                dashTelem.addData("vel angle error", velAngleError);
+                dashTelem.addData("vel error sign to target", velErrorSignToTarget);
+                dashTelem.addData("vel correction power", velCorrectionPower);
+                dashTelem.addData("proportional power", proportionalPower);
+                dashTelem.addData("translation power", power);
+                dashTelem.addData("forward power", forwardPower);
+                dashTelem.addData("strafe power", strafePower);
+                dashTelem.addData("left front power", leftFrontPower);
+                dashTelem.addData("right front power", rightFrontPower);
+                dashTelem.update();
 
-            StringBuilder telemetry = new StringBuilder();
-            telemetry.append("Paused: ").append(pause).append('\n');
-            telemetry.append("Target pose: ").append(targetPose).append('\n');
-            telemetry.append("Target point index: ").append(targetPoint).append('\n');
-            telemetry.append("Pose error: ").append(poseError).append('\n');
-            telemetry.append("heading error: ").append(headingError).append('\n');
-            telemetry.append("heading power: ").append(headingPower).append('\n');
-            telemetry.append("translation error: ").append(translationError).append('\n');
-            telemetry.append("vel error: ").append(velError).append('\n');
-            telemetry.append("velErrorSignToTarget: ").append(velErrorSignToTarget).append('\n');
-            telemetry.append("vel correction power: ").append(velCorrectionPower).append('\n');
-            telemetry.append("proportional power: ").append(proportionalPower).append('\n');
-            telemetry.append("translation power: ").append(power).append('\n');
-            telemetry.append("forward power: ").append(forwardPower).append('\n');
-            telemetry.append("strafe power: ").append(strafePower).append('\n');
-            telemetry.append("left front power: ").append(leftFrontPower).append('\n');
-            telemetry.append("right front power: ").append(rightFrontPower).append('\n');
-            return telemetry.toString();
+                StringBuilder telemetry = new StringBuilder();
+                telemetry.append("Paused: ").append(pause).append('\n');
+                telemetry.append("Target pose: ").append(targetPose).append('\n');
+                telemetry.append("Target point index: ").append(targetPoint).append('\n');
+                telemetry.append("Robot x: ").append(robotPose.position.x).append('\n');
+                telemetry.append("Robot y: ").append(robotPose.position.y).append('\n');
+                telemetry.append("Robot heading: ").append(robotPose.heading.toDouble()).append('\n');
+                telemetry.append("Robot RotationToTarget: ").append(robotRotationToTarget.toDouble()).append('\n');
+                telemetry.append("Pose error x: ").append(poseError.position.x).append('\n');
+                telemetry.append("Pose error y: ").append(poseError.position.y).append('\n');
+                telemetry.append("heading error: ").append(headingError).append('\n');
+                telemetry.append("heading power: ").append(headingPower).append('\n');
+                telemetry.append("translation error: ").append(translationError).append('\n');
+                telemetry.append("vel error: ").append(velError).append('\n');
+                telemetry.append("vel angle: ").append(velAngle).append('\n');
+                telemetry.append("angle to target: ").append(angleToTarget).append('\n');
+                telemetry.append("vel angle error: ").append(velAngleError).append('\n');
+                telemetry.append("vel error sign to target: ").append(velErrorSignToTarget).append('\n');
+                telemetry.append("vel correction power: ").append(velCorrectionPower).append('\n');
+                telemetry.append("proportional power: ").append(proportionalPower).append('\n');
+                telemetry.append("translation power: ").append(power).append('\n');
+                telemetry.append("forward power: ").append(forwardPower).append('\n');
+                telemetry.append("strafe power: ").append(strafePower).append('\n');
+                telemetry.append("left front power: ").append(leftFrontPower).append('\n');
+                telemetry.append("right front power: ").append(rightFrontPower).append('\n');
+                return telemetry.toString();
+            }
         }
 
         return "";

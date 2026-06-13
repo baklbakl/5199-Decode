@@ -6,12 +6,10 @@ import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.util.ElapsedTime;
 import org.apache.commons.lang3.tuple.Pair;
 import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
 import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
-import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.TwoOfThree;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
@@ -31,6 +29,30 @@ public class ExpansionHubThread extends ThreadEx {
     //
     public static double turretOffset = -52.0 /*mm*/ / 25.4;
     public static Vector2d goalTargetPos = new Vector2d(-66, 66);
+    public static class AutoGateCyclePosePair {
+        public final Pose2d shootPose;
+        public final Pose2d gateLineupPose;
+        public AutoGateCyclePosePair(Pose2d shootPose, Pose2d gateLineupPose) {
+            this.shootPose = shootPose;
+            this.gateLineupPose = gateLineupPose;
+        }
+    }
+    public static final AutoGateCyclePosePair nearAutoGateCyclePose = new AutoGateCyclePosePair(
+            new Pose2d(-15, 25, Math.PI / 4),
+            new Pose2d(5, 39, Math.PI / 4)
+    );
+
+    public static final AutoGateCyclePosePair midAutoGateCyclePose = new AutoGateCyclePosePair(
+            new Pose2d(-5, 15, Math.PI / 3),
+            new Pose2d(5, 39, Math.PI / 3)
+    );
+
+    public static final AutoGateCyclePosePair farAutoGateCyclePose = new AutoGateCyclePosePair(
+            new Pose2d(5, 5, Math.PI / 2),
+            null
+    );
+
+    public static Pose2d gatePose = new Pose2d(15, 47, Math.PI / 2);
 
     //
     // Globals
@@ -47,25 +69,32 @@ public class ExpansionHubThread extends ThreadEx {
     private final AutoIntake autoIntake;
 
     private Vector2d correctedGoalTargetPose;
-
     private enum LauncherControlMethod {
         MANUAL,
         PRESET,
         ODOMETRY,
     }
     private final List<LauncherControlMethod> launcherControlMethodElements = new ArrayList<>();
+
     private LauncherControlMethod launcherControlMethod;
     private boolean turretTracking = true;
+    private enum AutoGateCycleState {
+        DISABLED,
+        TO_SHOOT_POS,
+        SHOOTING,
+        TO_GATE
+    }
+    private AutoGateCycleState autoGateCycleState = AutoGateCycleState.DISABLED;
 
-    private enum State {
+    private enum BallHandlingState {
         STOPPED,
         INTAKE,
         OUTTAKE,
         SHOOTING,
     }
 
-    private void toState(State newState) {
-        if(newState == state) return;
+    private void toBallHandlingState(BallHandlingState newState) {
+        if(newState == ballHandlingState) return;
         switch (newState) {
             case STOPPED:
                 mainBotHardware.restIntakeTransfer();
@@ -82,10 +111,12 @@ public class ExpansionHubThread extends ThreadEx {
                 autoShoot.startShooting();
                 break;
         }
-        this.state = newState;
+        this.ballHandlingState = newState;
     }
 
-    private State state = State.STOPPED;
+    private BallHandlingState ballHandlingState = BallHandlingState.STOPPED;
+
+    private AutoGateCyclePosePair activeAutoGateCyclePosePair = null;
 
     private static double launchSpeedFromDist(double dist) {
         synchronized (MainBotHardware.launchSpeedMapping) {
@@ -156,24 +187,57 @@ public class ExpansionHubThread extends ThreadEx {
                     Gamepad.class.getField("square"),
                     Gamepad.class.getField("right_bumper"),
                     Boolean::equals, (Boolean left_bumper, Boolean square, Boolean right_bumper) -> {
+                if(autoGateCycleState != AutoGateCycleState.DISABLED) {
+                    return;
+                }
+
                 if(TwoOfThree.twoOfThree(left_bumper, square, right_bumper) || (!left_bumper && !square && !right_bumper)) {
-                    toState(State.STOPPED);
+                    toBallHandlingState(BallHandlingState.STOPPED);
                 } else if(square) {
-                    toState(State.OUTTAKE);
+                    toBallHandlingState(BallHandlingState.OUTTAKE);
                 } else if(left_bumper) {
-                    toState(State.INTAKE);
+                    toBallHandlingState(BallHandlingState.INTAKE);
                 } else if(right_bumper) {
-                    toState(State.SHOOTING);
+                    toBallHandlingState(BallHandlingState.SHOOTING);
                 } else {
                     throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
                 }
             }));
 
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_down"), (Boolean dpad_down) -> {
-                if(dpad_down) {
-                    controlHubThread.requestFollowerFollow(List.of(new Pose2d(goalTargetPos, Math.PI)));
+            variablesWatched.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right) -> {
+                if(TwoOfThree.twoOfThree(dpad_left, dpad_down, dpad_right)) {
+                    return;
+                }
+
+                if(dpad_left || dpad_down || dpad_right) {
+                    if(dpad_left) {
+                        activeAutoGateCyclePosePair = farAutoGateCyclePose;
+                    } else if(dpad_down) {
+                        activeAutoGateCyclePosePair = midAutoGateCyclePose;
+                    } else if (dpad_right) {
+                        activeAutoGateCyclePosePair = nearAutoGateCyclePose;
+                    }
+
+                    if(hardware.transferEndBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY && hardware.intakeBB.getState() == BeamBreak.State.EMPTY) {
+                        return;
+                    }
+                    toBallHandlingState(BallHandlingState.STOPPED);
+                    autoGateCycleState = AutoGateCycleState.TO_SHOOT_POS;
+                    controlHubThread.requestFollowerFollow(List.of(activeAutoGateCyclePosePair.shootPose));
+
                 } else {
-                    controlHubThread.requestFollowerCancel();
+                    if(autoGateCycleState != AutoGateCycleState.DISABLED) {
+                        autoGateCycleState = AutoGateCycleState.DISABLED;
+                        controlHubThread.requestFollowerCancel();
+                    }
+
+                    activeAutoGateCyclePosePair = null;
+
+                    if(gamepad1.left_bumper) {
+                        toBallHandlingState(BallHandlingState.INTAKE);
+                    } else {
+                        toBallHandlingState(BallHandlingState.STOPPED);
+                    }
                 }
             }));
 
@@ -285,7 +349,7 @@ public class ExpansionHubThread extends ThreadEx {
 
         Boolean autoShootState = null;
 
-        switch(state) {
+        switch(ballHandlingState) {
             case STOPPED:
             case OUTTAKE:
                 break;
@@ -293,7 +357,7 @@ public class ExpansionHubThread extends ThreadEx {
             case INTAKE:
                 if(autoIntake.tick()) {
                     gamepad1.rumble(200);
-                    state = State.STOPPED;
+                    ballHandlingState = BallHandlingState.STOPPED;
                 }
                 break;
 
@@ -302,8 +366,31 @@ public class ExpansionHubThread extends ThreadEx {
                 break;
         }
 
+        switch(autoGateCycleState) {
+            case DISABLED:
+                break;
+            case TO_SHOOT_POS:
+                if(!controlHubThread.isFollowerRunning() && !controlHubThread.isFollowerRequestPending()) {
+                    toBallHandlingState(BallHandlingState.SHOOTING);
+                    autoGateCycleState = AutoGateCycleState.SHOOTING;
+                }
+                break;
+            case SHOOTING:
+                if(Boolean.TRUE.equals(autoShootState)) {
+                    toBallHandlingState(BallHandlingState.STOPPED);
+                    autoGateCycleState = AutoGateCycleState.TO_GATE;
+                    controlHubThread.requestFollowerFollow(activeAutoGateCyclePosePair.gateLineupPose == null ? List.of(gatePose) : List.of(activeAutoGateCyclePosePair.gateLineupPose, gatePose));
+                }
+                break;
+            case TO_GATE:
+                if(!controlHubThread.isFollowerRunning() && !controlHubThread.isFollowerRequestPending()) {
+                    autoGateCycleState = AutoGateCycleState.DISABLED;
+                }
+                break;
+        }
+
         telemetry.append("\nState: ");
-        telemetry.append(state);
+        telemetry.append(ballHandlingState);
         telemetry.append("\nAutoShootState: ");
         telemetry.append(autoShootState);
         telemetry.append("\nIntake BB: ");

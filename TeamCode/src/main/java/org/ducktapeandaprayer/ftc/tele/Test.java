@@ -18,7 +18,9 @@ import static java.lang.Math.abs;
 
 @TeleOp(name = "Test", group = MainBotConfig.opmodeGroupName)
 public class Test extends FastIterativeOpMode {
-    public static double dist = 25;
+    public static double distX = 0;
+    public static double distY = 0;
+    public static double distTheta = 0;
     private final static Pose2d startPoint = new Pose2d(0, 0, 0);
 
     private ElapsedTime runtime = new ElapsedTime();
@@ -46,11 +48,7 @@ public class Test extends FastIterativeOpMode {
                 } else if(circle && follower.isPaused()) {
                     hardware.setOctoQuadPose(startPoint);
                     follower.followTrajectory(List.of(
-                            //new Pose2d(0, dist, 0)
-                            //new Pose2d(dist, 0, 0),
-                            new Pose2d(dist, 0, Math.PI/2)
-                            //new Pose2d(0, 0, Math.PI/2)
-                            /*new Pose2d(0, 0, 0)*/), true);
+                            new Pose2d(distX, distY, Math.toRadians(distTheta))), true);
                 }
             }));
         } catch (NoSuchFieldException e) {
