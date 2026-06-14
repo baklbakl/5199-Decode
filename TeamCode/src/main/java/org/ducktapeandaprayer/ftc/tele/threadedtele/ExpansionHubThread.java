@@ -211,11 +211,11 @@ public class ExpansionHubThread extends ThreadEx {
 
                 if(dpad_left || dpad_down || dpad_right) {
                     if(dpad_left) {
-                        activeAutoGateCyclePosePair = farAutoGateCyclePose;
+                        activeAutoGateCyclePosePair = nearAutoGateCyclePose;
                     } else if(dpad_down) {
                         activeAutoGateCyclePosePair = midAutoGateCyclePose;
                     } else if (dpad_right) {
-                        activeAutoGateCyclePosePair = nearAutoGateCyclePose;
+                        activeAutoGateCyclePosePair = farAutoGateCyclePose;
                     }
 
                     if(hardware.transferEndBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY && hardware.intakeBB.getState() == BeamBreak.State.EMPTY) {

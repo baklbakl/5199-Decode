@@ -1,5 +1,7 @@
 package org.ducktapeandaprayer.ftc.lib;
 
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
@@ -34,6 +36,21 @@ public class ThreadedOpMode extends FastIterativeOpMode {
         this.alliance = alliance;
     }
 
+    public Vector2d invertIfBlue(Vector2d vector) {
+        if(getAlliance() == Alliance.BLUE) {
+            return new Vector2d(vector.x, -vector.y);
+        }
+        return vector;
+    }
+
+    public Pose2d invertIfBlue(Pose2d pose) {
+        if(getAlliance() == Alliance.BLUE) {
+            return new Pose2d(invertIfBlue(pose.position), pose.heading.inverse());
+        }
+        return pose;
+    }
+
+
     @Override
     protected void init_internal() {
         optionDriver = new OptionDriver();
@@ -47,6 +64,10 @@ public class ThreadedOpMode extends FastIterativeOpMode {
         threads.clear();
     }
 
+    public String optionDriverUpdateCallback() {
+        return null;
+    }
+
     @Override
     protected void init_loop_internal() {
         String out = optionDriver.tick();
@@ -55,10 +76,15 @@ public class ThreadedOpMode extends FastIterativeOpMode {
             telemetry.update();
 
             StringBuilder sb = new StringBuilder();
+            String message = this.optionDriverUpdateCallback();
+            if(message != null) {
+                sb.append(message);
+            }
+
             for(ThreadEx thread : threads.values()) {
-                String message = thread.optionDriverUpdateCallback();
-                if(message != null) {
-                    sb.append(message);
+                String otherThreadMessage = thread.optionDriverUpdateCallback();
+                if(otherThreadMessage != null) {
+                    sb.append(otherThreadMessage);
                 }
             }
 

@@ -11,20 +11,6 @@ import org.ducktapeandaprayer.ftc.lib.*;
 public class ThreadedTele extends ThreadedOpMode {
     public MainBotHardware hardware = null;
 
-    public Vector2d invertIfBlue(Vector2d vector) {
-        if(getAlliance() == Alliance.BLUE) {
-            return new Vector2d(vector.x, -vector.y);
-        }
-        return vector;
-    }
-
-    public Pose2d invertIfBlue(Pose2d pose) {
-        if(getAlliance() == Alliance.BLUE) {
-            return new Pose2d(invertIfBlue(pose.position), pose.heading.inverse());
-        }
-        return pose;
-    }
-
     @Override
     protected void init_internal() {
         super.setAlliance(Alliance.lastAlliance);

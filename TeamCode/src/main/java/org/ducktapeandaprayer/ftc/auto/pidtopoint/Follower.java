@@ -9,6 +9,7 @@ import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Follower {
@@ -17,7 +18,7 @@ public class Follower {
     public static double headingDoneThresh = 0.02;
     public static double kS = 2;
     public static double doneThresh = 1;
-    public static double kDfake = 0.12;
+    public static double kDfake = 0.18;
     public static double velocityPower = 1;
     public static double strafeMultiplier = 1.5;
     public static double brakeDistance = 45;
@@ -34,7 +35,9 @@ public class Follower {
     }
 
     public void followTrajectory(List<Pose2d> points, boolean holdEnd) {
-        this.points = points;
+        this.points = new ArrayList<>();
+        //We put the data in our own arraylist so it won't get changed under our feet
+        this.points.addAll(points);
         this.holdEnd = holdEnd;
         targetPoint = 0;
     }
@@ -76,7 +79,7 @@ public class Follower {
     }
 
     public String tick(OctoQuad.LocalizerDataBlock dataBlock) {
-        if(points != null) {
+        if(points != null && dataBlock != null) {
             MainBotHardware.Container container = hardware.getContainer();
             double voltage = container.voltageSensor.getVoltage();
             Pose2d targetPose = points.get(targetPoint);

@@ -1,6 +1,7 @@
 package org.ducktapeandaprayer.ftc.auto.pidtopoint;
 
 import com.acmerobotics.roadrunner.Pose2d;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.util.ElapsedTime;
@@ -36,6 +37,7 @@ public class FollowerTester extends FastIterativeOpMode {
         hardware.setOctoQuadPose(startPoint);
         follower = new Follower(hardware);
         follower.setPaused(true);
+        follower.setTelemetryEnabled(true);
 
         try {
             variableWatchers.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("square"), Gamepad.class.getField("circle"), Boolean::equals, (Boolean square, Boolean circle) -> {
@@ -82,7 +84,8 @@ public class FollowerTester extends FastIterativeOpMode {
             watcher.tick();
         }
 
-        telemetry.addLine(follower.tick(hardware.readOctoQuadLocalizerData(this::opModeIsActive)));
+        OctoQuad.LocalizerDataBlock dataBlock = hardware.readOctoQuadLocalizerData(this::isStopRequested);
+        telemetry.addLine(follower.tick(dataBlock));
         telemetry.update();
     }
 

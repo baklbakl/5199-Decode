@@ -53,11 +53,11 @@ class AroundCornerConstraint implements VelConstraint {
 
 public class MeepMeepTesting {
     public static void main(String[] args) {
-        double headingToTarget = Math.PI;
-        Rotation2d robotPose = Rotation2d.fromDouble(Math.PI / 2);
-        System.out.println(Rotation2d.fromDouble(headingToTarget).times(robotPose.inverse()));
-        System.out.println(Rotation2d.fromDouble(Rotation2d.fromDouble(headingToTarget).minus(robotPose)));
-        if(true) return;
+        //double headingToTarget = Math.PI;
+        //Rotation2d robotPose = Rotation2d.fromDouble(Math.PI / 2);
+        //System.out.println(Rotation2d.fromDouble(headingToTarget).times(robotPose.inverse()));
+        //System.out.println(Rotation2d.fromDouble(Rotation2d.fromDouble(headingToTarget).minus(robotPose)));
+        //if(true) return;
 
         System.setProperty("sun.java2d.opengl", "true");
 
@@ -71,7 +71,7 @@ public class MeepMeepTesting {
 
         SplitAuto splitAuto = new SplitAuto((startPose) -> bot.getDrive().actionBuilder(startPose), new MeepMeepImp());
         Alliance alliance = Alliance.RED;
-        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, true, 3, true, GatePush.AFTER_ONE);
+        TrajectoryActionBuilder builder = splitAuto.fillBuilder(Delay.NONE, StartPos.GOAL, alliance, false, 3, false, GatePush.AFTER_ONE);
 
         Action action = builder.build();
         bot.runAction(
@@ -88,7 +88,7 @@ public class MeepMeepTesting {
         meepMeep.setBackground(MeepMeep.Background.FIELD_DECODE_JUICE_DARK)
                 .setDarkMode(true)
                 .setBackgroundAlpha(0.95f)
-                .addEntity(bot)
+                //.addEntity(bot)
                 .start();
     }
 }
