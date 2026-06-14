@@ -29,7 +29,7 @@ public class ControlHubThread extends ThreadEx {
     //
     // Global Variables
     //
-    public boolean followerDebugInfo;
+    public boolean followerDebugInfo = true;
 
     private final MainBotHardware hardware;
     private MainBotHardware.Container container;
@@ -112,7 +112,7 @@ public class ControlHubThread extends ThreadEx {
         } else {
             heading = container.octoQuad.readLocalizerData().heading_rad;
         }
-        hardware.setOctoQuadPose(correctedStartPose.position.x, correctedStartPose.position.y, heading);
+        container.setOctoQuadPose(correctedStartPose.position.x, correctedStartPose.position.y, heading);
     }
 
     public ControlHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, boolean resetOctoQuadPoseOnStart) {
@@ -161,7 +161,7 @@ public class ControlHubThread extends ThreadEx {
     }
 
     public void tick() {
-        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData(threadedTele::isStopRequested);
+        OctoQuad.LocalizerDataBlock block = container.readOctoQuadLocalizerData(threadedTele::isStopRequested);
         Pose2d newPose = MainBotHardware.makeOctoQuadPose(block);
 
         telemetry.append("Octoquad x: ");

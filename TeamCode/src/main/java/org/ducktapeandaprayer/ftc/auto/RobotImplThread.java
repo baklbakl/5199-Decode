@@ -1,51 +1,92 @@
 package org.ducktapeandaprayer.ftc.auto;
 
+import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.util.RobotLog;
-import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
-import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
-import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
-import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
+import org.ducktapeandaprayer.ftc.hardware.*;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
+import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
+import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 public class RobotImplThread extends ThreadEx implements RobotInterface {
     private final MainBotHardware hardware;
     private final MainBotHardware.Container container;
     private final AutoShoot autoShoot;
     private final AutoIntake autoIntake;
+    private final AutoRanging autoRanging;
+    private final Supplier<Pose2d> poseSupplier;
 
     private volatile boolean requestLaunchingStart = false;
     private volatile boolean launching = false;
     private volatile boolean full = false;
-    private final boolean runAutoRanging = false;
+    private final boolean runAutoRanging;
     private final AtomicReference<Double> requestLauncherSpeed = new AtomicReference<>(Double.NaN);
     private final AtomicReference<Boolean> requestIntake = new AtomicReference<>(null);
     private final AtomicReference<Double> voltage = new AtomicReference<>(Double.NaN);
 
     private boolean intaking = false;
+    private boolean autoRangingDebugInfo = true;
 
-    public RobotImplThread(MainBotHardware hardware, boolean runAutoRanging) {
+    public RobotImplThread(MainBotHardware hardware) {
+        this(hardware, false, null, null);
+    }
+
+    public RobotImplThread(MainBotHardware hardware, ThreadedOpMode opMode, Supplier<Pose2d> poseSupplier) {
+        this(hardware, true, opMode, poseSupplier);
+    }
+
+    private RobotImplThread(MainBotHardware hardware, boolean runAutoRanging, ThreadedOpMode opMode, Supplier<Pose2d> poseSupplier) {
         this.hardware = hardware;
+        this.poseSupplier = poseSupplier;
+        this.runAutoRanging = runAutoRanging;
 
         this.container = hardware.getContainer();
         container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         this.autoShoot = new AutoShoot(hardware);
         this.autoIntake = new AutoIntake(hardware);
+        if(runAutoRanging) {
+            this.autoRanging = new AutoRanging(hardware, opMode::invertIfBlue);
+            try {
+                opMode.getOptionDriver().add(new BooleanOption("Auto ranging debug info", "dpad_right", opMode.gamepad1, this.getClass().getField("autoRangingDebugInfo"), this));
+            } catch (NoSuchFieldException e) {
+                throw new RuntimeException(e);
+            }
+            this.autoRanging.setEnableDebugInfo(true);
+            //These are only fine to run in init because we are setting them to true
+            autoRanging.setTurretTracking(true);
+            autoRanging.setLauncherRunning(false);
+        } else {
+            this.autoRanging = null;
+        }
+
     }
 
     @Override
     public void run() {
+        if(autoRanging != null) {
+            autoRanging.setEnableDebugInfo(autoRangingDebugInfo);
+        }
         super.run();
     }
 
     @Override
     public void tick() {
         container.modules.childModule.module.clearBulkCache();
-        hardware.tickBBs();
-
+        container.tickBBs();
         voltage.set(container.voltageSensor.getVoltage());
+
+        if(runAutoRanging) {
+            String out = autoRanging.tick(poseSupplier.get());
+            if(!out.isEmpty()) {
+                telemetry.append(out);
+            }
+        }
 
         if(requestLaunchingStart) {
             if(launching) {
@@ -76,8 +117,12 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
         synchronized (requestLauncherSpeed) {
             double speed = requestLauncherSpeed.get();
             if(!Double.isNaN(speed)) {
-                container.launchDrive.setVelocity(speed);
-                requestLauncherSpeed.set(Double.NaN);
+                if(runAutoRanging) {
+                    autoRanging.setLauncherRunning(speed != 0);
+                } else {
+                    container.launchDrive.setVelocity(speed);
+                    requestLauncherSpeed.set(Double.NaN);
+                }
             }
         }
 
@@ -88,7 +133,7 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
                     autoIntake.startIntaking();
                     intaking = true;
                 } else if(intaking) {
-                    hardware.restIntakeTransfer();
+                    container.restIntakeTransfer();
                     intaking = false;
                 }
 

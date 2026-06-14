@@ -8,7 +8,6 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-//FIX: Make proxyVoltageSensor fall back if it hasn't been ticked in a while
 public class ProxyVoltageSensor implements VoltageSensor {
 
     private final double scalingFactor;

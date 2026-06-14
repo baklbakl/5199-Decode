@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.*;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
 import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.options.Delay;
@@ -89,6 +90,7 @@ public class RoadRunnerThread extends ThreadEx {
                         path,
                         new InstantAction(() -> {
                             pathDone.set(true);
+                            RobotLog.ii("RoadRunnerThread", "Path done!");
                         })
 
                 ),
@@ -97,6 +99,7 @@ public class RoadRunnerThread extends ThreadEx {
                     telemetry.append("x: ").append(mecanumDrive.localizer.getPose().position.x).append("\n");
                     telemetry.append("y: ").append(mecanumDrive.localizer.getPose().position.y).append("\n");
                     telemetry.append("heading (deg): ").append(Math.toDegrees(mecanumDrive.localizer.getPose().heading.toDouble())).append("\n");
+                    RobotLog.ii("RoadRunnerThread", "Other action");
                     updateTelemetry();
                     return !pathDone.get();
                 }

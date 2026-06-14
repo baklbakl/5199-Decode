@@ -34,7 +34,7 @@ public class FollowerTester extends FastIterativeOpMode {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         container = hardware.getContainer();
-        hardware.setOctoQuadPose(startPoint);
+        container.setOctoQuadPose(startPoint);
         follower = new Follower(hardware);
         follower.setPaused(true);
         follower.setTelemetryEnabled(true);
@@ -48,7 +48,7 @@ public class FollowerTester extends FastIterativeOpMode {
                 if(square) {
                     follower.setPaused(!follower.isPaused());
                 } else if(circle && follower.isPaused()) {
-                    hardware.setOctoQuadPose(startPoint);
+                    container.setOctoQuadPose(startPoint);
                     follower.followTrajectory(List.of(
                             new Pose2d(distX, distY, Math.toRadians(distTheta))), true);
                 }
@@ -84,7 +84,7 @@ public class FollowerTester extends FastIterativeOpMode {
             watcher.tick();
         }
 
-        OctoQuad.LocalizerDataBlock dataBlock = hardware.readOctoQuadLocalizerData(this::isStopRequested);
+        OctoQuad.LocalizerDataBlock dataBlock = container.readOctoQuadLocalizerData(this::isStopRequested);
         telemetry.addLine(follower.tick(dataBlock));
         telemetry.update();
     }

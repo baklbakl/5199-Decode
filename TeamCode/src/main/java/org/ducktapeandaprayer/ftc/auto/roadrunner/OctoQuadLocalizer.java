@@ -11,19 +11,21 @@ import java.util.function.Supplier;
 
 public final class OctoQuadLocalizer implements Localizer {
     public final MainBotHardware hardware;
+    public final MainBotHardware.Container container;
     private Pose2d pose;
     private final Supplier<Boolean> isStopRequested;
 
     public OctoQuadLocalizer(MainBotHardware hardware, Pose2d initialPose, Supplier<Boolean> isStopRequested) {
         this.hardware = hardware;
         this.isStopRequested = isStopRequested;
-        hardware.setOctoQuadPose(initialPose);
+        this.container = hardware.getContainer();
+        container.setOctoQuadPose(initialPose);
         pose = initialPose;
     }
 
     @Override
     public void setPose(Pose2d pose) {
-        hardware.setOctoQuadPose(pose);
+        container.setOctoQuadPose(pose);
     }
 
     @Override
@@ -38,7 +40,7 @@ public final class OctoQuadLocalizer implements Localizer {
 
     @Override
     public PoseVelocity2d update() {
-        OctoQuad.LocalizerDataBlock block = hardware.readOctoQuadLocalizerData(isStopRequested);
+        OctoQuad.LocalizerDataBlock block = container.readOctoQuadLocalizerData(isStopRequested);
         pose = MainBotHardware.makeOctoQuadPose(block);
         velocity = new PoseVelocity2d(new Vector2d(block.velX_mmS / 25.4, block.velY_mmS / 25.4), block.velHeading_radS);
         return velocity;

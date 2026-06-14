@@ -209,23 +209,71 @@ public class MainBotHardware {
             hardwareMap.put("ProxyVoltageSensor", voltageSensor);
             hardwareMap.voltageSensor.put("ProxyVoltageSensor", voltageSensor);
         }
+
+        public void turretToHeading(double heading) {
+            if(Math.abs(heading) > turretMaxHeading) {
+                heading = Math.signum(heading) * turretMaxHeading;
+            }
+            //Multiply by this to convert from radians to servo pos
+            double turretRatio = 77.0/29 * 15/48 / Math.toRadians(axonRange);
+            double pos = turretRatio * heading + turretCenter;
+            //RobotLog.ii("MainBotHardware", "Turret: " + pos);
+            getContainer().turretServo.setPosition(pos);
+        }
+
+
+        public void setOctoQuadPose(Pose2d pose) {
+            setOctoQuadPose(pose.position.x, pose.position.y, (float) pose.heading.toDouble());
+        }
+
+        public void setOctoQuadPose(double x, double y, float heading) {
+            octoQuad.setLocalizerPose((int) (x * 25.4), (int) (y * 25.4), heading);
+        }
+
+        private final int octoquadMaxRetryAttempts = 10;
+
+        public OctoQuad.LocalizerDataBlock readOctoQuadLocalizerData(Supplier<Boolean> isStopRequested) {
+            int failedOctoquadReadAttempts = 0;
+            OctoQuad.LocalizerDataBlock block = null;
+            while((block == null || !block.crcOk)) {
+                if(isStopRequested == null) {
+                    if(failedOctoquadReadAttempts >= octoquadMaxRetryAttempts) {
+                        block = null;
+                        break;
+                    }
+                    failedOctoquadReadAttempts++;
+                } else if(isStopRequested.get()) {
+                    block = null;
+                    break;
+                }
+                block = octoQuad.readLocalizerData();
+            }
+
+            return block;
+        }
+
+        public void tickBBs() {
+            Container hardware = getContainer();
+            hardware.intakeBB.tick();
+            hardware.transferMiddleBB.tick();
+            hardware.transferEndBB.tick();
+        }
+
+        public void restIntakeTransfer() {
+            Container hardware = getContainer();
+            hardware.transferDrive.setPower(0);
+            hardware.intakeDrive.setPower(0);
+            hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
+        }
+    }
+
+    public static Pose2d makeOctoQuadPose(OctoQuad.LocalizerDataBlock block) {
+        return new Pose2d(block.posX_mm / 25.4, block.posY_mm / 25.4, block.heading_rad);
     }
 
     private final OctoQuad octoQuad;
     private final HardwareMap hardwareMap;
     private final LynxModuleInitializer modules;
-
-    //FIX: Move these helper methods that rely on the container to the container
-    public void turretToHeading(double heading) {
-        if(Math.abs(heading) > turretMaxHeading) {
-            heading = Math.signum(heading) * turretMaxHeading;
-        }
-        //Multiply by this to convert from radians to servo pos
-        double turretRatio = 77.0/29 * 15/48 / Math.toRadians(axonRange);
-        double pos = turretRatio * heading + turretCenter;
-        //RobotLog.ii("MainBotHardware", "Turret: " + pos);
-        getContainer().turretServo.setPosition(pos);
-    }
 
     public static MainBotHardware getOrCreate(HardwareMap hardwareMap, boolean resetOctoQuad) {
         MainBotHardware ts = SingletonHelper.getOrCreate(MainBotHardware.class, () -> new MainBotHardware(hardwareMap, resetOctoQuad));
@@ -285,54 +333,5 @@ public class MainBotHardware {
                 }
             }
         }
-    }
-
-    public void setOctoQuadPose(Pose2d pose) {
-        setOctoQuadPose(pose.position.x, pose.position.y, (float) pose.heading.toDouble());
-    }
-
-    public void setOctoQuadPose(double x, double y, float heading) {
-        octoQuad.setLocalizerPose((int) (x * 25.4), (int) (y * 25.4), heading);
-    }
-
-    private int failedOctoquadReadAttempts = 0;
-    private final int octoquadMaxRetryAttempts = 10;
-
-    public OctoQuad.LocalizerDataBlock readOctoQuadLocalizerData(Supplier<Boolean> isStopRequested) {
-        failedOctoquadReadAttempts = 0;
-        OctoQuad.LocalizerDataBlock block = null;
-        while((block == null || !block.crcOk)) {
-            if(isStopRequested == null) {
-                if(failedOctoquadReadAttempts >= octoquadMaxRetryAttempts) {
-                    block = null;
-                    break;
-                }
-                failedOctoquadReadAttempts++;
-            } else if(isStopRequested.get()) {
-               block = null;
-               break;
-            }
-            block = octoQuad.readLocalizerData();
-        }
-
-        return block;
-    }
-
-    public static Pose2d makeOctoQuadPose(OctoQuad.LocalizerDataBlock block) {
-        return new Pose2d(block.posX_mm / 25.4, block.posY_mm / 25.4, block.heading_rad);
-    }
-
-    public void tickBBs() {
-        Container hardware = getContainer();
-        hardware.intakeBB.tick();
-        hardware.transferMiddleBB.tick();
-        hardware.transferEndBB.tick();
-    }
-
-    public void restIntakeTransfer() {
-        Container hardware = getContainer();
-        hardware.transferDrive.setPower(0);
-        hardware.intakeDrive.setPower(0);
-        hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
     }
 }

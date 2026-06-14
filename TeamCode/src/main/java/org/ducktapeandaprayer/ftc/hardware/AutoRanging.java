@@ -11,12 +11,16 @@ public class AutoRanging {
     public static double turretOffset = -52.0 /*mm*/ / 25.4;
     public static Vector2d goalTargetPos = new Vector2d(-66, 66);
 
-    private final MainBotHardware.Container container;
     private final MainBotHardware hardware;
     private final Vector2d correctedGoalTargetPose;
-    private final boolean enableDebugInfo;
 
-    private boolean startOdoLauncher;
+    private boolean enableDebugInfo = false;
+    public void setEnableDebugInfo(boolean enableDebugInfo) {
+        this.enableDebugInfo = enableDebugInfo;
+    }
+
+    private boolean startOdoLauncher = false;
+    private boolean runOdoLauncher = false;
 
     private static double launchSpeedFromDist(double dist) {
         synchronized (MainBotHardware.launchSpeedMapping) {
@@ -52,16 +56,15 @@ public class AutoRanging {
     }
 
 
-    public AutoRanging(MainBotHardware hardware, Function<Vector2d, Vector2d> invertIfBlue, boolean enableDebugInfo) {
+    public AutoRanging(MainBotHardware hardware, Function<Vector2d, Vector2d> invertIfBlue) {
         this.hardware = hardware;
-        this.container = this.hardware.getContainer();
         this.correctedGoalTargetPose = invertIfBlue.apply(goalTargetPos);
-        this.enableDebugInfo = enableDebugInfo;
     }
 
     public String tick(Pose2d robotPose) {
         StringBuilder telemetry = new StringBuilder();
         if(robotPose != null) {
+            MainBotHardware.Container container = hardware.getContainer();
             Pose2d turretPose = robotPose.plus(new Twist2d(new Vector2d(turretOffset, 0), 0));
             double distToGoal = correctedGoalTargetPose.minus(turretPose.position).norm();
             double autoSpeed = launchSpeedFromDist(distToGoal);
@@ -75,7 +78,7 @@ public class AutoRanging {
                 telemetry.append("\n");
             }
 
-            if(container.launchDrive.getTargetVelocity() != 0 || startOdoLauncher) {
+            if((container.launchDrive.getTargetVelocity() != 0 || startOdoLauncher) && runOdoLauncher) {
                 startOdoLauncher = false;
                 container.launchDrive.setVelocity(autoSpeed);
             }
@@ -99,7 +102,7 @@ public class AutoRanging {
             }
 
             if(turretTracking) {
-                hardware.turretToHeading(turretTheta);
+                container.turretToHeading(turretTheta);
             }
         }
 
@@ -107,10 +110,11 @@ public class AutoRanging {
     }
 
     public void setLauncherRunning(boolean state) {
+        runOdoLauncher = state;
         if(state) {
             startOdoLauncher = true;
         } else {
-            container.launchDrive.setVelocity(0);
+            hardware.getContainer().launchDrive.setVelocity(0);
         }
     }
 
@@ -119,7 +123,11 @@ public class AutoRanging {
     public void setTurretTracking(boolean state) {
         turretTracking = state;
         if(!turretTracking) {
-            hardware.turretToHeading(0);
+            hardware.getContainer().turretToHeading(0);
         }
+    }
+
+    public boolean isTurretTracking() {
+        return turretTracking;
     }
 }

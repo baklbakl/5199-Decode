@@ -69,7 +69,7 @@ public class Test extends FastIterativeOpMode {
         //    watcher.tick();
         //}
         //
-        hardware.readOctoQuadLocalizerData(this::isStopRequested);
+        container.readOctoQuadLocalizerData(this::isStopRequested);
         //telemetry.addLine(follower.tick(hardware.readOctoQuadLocalizerData()));
         //telemetry.update();
     }

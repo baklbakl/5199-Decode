@@ -43,7 +43,7 @@ public class SplitAutoActionThread extends ThreadedOpMode {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         container = hardware.getContainer();
 
-        robotImpl = new RobotImplThread(hardware, false);
+        robotImpl = new RobotImplThread(hardware);
         super.getThreads().put("RobotImplThread", robotImpl);
 
         container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
@@ -91,7 +91,7 @@ public class SplitAutoActionThread extends ThreadedOpMode {
 
     @Override
     protected void start_internal() {
-        super.getThreads().put("PIDToPointThread", new ActionThreadEx(action, this));
+        super.getThreads().put("Action Thread", new ActionThreadEx(action, this));
         super.start_internal();
     }
 }

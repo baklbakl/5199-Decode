@@ -2,6 +2,7 @@ package org.ducktapeandaprayer.ftc.auto.pidtopoint;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.*;
+import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
@@ -15,6 +16,7 @@ import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 
 import java.lang.Math;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Autonomous(name = "PID To Point Auto")
 public class PidToPointAuto extends ThreadedOpMode {
@@ -22,7 +24,8 @@ public class PidToPointAuto extends ThreadedOpMode {
     public static double gateWaitTime = 0.5;
 
     private static final Pose2d startPose = new Pose2d(-71 + 11, 71 - 31, Math.toRadians(0));
-    private static final Pose2d closeShootPose = new Pose2d(-22, 22, Math.toRadians(0));
+    private static final Pose2d closeShootPose = new Pose2d(-22, 22, Math.toRadians(45));
+    private static final Pose2d lastShootPose = new Pose2d(-42, 16, Math.toRadians(45));
 
     private static final double spikeOneX = -10;
     private static final double spikeTwoX = 10;
@@ -40,6 +43,9 @@ public class PidToPointAuto extends ThreadedOpMode {
     private static final Pose2d gatePickupPose = new Pose2d(8, 54, Math.toRadians(110));
     private static final Pose2d gateLinupPose = new Pose2d(1, spikeStartY, Math.toRadians(90));
 
+    private final AtomicReference<Pose2d> lastPose = new AtomicReference<>(null);
+    private OctoQuad.LocalizerDataBlock lastBlock = null;
+
     private RobotImplThread robotImpl = null;
     private MainBotHardware.Container container = null;
     private MainBotHardware hardware = null;
@@ -56,9 +62,9 @@ public class PidToPointAuto extends ThreadedOpMode {
         container = hardware.getContainer();
         container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         follower = new Follower(hardware);
-        actionFactory = new FollowerActionFactory(follower, () -> hardware.readOctoQuadLocalizerData(this::isStopRequested), this::invertIfBlue);
+        actionFactory = new FollowerActionFactory(follower, () -> lastBlock, this::invertIfBlue);
 
-        robotImpl = new RobotImplThread(hardware, true);
+        robotImpl = new RobotImplThread(hardware, this, lastPose::get);
         super.getThreads().put("RobotImplThread", robotImpl);
 
         try {
@@ -98,24 +104,30 @@ public class PidToPointAuto extends ThreadedOpMode {
         );
     }
 
-    private Action gateCycle(boolean clearSpikeOne) {
+    private Action gateCycle(boolean clearSpikeOne, Pose2d launchPose) {
         return new SequentialAction(
                 new InstantAction(robotImpl::intake),
                 clearSpikeOne ? actionFactory.makeFollowerAction(List.of(gateLinupPose, gatePickupPose)) : actionFactory.makeFollowerAction(gatePickupPose),
                 new WaitUntilAction(robotImpl::isFull, gateIntakeTimeout),
                 new InstantAction(robotImpl::stopIntake),
-                actionFactory.makeFollowerAction(List.of(gatePickupBackupPose, closeShootPose)),
+                actionFactory.makeFollowerAction(List.of(gatePickupBackupPose, launchPose)),
                 launch()
         );
     }
 
+    private Action gateCycle(boolean clearSpikeOne) {
+        return gateCycle(clearSpikeOne, closeShootPose);
+    }
+
     @Override
     public String optionDriverUpdateCallback() {
-        hardware.setOctoQuadPose(invertIfBlue(startPose));
+        container.setOctoQuadPose(invertIfBlue(startPose));
         action = new RaceAction(
                 (telemetryPacket) -> {
                     container.modules.parentModule.module.clearBulkCache();
                     container.voltageSensor.periodic();
+                    lastBlock = container.readOctoQuadLocalizerData(this::isStopRequested);
+                    lastPose.set(MainBotHardware.makeOctoQuadPose(lastBlock));
                     return true;
                 },
                 new SequentialAction(
@@ -126,8 +138,7 @@ public class PidToPointAuto extends ThreadedOpMode {
                         gateCycle(true),
                         lineOneCycle(),
                         gateCycle(false),
-                        gateCycle(false)
-                        //ADD: Park on last cycle
+                        gateCycle(false, lastShootPose)
                 )
         );
 

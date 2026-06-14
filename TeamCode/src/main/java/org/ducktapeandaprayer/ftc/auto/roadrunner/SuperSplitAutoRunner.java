@@ -8,6 +8,7 @@ import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
 
 //FIX: Delete super split auto after testing split auto action thread tele crossover
 @Autonomous(name = "Super Split Auto")
+//FIX: This doesn't auto end anymore
 public class SuperSplitAutoRunner extends ThreadedOpMode {
     @Override
     protected void init_internal() {
@@ -16,7 +17,7 @@ public class SuperSplitAutoRunner extends ThreadedOpMode {
         MainBotHardware hardware = MainBotHardware.getOrCreate(hardwareMap);
         hardware.getContainer();
 
-        RobotImplThread robotImpl = new RobotImplThread(hardware, false);
+        RobotImplThread robotImpl = new RobotImplThread(hardware);
         RoadRunnerThread roadRunnerThread = new RoadRunnerThread(hardware, this, robotImpl);
         super.getThreads().put("RoadRunnerThread", roadRunnerThread);
         super.getThreads().put("RobotImplThread", robotImpl);
@@ -25,5 +26,6 @@ public class SuperSplitAutoRunner extends ThreadedOpMode {
     @Override
     protected void start_internal() {
         Alliance.lastAlliance = getAlliance();
+        super.start_internal();
     }
 }

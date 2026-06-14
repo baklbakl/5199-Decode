@@ -7,14 +7,11 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import org.apache.commons.lang3.tuple.Pair;
-import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
-import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
-import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
+import org.ducktapeandaprayer.ftc.hardware.*;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.TwoOfThree;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
-import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
@@ -30,8 +27,6 @@ public class ExpansionHubThread extends ThreadEx {
     //
     // Dash options
     //
-    public static double turretOffset = -52.0 /*mm*/ / 25.4;
-    public static Vector2d goalTargetPos = new Vector2d(-66, 66);
     public static class AutoGateCyclePosePair {
         public final Pose2d shootPose;
         public final Pose2d gateLineupPose;
@@ -61,7 +56,7 @@ public class ExpansionHubThread extends ThreadEx {
     // Globals
     //
 
-    public Boolean autoLockDebInfo = true;
+    public Boolean autoRangingDebugInfo = true;
 
     private final MainBotHardware hardware;
     private MainBotHardware.Container container;
@@ -70,8 +65,7 @@ public class ExpansionHubThread extends ThreadEx {
     private final ControlHubThread controlHubThread;
     private final AutoShoot autoShoot;
     private final AutoIntake autoIntake;
-
-    private Vector2d correctedGoalTargetPose;
+    private final AutoRanging autoRanging;
 
     private enum LauncherControlMethod {
         MANUAL,
@@ -79,9 +73,7 @@ public class ExpansionHubThread extends ThreadEx {
         ODOMETRY,
     }
     private final List<LauncherControlMethod> launcherControlMethodElements = new ArrayList<>();
-
     private LauncherControlMethod launcherControlMethod;
-    private boolean turretTracking = true;
     private enum AutoGateCycleState {
         DISABLED,
         TO_SHOOT_POS,
@@ -101,7 +93,7 @@ public class ExpansionHubThread extends ThreadEx {
         if(newState == ballHandlingState) return;
         switch (newState) {
             case STOPPED:
-                hardware.restIntakeTransfer();
+                container.restIntakeTransfer();
                 break;
             case INTAKE:
                 autoIntake.startIntaking();
@@ -117,53 +109,16 @@ public class ExpansionHubThread extends ThreadEx {
         }
         this.ballHandlingState = newState;
     }
-
     private BallHandlingState ballHandlingState = BallHandlingState.STOPPED;
 
     private AutoGateCyclePosePair activeAutoGateCyclePosePair = null;
-
-    private static double launchSpeedFromDist(double dist) {
-        synchronized (MainBotHardware.launchSpeedMapping) {
-            Pair<Double, Double> lowestPair = MainBotHardware.launchSpeedMapping.get(0);
-            if(dist < lowestPair.getKey()) {
-                //return Double.NaN;
-                return lowestPair.getValue();
-            }
-
-
-            for(int i = 0; i < MainBotHardware.launchSpeedMapping.size(); i++) {
-                Pair<Double, Double> p = MainBotHardware.launchSpeedMapping.get(i);
-                if(dist == p.getKey()) {
-                    return p.getValue();
-                }
-
-                if(dist < p.getKey()) {
-                    //Previous one must have been greater, so we know we are between the two closest points,
-                    // so we interpolate with a weighted average
-                    Pair<Double, Double> last = MainBotHardware.launchSpeedMapping.get(i-1);
-                    double deltaDist = p.getKey() - last.getKey();
-                    double offset = dist - last.getKey();
-                    double weightLast = (deltaDist - offset) / deltaDist;
-                    double weightThis = offset / deltaDist;
-
-                    return weightLast * last.getValue() + weightThis * p.getValue();
-                }
-            }
-        }
-
-        //return Double.NaN;
-        return MainBotHardware.launchSpeedMapping.get(MainBotHardware.launchSpeedMapping.size() - 1).getValue();
-    }
-
-    private boolean startOdoLauncher = false;
 
     private void startLauncher() {
         if(launcherControlMethod == LauncherControlMethod.PRESET) {
             container.launchDrive.setVelocity(MainBotHardware.launcherPresetVelocity);
         } else if(launcherControlMethod == LauncherControlMethod.ODOMETRY) {
-            //hardware.launchDrive.setVelocity(computeOdoLauncherSpeed());
             //This will get automatically set in the tick method
-            startOdoLauncher = true;
+            autoRanging.setLauncherRunning(true);
         } else {
             throw new RuntimeException("Oops unaccounted for launcher control method \"" + launcherControlMethod + "\"");
         }
@@ -176,6 +131,7 @@ public class ExpansionHubThread extends ThreadEx {
         this.gamepad1 = threadedTele.gamepad1;
         this.autoShoot = new AutoShoot(hardware);
         this.autoIntake = new AutoIntake(hardware);
+        this.autoRanging = new AutoRanging(hardware, threadedTele::invertIfBlue);
 
         launcherControlMethodElements.addAll(EnumSet.allOf(LauncherControlMethod.class));
         launcherControlMethod = LauncherControlMethod.ODOMETRY;
@@ -183,7 +139,7 @@ public class ExpansionHubThread extends ThreadEx {
         OptionDriver optionDriver = threadedTele.getOptionDriver();
 
         try {
-            optionDriver.add(new BooleanOption("Auto lock debug info", "dpad_right", gamepad1, this.getClass().getField("autoLockDebInfo"), this));
+            optionDriver.add(new BooleanOption("Auto ranging debug info", "dpad_right", gamepad1, this.getClass().getField("autoRangingDebugInfo"), this));
 
             variablesWatched.add(new TripleVariableWatcher<>(
                     gamepad1,
@@ -258,10 +214,7 @@ public class ExpansionHubThread extends ThreadEx {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
                 if(circle) {
-                    turretTracking = !turretTracking;
-                    if(!turretTracking) {
-                        hardware.turretToHeading(0);
-                    }
+                    this.autoRanging.setTurretTracking(!autoRanging.isTurretTracking());
                 }
             }));
 
@@ -284,6 +237,7 @@ public class ExpansionHubThread extends ThreadEx {
                     } else {
                         container.launchDrive.setVelocity(0);
                         container.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                        autoRanging.setLauncherRunning(launcherControlMethod == LauncherControlMethod.ODOMETRY);
                     }
                 }
             }));
@@ -297,58 +251,18 @@ public class ExpansionHubThread extends ThreadEx {
     public void run() {
         container = hardware.getContainer();
         container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
-        correctedGoalTargetPose = threadedTele.invertIfBlue(goalTargetPos);
-
-        startOdoLauncher = true;
+        autoRanging.setEnableDebugInfo(autoRangingDebugInfo);
+        autoRanging.setLauncherRunning(true);
 
         super.run();
     }
 
     public void tick() {
         container.modules.childModule.module.clearBulkCache();
-        hardware.tickBBs();
-
-        Pose2d robotPose = controlHubThread.robotPose.get();
-        if(robotPose != null) {
-            Pose2d turretPose = robotPose.plus(new Twist2d(new Vector2d(turretOffset, 0), 0));
-            double distToGoal = correctedGoalTargetPose.minus(turretPose.position).norm();
-            double autoSpeed = launchSpeedFromDist(distToGoal);
-
-            if(autoLockDebInfo) {
-                telemetry.append("Dist to goal: ");
-                telemetry.append(distToGoal);
-                telemetry.append("\n");
-                telemetry.append("Launcher Auto Speed Target: ");
-                telemetry.append(autoSpeed);
-                telemetry.append("\n");
-            }
-
-            if(launcherControlMethod == LauncherControlMethod.ODOMETRY && (container.launchDrive.getTargetVelocity() != 0) || startOdoLauncher) {
-                startOdoLauncher = false;
-                container.launchDrive.setVelocity(autoSpeed);
-            }
-
-            double fieldThetaToGoal = Math.atan2(correctedGoalTargetPose.y - turretPose.position.y, correctedGoalTargetPose.x - turretPose.position.x);
-            double turretTheta = (fieldThetaToGoal - turretPose.heading.toDouble() + Math.PI * 2) % (Math.PI * 2);
-            if(turretTheta > Math.PI) {
-                turretTheta -= 2 * Math.PI;
-            }
-
-            if(autoLockDebInfo) {
-                telemetry.append("Turret tracking: ");
-                telemetry.append(turretTracking);
-                telemetry.append("\n");
-                telemetry.append("Field angle to goal: ");
-                telemetry.append(Math.toDegrees(fieldThetaToGoal));
-                telemetry.append("\n");
-                telemetry.append("Turret target theta: ");
-                telemetry.append(Math.toDegrees(turretTheta));
-                telemetry.append("\n");
-            }
-
-            if(turretTracking) {
-                hardware.turretToHeading(turretTheta);
-            }
+        container.tickBBs();
+        String autoRangingTelem = autoRanging.tick(controlHubThread.robotPose.get());
+        if(!autoRangingTelem.isEmpty()) {
+            telemetry.append(autoRangingTelem);
         }
 
         Boolean autoShootState = null;
