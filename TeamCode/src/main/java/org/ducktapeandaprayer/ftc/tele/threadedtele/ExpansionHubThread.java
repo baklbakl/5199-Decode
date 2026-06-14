@@ -10,6 +10,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
 import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
+import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.TwoOfThree;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
@@ -22,6 +23,8 @@ import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
+
+import static org.ducktapeandaprayer.ftc.lib.Alliance.RED;
 
 public class ExpansionHubThread extends ThreadEx {
     //
@@ -38,21 +41,21 @@ public class ExpansionHubThread extends ThreadEx {
         }
     }
     public static final AutoGateCyclePosePair nearAutoGateCyclePose = new AutoGateCyclePosePair(
-            new Pose2d(-15, 25, Math.PI / 4),
+            new Pose2d(-18, 25, Math.PI / 4),
             new Pose2d(5, 39, Math.PI / 4)
     );
 
     public static final AutoGateCyclePosePair midAutoGateCyclePose = new AutoGateCyclePosePair(
-            new Pose2d(-5, 15, Math.PI / 3),
+            new Pose2d(-8, 15, Math.PI / 3),
             new Pose2d(5, 39, Math.PI / 3)
     );
 
     public static final AutoGateCyclePosePair farAutoGateCyclePose = new AutoGateCyclePosePair(
-            new Pose2d(5, 5, Math.PI / 2),
+            new Pose2d(2, 5, Math.PI / 2),
             null
     );
 
-    public static Pose2d gatePose = new Pose2d(15, 47, Math.PI / 2);
+    public static Pose2d gatePose = new Pose2d(9, 47, Math.PI / 2);
 
     //
     // Globals
@@ -60,8 +63,8 @@ public class ExpansionHubThread extends ThreadEx {
 
     public Boolean autoLockDebInfo = true;
 
-    private final MainBotHardware mainBotHardware;
-    private MainBotHardware.Container hardware;
+    private final MainBotHardware hardware;
+    private MainBotHardware.Container container;
     private final Gamepad gamepad1;
     private final ThreadedTele threadedTele;
     private final ControlHubThread controlHubThread;
@@ -69,6 +72,7 @@ public class ExpansionHubThread extends ThreadEx {
     private final AutoIntake autoIntake;
 
     private Vector2d correctedGoalTargetPose;
+
     private enum LauncherControlMethod {
         MANUAL,
         PRESET,
@@ -97,15 +101,15 @@ public class ExpansionHubThread extends ThreadEx {
         if(newState == ballHandlingState) return;
         switch (newState) {
             case STOPPED:
-                mainBotHardware.restIntakeTransfer();
+                hardware.restIntakeTransfer();
                 break;
             case INTAKE:
                 autoIntake.startIntaking();
                 break;
             case OUTTAKE:
-                hardware.transferDrive.setPower(-MainBotHardware.transferInPower);
-                hardware.intakeDrive.setPower(-MainBotHardware.intakeInPower);
-                hardware.rampServo.setPosition(MainBotHardware.rampDownPos);
+                container.transferDrive.setPower(-MainBotHardware.transferInPower);
+                container.intakeDrive.setPower(-MainBotHardware.intakeInPower);
+                container.rampServo.setPosition(MainBotHardware.rampDownPos);
                 break;
             case SHOOTING:
                 autoShoot.startShooting();
@@ -155,7 +159,7 @@ public class ExpansionHubThread extends ThreadEx {
 
     private void startLauncher() {
         if(launcherControlMethod == LauncherControlMethod.PRESET) {
-            hardware.launchDrive.setVelocity(MainBotHardware.launcherPresetVelocity);
+            container.launchDrive.setVelocity(MainBotHardware.launcherPresetVelocity);
         } else if(launcherControlMethod == LauncherControlMethod.ODOMETRY) {
             //hardware.launchDrive.setVelocity(computeOdoLauncherSpeed());
             //This will get automatically set in the tick method
@@ -166,12 +170,12 @@ public class ExpansionHubThread extends ThreadEx {
     }
 
     public ExpansionHubThread(MainBotHardware hardwareArg, ThreadedTele threadedTele, ControlHubThread controlHubThread) {
-        this.mainBotHardware = hardwareArg;
+        this.hardware = hardwareArg;
         this.threadedTele = threadedTele;
         this.controlHubThread = controlHubThread;
         this.gamepad1 = threadedTele.gamepad1;
-        this.autoShoot = new AutoShoot(mainBotHardware);
-        this.autoIntake = new AutoIntake(mainBotHardware);
+        this.autoShoot = new AutoShoot(hardware);
+        this.autoIntake = new AutoIntake(hardware);
 
         launcherControlMethodElements.addAll(EnumSet.allOf(LauncherControlMethod.class));
         launcherControlMethod = LauncherControlMethod.ODOMETRY;
@@ -210,15 +214,16 @@ public class ExpansionHubThread extends ThreadEx {
                 }
 
                 if(dpad_left || dpad_down || dpad_right) {
-                    if(dpad_left) {
+                    Alliance alliance = threadedTele.getAlliance();
+                    if(dpad_left && alliance == RED || dpad_right && alliance == Alliance.BLUE) {
                         activeAutoGateCyclePosePair = nearAutoGateCyclePose;
                     } else if(dpad_down) {
                         activeAutoGateCyclePosePair = midAutoGateCyclePose;
-                    } else if (dpad_right) {
+                    } else if (dpad_right && alliance == RED || dpad_left && alliance == Alliance.BLUE) {
                         activeAutoGateCyclePosePair = farAutoGateCyclePose;
                     }
 
-                    if(hardware.transferEndBB.getState() == BeamBreak.State.EMPTY && hardware.transferMiddleBB.getState() == BeamBreak.State.EMPTY && hardware.intakeBB.getState() == BeamBreak.State.EMPTY) {
+                    if(container.transferEndBB.getState() == BeamBreak.State.EMPTY && container.transferMiddleBB.getState() == BeamBreak.State.EMPTY && container.intakeBB.getState() == BeamBreak.State.EMPTY) {
                         return;
                     }
                     toBallHandlingState(BallHandlingState.STOPPED);
@@ -243,10 +248,10 @@ public class ExpansionHubThread extends ThreadEx {
 
             variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
                 if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
-                    if(hardware.launchDrive.getTargetVelocity() == 0) {
+                    if(container.launchDrive.getTargetVelocity() == 0) {
                         startLauncher();
                     } else {
-                        hardware.launchDrive.setVelocity(0);
+                        container.launchDrive.setVelocity(0);
                     }
                 }
             }));
@@ -255,7 +260,7 @@ public class ExpansionHubThread extends ThreadEx {
                 if(circle) {
                     turretTracking = !turretTracking;
                     if(!turretTracking) {
-                        mainBotHardware.turretToHeading(0);
+                        hardware.turretToHeading(0);
                     }
                 }
             }));
@@ -263,7 +268,7 @@ public class ExpansionHubThread extends ThreadEx {
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
                 if(launcherControlMethod == LauncherControlMethod.MANUAL) {
                     float power = left_trigger - right_trigger;
-                    hardware.launchDrive.setPower(power);
+                    container.launchDrive.setPower(power);
                 }
             }));
 
@@ -274,11 +279,11 @@ public class ExpansionHubThread extends ThreadEx {
                     launcherControlMethod = launcherControlMethodElements.get(state);
 
                     if(launcherControlMethod == LauncherControlMethod.MANUAL) {
-                        hardware.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                        hardware.launchDrive.setPower(gamepad1.left_trigger - gamepad1.right_trigger);
+                        container.launchDrive.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                        container.launchDrive.setPower(gamepad1.left_trigger - gamepad1.right_trigger);
                     } else {
-                        hardware.launchDrive.setVelocity(0);
-                        hardware.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                        container.launchDrive.setVelocity(0);
+                        container.launchDrive.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
                     }
                 }
             }));
@@ -290,8 +295,8 @@ public class ExpansionHubThread extends ThreadEx {
 
     @Override
     public void run() {
-        hardware = mainBotHardware.getContainer();
-        hardware.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+        container = hardware.getContainer();
+        container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         correctedGoalTargetPose = threadedTele.invertIfBlue(goalTargetPos);
 
         startOdoLauncher = true;
@@ -300,8 +305,8 @@ public class ExpansionHubThread extends ThreadEx {
     }
 
     public void tick() {
-        hardware.modules.childModule.module.clearBulkCache();
-        mainBotHardware.tickBBs();
+        container.modules.childModule.module.clearBulkCache();
+        hardware.tickBBs();
 
         Pose2d robotPose = controlHubThread.robotPose.get();
         if(robotPose != null) {
@@ -318,9 +323,9 @@ public class ExpansionHubThread extends ThreadEx {
                 telemetry.append("\n");
             }
 
-            if(launcherControlMethod == LauncherControlMethod.ODOMETRY && (hardware.launchDrive.getTargetVelocity() != 0) || startOdoLauncher) {
+            if(launcherControlMethod == LauncherControlMethod.ODOMETRY && (container.launchDrive.getTargetVelocity() != 0) || startOdoLauncher) {
                 startOdoLauncher = false;
-                hardware.launchDrive.setVelocity(autoSpeed);
+                container.launchDrive.setVelocity(autoSpeed);
             }
 
             double fieldThetaToGoal = Math.atan2(correctedGoalTargetPose.y - turretPose.position.y, correctedGoalTargetPose.x - turretPose.position.x);
@@ -342,10 +347,9 @@ public class ExpansionHubThread extends ThreadEx {
             }
 
             if(turretTracking) {
-                mainBotHardware.turretToHeading(turretTheta);
+                hardware.turretToHeading(turretTheta);
             }
         }
-
 
         Boolean autoShootState = null;
 
@@ -394,19 +398,19 @@ public class ExpansionHubThread extends ThreadEx {
         telemetry.append("\nAutoShootState: ");
         telemetry.append(autoShootState);
         telemetry.append("\nIntake BB: ");
-        telemetry.append(hardware.intakeBB.getState());
+        telemetry.append(container.intakeBB.getState());
         telemetry.append("\nTransfer Middle BB: ");
-        telemetry.append(hardware.transferMiddleBB.getState());
+        telemetry.append(container.transferMiddleBB.getState());
         telemetry.append("\nTransfer End BB: ");
-        telemetry.append(hardware.transferEndBB.getState());
+        telemetry.append(container.transferEndBB.getState());
         telemetry.append("\n\n");
 
-        hardware.voltageSensor.periodic();
+        container.voltageSensor.periodic();
 
         telemetry.append("Launcher Target Speed: ");
-        telemetry.append(hardware.launchDrive.getTargetVelocity());
+        telemetry.append(container.launchDrive.getTargetVelocity());
         telemetry.append("\nLauncher Current Speed: ");
-        telemetry.append(hardware.launchDrive.getVelocity());
+        telemetry.append(container.launchDrive.getVelocity());
         telemetry.append("\nLauncher Control Method: ");
         telemetry.append(launcherControlMethod);
         telemetry.append("\n\n");

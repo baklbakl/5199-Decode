@@ -1,4 +1,4 @@
-package org.ducktapeandaprayer.ftc.lib;
+package org.ducktapeandaprayer.ftc.lib.action;
 
 import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;

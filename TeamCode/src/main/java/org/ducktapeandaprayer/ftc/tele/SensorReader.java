@@ -19,7 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 @TeleOp(name = "Sensor Reader", group = MainBotConfig.opmodeGroupName)
-public class SensorReader extends FastIterativeOpMode {
+public class
+SensorReader extends FastIterativeOpMode {
     private final List<DcMotorEx> motors = new ArrayList<>();
     private final List<OctoQuad> octoQuads = new ArrayList<>();
     private final List<AnalogInput> analogInputs = new ArrayList<>();

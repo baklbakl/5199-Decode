@@ -40,7 +40,7 @@ public class MainBotHardware {
     public static double turretMaxHeading = 2.3;
     public static double turretCenter = 0.495;
     public static double shootTransferOnDelay = 0.3;
-    public static double singleShootHighRampDelay = 0.5;
+    public static double singleShootHighRampDelay = 0.4;
     //This number comes from the pinpoint driver
     public static float encoderTicksPerMM = 13.26291192f;
     public static double axonRange = 320;
@@ -215,6 +215,7 @@ public class MainBotHardware {
     private final HardwareMap hardwareMap;
     private final LynxModuleInitializer modules;
 
+    //FIX: Move these helper methods that rely on the container to the container
     public void turretToHeading(double heading) {
         if(Math.abs(heading) > turretMaxHeading) {
             heading = Math.signum(heading) * turretMaxHeading;

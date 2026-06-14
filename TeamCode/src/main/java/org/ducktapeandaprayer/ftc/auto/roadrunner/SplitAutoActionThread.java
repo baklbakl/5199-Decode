@@ -10,7 +10,7 @@ import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.GatePush;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
-import org.ducktapeandaprayer.ftc.lib.ActionThreadEx;
+import org.ducktapeandaprayer.ftc.lib.action.ActionThreadEx;
 import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
@@ -43,7 +43,7 @@ public class SplitAutoActionThread extends ThreadedOpMode {
         hardware = MainBotHardware.getOrCreate(hardwareMap);
         container = hardware.getContainer();
 
-        robotImpl = new RobotImplThread(hardware);
+        robotImpl = new RobotImplThread(hardware, false);
         super.getThreads().put("RobotImplThread", robotImpl);
 
         container.modules.parentModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);

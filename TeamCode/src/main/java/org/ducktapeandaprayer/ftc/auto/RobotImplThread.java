@@ -4,6 +4,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.hardware.AutoIntake;
 import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
+import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 
@@ -17,13 +18,15 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
 
     private volatile boolean requestLaunchingStart = false;
     private volatile boolean launching = false;
+    private volatile boolean full = false;
+    private final boolean runAutoRanging = false;
     private final AtomicReference<Double> requestLauncherSpeed = new AtomicReference<>(Double.NaN);
     private final AtomicReference<Boolean> requestIntake = new AtomicReference<>(null);
     private final AtomicReference<Double> voltage = new AtomicReference<>(Double.NaN);
 
     private boolean intaking = false;
 
-    public RobotImplThread(MainBotHardware hardware) {
+    public RobotImplThread(MainBotHardware hardware, boolean runAutoRanging) {
         this.hardware = hardware;
 
         this.container = hardware.getContainer();
@@ -67,6 +70,8 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
             intaking = !autoIntake.tick();
             //No cleanup needed here. When intaking is done, everything is stopped
         }
+
+        full = container.transferEndBB.getState() == BeamBreak.State.FULL && container.transferMiddleBB.getState() == BeamBreak.State.FULL && container.intakeBB.getState() == BeamBreak.State.FULL;
 
         synchronized (requestLauncherSpeed) {
             double speed = requestLauncherSpeed.get();
@@ -134,5 +139,9 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
 
     public double getVoltage() {
         return voltage.get();
+    }
+
+    public boolean isFull() {
+        return full;
     }
 }

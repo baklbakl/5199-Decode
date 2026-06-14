@@ -16,6 +16,7 @@ import org.ducktapeandaprayer.ftc.auto.SplitAuto;
 import org.ducktapeandaprayer.ftc.auto.RobotImplThread;
 import org.ducktapeandaprayer.ftc.auto.pidtopoint.Follower;
 import org.ducktapeandaprayer.ftc.auto.pidtopoint.FollowerTester;
+import org.ducktapeandaprayer.ftc.hardware.AutoRanging;
 import org.ducktapeandaprayer.ftc.tele.Test;
 import org.ducktapeandaprayer.ftc.hardware.AutoShoot;
 import org.ducktapeandaprayer.ftc.hardware.BeamBreak;
@@ -39,6 +40,7 @@ public class RegisterConfigClasses {
             ControlHubThread.class,
             LauncherTuner.class,
             FollowerTester.class,
+            AutoRanging.class,
             //LauncherFeedForwardTester.class,
             BeamBreak.class,
     };

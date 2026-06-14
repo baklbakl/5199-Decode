@@ -5,7 +5,7 @@ import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
-import org.ducktapeandaprayer.ftc.lib.SetupAction;
+import org.ducktapeandaprayer.ftc.lib.action.SetupAction;
 
 import java.util.List;
 import java.util.function.Supplier;
