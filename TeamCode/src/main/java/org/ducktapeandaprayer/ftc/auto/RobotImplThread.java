@@ -31,7 +31,8 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
     private final AtomicReference<Double> voltage = new AtomicReference<>(Double.NaN);
 
     private boolean intaking = false;
-    private boolean autoRangingDebugInfo = true;
+
+    public boolean autoRangingDebugInfo = true;
 
     public RobotImplThread(MainBotHardware hardware) {
         this(hardware, false, null, null);
@@ -146,6 +147,9 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
     public void launch() {
         if(launching) {
             throw new RuntimeException("Can't start lauching while launching");
+        }
+        if(intaking) {
+            throw new RuntimeException("Can't start launching while intaking");
         }
         requestLaunchingStart = true;
     }

@@ -39,8 +39,6 @@ public class MainBotHardware {
     public static double resistorMultiplier = 3.38;
     public static double turretMaxHeading = 2.3;
     public static double turretCenter = 0.495;
-    public static double shootTransferOnDelay = 0.3;
-    public static double singleShootHighRampDelay = 0.4;
     //This number comes from the pinpoint driver
     public static float encoderTicksPerMM = 13.26291192f;
     public static double axonRange = 320;

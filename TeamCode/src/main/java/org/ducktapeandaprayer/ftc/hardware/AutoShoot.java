@@ -5,7 +5,10 @@ import com.qualcomm.robotcore.util.RobotLog;
 
 public class AutoShoot {
     public static double shootingTimeout = 2.0;
-    public static double lastBallTime = 0.6;
+    public static double lastBallTime = 0.15;
+    public static double shootTransferOnDelay = 0.3;
+    public static double singleShootHighRampDelay = 0.4;
+
 
     public final MainBotHardware hardware;
     private final ElapsedTime timer = new ElapsedTime();
@@ -50,13 +53,13 @@ public class AutoShoot {
         MainBotHardware.Container container = this.hardware.getContainer();
         double time = timer.seconds();
         //Shooting start time is Double.NaN when not waiting to start the transfer and 1 - NaN = NaN and NaN >= any number = false, so this works
-        if(time - shootingStartTimeForTransfer >= MainBotHardware.shootTransferOnDelay) {
+        if(time - shootingStartTimeForTransfer >= shootTransferOnDelay) {
             container.transferDrive.setPower(MainBotHardware.transferInPower);
             container.intakeDrive.setPower(MainBotHardware.intakeInPower);
             shootingStartTimeForTransfer = Double.NaN;
         }
 
-        if(time - shootingStartTimeForRamp >= MainBotHardware.singleShootHighRampDelay) {
+        if(time - shootingStartTimeForRamp >= singleShootHighRampDelay) {
             if(container.intakeBB.getState() == BeamBreak.State.EMPTY && container.transferMiddleBB.getState() == BeamBreak.State.EMPTY) {
                 container.rampServo.setPosition(MainBotHardware.rampLastBallPos);
                 shootingStartTimeForRamp = Double.NaN;
