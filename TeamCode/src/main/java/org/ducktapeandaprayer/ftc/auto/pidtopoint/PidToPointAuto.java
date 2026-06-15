@@ -11,8 +11,6 @@ import org.ducktapeandaprayer.ftc.lib.action.ActionThreadEx;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
 import org.ducktapeandaprayer.ftc.lib.action.WaitUntilAction;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.IntOption;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 
 import java.lang.Math;
 import java.util.List;
@@ -25,7 +23,7 @@ public class PidToPointAuto extends ThreadedOpMode {
 
     private static final Pose2d startPose = new Pose2d(-71 + 11, 71 - 31, Math.toRadians(0));
     private static final Pose2d closeShootPose = new Pose2d(-22, 22, Math.toRadians(45));
-    private static final Pose2d lastShootPose = new Pose2d(-42, 16, Math.toRadians(45));
+    private static final Pose2d lastShootPose = new Pose2d(-37, 21, Math.toRadians(45));
 
     private static final double spikeOneX = -10;
     private static final double spikeTwoX = 10;
@@ -33,12 +31,12 @@ public class PidToPointAuto extends ThreadedOpMode {
     private static final double spikeEndY = 48;
 
     private static final Pose2d spikeOneLineupPose = new Pose2d(spikeOneX - 5, spikeStartY, Math.toRadians(90));
-    private static final Pose2d spikeOneDonePose = new Pose2d(spikeOneX, spikeEndY + 3, Math.toRadians(90));
+    private static final Pose2d spikeOneDonePose = new Pose2d(spikeOneX, spikeEndY + 4, Math.toRadians(90));
     private static final Pose2d spikeTwoLineupPose = new Pose2d(spikeTwoX - 12, spikeStartY, Math.toRadians(90));
     private static final Pose2d spikeTwoDonePose = new Pose2d(spikeTwoX, spikeEndY, Math.toRadians(90));
 
     private static final Pose2d gateHitPose = new Pose2d(6, 53, Math.toRadians(90));
-    private static final Pose2d gateHitBackupPose = new Pose2d(3, spikeStartY, Math.toRadians(90));
+    private static final Pose2d gateHitBackupPose = new Pose2d(3, spikeStartY + 8, Math.toRadians(90));
 
     private static final Pose2d gatePickupLineupPose = new Pose2d(1, 39, Math.toRadians(45));
     private static final Pose2d gatePickupPreTurnPose = new Pose2d(7, 49, Math.toRadians(90));
@@ -53,7 +51,6 @@ public class PidToPointAuto extends ThreadedOpMode {
     private FollowerActionFactory actionFactory = null;
     private Follower follower = null;
     private Action action = null;
-    public int cycleCount = 0;
 
     @Override
     protected void init_internal() {
@@ -69,13 +66,6 @@ public class PidToPointAuto extends ThreadedOpMode {
         super.getThreads().put("RobotImplThread", robotImpl);
 
         //ADD: Report beam break state in init to make sure beam breaks are broken
-
-        try {
-            OptionDriver optionDriver = getOptionDriver();
-            optionDriver.add(new IntOption("Cycle Count", "dpad_down", gamepad1, this.getClass().getField("cycleCount"), this, 1, 5));
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
     }
 
     private Action launch() {
@@ -148,9 +138,22 @@ public class PidToPointAuto extends ThreadedOpMode {
                 )
         );
 
-        return "\nDone building paths";
+        return "Done building paths";
     }
 
+    @Override
+    public String additionalInitLoopTelemetry() {
+        StringBuilder telemetry = new StringBuilder();
+        container.tickBBs();
+        telemetry.append("\nIntake BB: ");
+        telemetry.append(container.intakeBB.getState());
+        telemetry.append("\nTransfer Middle BB: ");
+        telemetry.append(container.transferMiddleBB.getState());
+        telemetry.append("\nTransfer End BB: ");
+        telemetry.append(container.transferEndBB.getState());
+        telemetry.append("\n\n");
+        return telemetry.toString();
+    }
 
     @Override
     protected void start_internal() {

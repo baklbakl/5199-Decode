@@ -148,9 +148,7 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
         if(launching) {
             throw new RuntimeException("Can't start lauching while launching");
         }
-        if(intaking) {
-            throw new RuntimeException("Can't start launching while intaking");
-        }
+        stopIntake();
         requestLaunchingStart = true;
     }
 

@@ -12,7 +12,8 @@ public class AutoRanging {
     public static Vector2d goalTargetPos = new Vector2d(-66, 66);
 
     private final MainBotHardware hardware;
-    private final Vector2d correctedGoalTargetPose;
+    private final Function<Vector2d, Vector2d> invertIfBlue;
+    private Vector2d correctedGoalTargetPose;
 
     private boolean enableDebugInfo = false;
     public void setEnableDebugInfo(boolean enableDebugInfo) {
@@ -54,14 +55,17 @@ public class AutoRanging {
         //return Double.NaN;
         return MainBotHardware.launchSpeedMapping.get(MainBotHardware.launchSpeedMapping.size() - 1).getValue();
     }
-
-
+    
     public AutoRanging(MainBotHardware hardware, Function<Vector2d, Vector2d> invertIfBlue) {
         this.hardware = hardware;
-        this.correctedGoalTargetPose = invertIfBlue.apply(goalTargetPos);
+        this.invertIfBlue = invertIfBlue;
     }
 
     public String tick(Pose2d robotPose) {
+        if(correctedGoalTargetPose == null) {
+            this.correctedGoalTargetPose = invertIfBlue.apply(goalTargetPos);
+        }
+
         StringBuilder telemetry = new StringBuilder();
         if(robotPose != null) {
             MainBotHardware.Container container = hardware.getContainer();

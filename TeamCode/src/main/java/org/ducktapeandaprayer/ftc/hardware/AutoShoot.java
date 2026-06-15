@@ -7,7 +7,7 @@ public class AutoShoot {
     public static double shootingTimeout = 2.0;
     public static double lastBallTime = 0.15;
     public static double shootTransferOnDelay = 0.3;
-    public static double singleShootHighRampDelay = 0.4;
+    public static double singleShootHighRampDelay = 0.01;
 
 
     public final MainBotHardware hardware;
@@ -23,10 +23,11 @@ public class AutoShoot {
     }
 
     public void startShooting() {
-        shootingStartTimeForTransfer = timer.time();
-        shootingStartTimeForRamp = shootingStartTimeForTransfer;
-        shootingStartTimeForTimeout = shootingStartTimeForTransfer;
-        shootingStartTimeForMeasurement = shootingStartTimeForTransfer;
+        double time = timer.time();
+        shootingStartTimeForTransfer = time;
+        shootingStartTimeForTimeout = time;
+        shootingStartTimeForMeasurement = time;
+        shootingStartTimeForRamp = Double.NaN;
         rampLastBallPosStartTime = Double.NaN;
 
         MainBotHardware.Container container = this.hardware.getContainer();
@@ -34,6 +35,7 @@ public class AutoShoot {
             container.transferDrive.setPower(MainBotHardware.transferInPower);
             container.intakeDrive.setPower(MainBotHardware.intakeInPower);
             shootingStartTimeForTransfer = Double.NaN;
+            shootingStartTimeForRamp = time;
         } else {
             container.rampServo.setPosition(MainBotHardware.rampShootPos);
             container.transferDrive.setPower(0);
@@ -57,6 +59,7 @@ public class AutoShoot {
             container.transferDrive.setPower(MainBotHardware.transferInPower);
             container.intakeDrive.setPower(MainBotHardware.intakeInPower);
             shootingStartTimeForTransfer = Double.NaN;
+            shootingStartTimeForRamp = time;
         }
 
         if(time - shootingStartTimeForRamp >= singleShootHighRampDelay) {

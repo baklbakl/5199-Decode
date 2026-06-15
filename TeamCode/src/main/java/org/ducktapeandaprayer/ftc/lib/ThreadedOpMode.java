@@ -67,33 +67,51 @@ public class ThreadedOpMode extends FastIterativeOpMode {
     public String optionDriverUpdateCallback() {
         return null;
     }
+    public String additionalInitLoopTelemetry() {
+        return null;
+    }
+
+    private String lastOptionDriverTelemetry = null;
 
     @Override
     protected void init_loop_internal() {
         String out = optionDriver.tick();
         if(out != null) {
-            telemetry.addLine(out);
+            lastOptionDriverTelemetry = out;
+            telemetry.addLine(lastOptionDriverTelemetry);
             telemetry.update();
 
-            StringBuilder sb = new StringBuilder();
+            StringBuilder threadTelemetry = new StringBuilder();
             String message = this.optionDriverUpdateCallback();
             if(message != null) {
-                sb.append(message);
+                threadTelemetry.append(message);
             }
 
             for(ThreadEx thread : threads.values()) {
                 String otherThreadMessage = thread.optionDriverUpdateCallback();
                 if(otherThreadMessage != null) {
-                    sb.append(otherThreadMessage);
+                    threadTelemetry.append(otherThreadMessage);
                 }
             }
 
-            String threadTelemCompiled = sb.toString();
+            String threadTelemCompiled = threadTelemetry.toString();
             if(!threadTelemCompiled.isEmpty()) {
-                telemetry.addLine(out);
-                telemetry.addLine(threadTelemCompiled);
+                StringBuilder sb = new StringBuilder();
+                sb.append(out).append('\n');
+                sb.append(threadTelemCompiled).append('\n');
+                lastOptionDriverTelemetry = sb.toString();
+                telemetry.addLine(lastOptionDriverTelemetry);
                 telemetry.update();
             }
+        }
+
+        String additionalTelem = additionalInitLoopTelemetry();
+        if (additionalTelem != null) {
+            if(lastOptionDriverTelemetry != null) {
+                telemetry.addLine(lastOptionDriverTelemetry);
+            }
+            telemetry.addLine(additionalTelem);
+            telemetry.update();
         }
 
         try {
