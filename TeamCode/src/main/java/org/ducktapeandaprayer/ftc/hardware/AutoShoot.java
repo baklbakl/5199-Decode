@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.util.RobotLog;
 
 public class AutoShoot {
     public static double shootingTimeout = 2.0;
-    public static double lastBallTime = 0.15;
+    public static double lastBallTime = 0.2;
     public static double shootTransferOnDelay = 0.3;
     public static double singleShootHighRampDelay = 0.01;
 

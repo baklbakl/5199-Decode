@@ -1,9 +1,11 @@
 package org.ducktapeandaprayer.ftc.auto.pidtopoint;
 
+import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
+import org.ducktapeandaprayer.ftc.lib.action.TimeoutAction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,16 +23,15 @@ public class FollowerActionFactory {
         this.invertIfBlue = invertIfBlue;
     }
 
-    public FollowerAction makeFollowerAction(List<Pose2d> poses) {
+    public Action makeFollowerAction(List<Pose2d> poses) {
         List<Pose2d> mirroredPoses = new ArrayList<>();
         for(Pose2d pose : poses) {
             mirroredPoses.add(invertIfBlue.apply(pose));
         }
-        return new FollowerAction(follower, dataBlockSupplier, mirroredPoses);
-        //return new FollowerAction(follower, dataBlockSupplier, poses);
+        return new TimeoutAction(new FollowerAction(follower, dataBlockSupplier, mirroredPoses), 3.0);
     }
 
-    public FollowerAction makeFollowerAction(Pose2d pose) {
+    public Action makeFollowerAction(Pose2d pose) {
         return makeFollowerAction(List.of(pose));
     }
 }

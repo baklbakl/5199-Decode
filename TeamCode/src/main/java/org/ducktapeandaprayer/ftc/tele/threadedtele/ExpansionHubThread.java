@@ -68,9 +68,9 @@ public class ExpansionHubThread extends ThreadEx {
     private final AutoRanging autoRanging;
 
     private enum LauncherControlMethod {
-        MANUAL,
-        PRESET,
         ODOMETRY,
+        PRESET,
+        MANUAL,
     }
     private final List<LauncherControlMethod> launcherControlMethodElements = new ArrayList<>();
     private LauncherControlMethod launcherControlMethod;

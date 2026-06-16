@@ -82,7 +82,7 @@ public class ThreadedOpMode extends FastIterativeOpMode {
             telemetry.update();
 
             StringBuilder threadTelemetry = new StringBuilder();
-            String message = this.optionDriverUpdateCallback();
+            String message = this. optionDriverUpdateCallback();
             if(message != null) {
                 threadTelemetry.append(message);
             }

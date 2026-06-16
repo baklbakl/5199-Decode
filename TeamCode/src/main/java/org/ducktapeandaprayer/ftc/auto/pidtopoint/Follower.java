@@ -14,13 +14,13 @@ import java.util.List;
 
 public class Follower {
     public static double kPTranslation = 0.9;
-    public static double kPHeading = 10;
+    public static double kPHeading = 5;
     public static double headingDoneThresh = 0.02;
     public static double kS = 2;
     public static double doneThresh = 1;
     public static double kDfake = 0.22;
     public static double velocityPower = 1;
-    public static double strafeMultiplier = 1.5;
+    public static double strafeMultiplier = 1.4;
     public static double brakeDistance = 45;
 
     private final MainBotHardware hardware;

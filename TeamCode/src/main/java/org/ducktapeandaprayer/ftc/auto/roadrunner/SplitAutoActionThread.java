@@ -10,6 +10,7 @@ import org.ducktapeandaprayer.ftc.auto.options.Delay;
 import org.ducktapeandaprayer.ftc.auto.options.GatePush;
 import org.ducktapeandaprayer.ftc.auto.options.StartPos;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
+import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.action.ActionThreadEx;
 import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
@@ -91,6 +92,7 @@ public class SplitAutoActionThread extends ThreadedOpMode {
 
     @Override
     protected void start_internal() {
+        Alliance.lastAlliance = this.getAlliance();
         super.getThreads().put("Action Thread", new ActionThreadEx(action, this));
         super.start_internal();
     }

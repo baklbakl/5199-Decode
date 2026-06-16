@@ -130,12 +130,14 @@ public class RobotImplThread extends ThreadEx implements RobotInterface {
         synchronized (requestIntake) {
             Boolean request = requestIntake.get();
             if(request != null) {
-                if(request) {
-                    autoIntake.startIntaking();
-                    intaking = true;
-                } else if(intaking) {
-                    container.restIntakeTransfer();
-                    intaking = false;
+                if(!launching) {
+                    if(request) {
+                        autoIntake.startIntaking();
+                        intaking = true;
+                    } else if(intaking) {
+                        container.restIntakeTransfer();
+                        intaking = false;
+                    }
                 }
 
                 requestIntake.set(null);
