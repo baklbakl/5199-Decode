@@ -10,6 +10,8 @@ import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.action.ActionThreadEx;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
 import org.ducktapeandaprayer.ftc.lib.ThreadedOpMode;
+import org.ducktapeandaprayer.ftc.lib.action.DeadlineAction;
+import org.ducktapeandaprayer.ftc.lib.action.TimeoutAction;
 import org.ducktapeandaprayer.ftc.lib.action.WaitUntilAction;
 
 import java.lang.Math;
@@ -20,6 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class PidToPointAuto extends ThreadedOpMode {
     public static double gateIntakeTimeout = 1.5;
     public static double gateWaitTime = 0.5;
+    public static double gateHitTimeout = 1;
 
     private static final Pose2d startPose = new Pose2d(-71 + 11, 71 - 31, Math.toRadians(0));
     private static final Pose2d closeShootPose = new Pose2d(-22, 22, Math.toRadians(45));
@@ -89,9 +92,11 @@ public class PidToPointAuto extends ThreadedOpMode {
                 new InstantAction(robotImpl::intake),
                 actionFactory.makeFollowerAction(List.of(spikeTwoLineupPose, spikeTwoDonePose)),
                 new InstantAction(robotImpl::stopIntake),
-                actionFactory.makeFollowerAction(gateHitPose),
+                new TimeoutAction(actionFactory.makeFollowerAction(gateHitPose), gateHitTimeout),
                 new SleepAction(gateWaitTime),
-                actionFactory.makeFollowerAction(List.of(gateHitBackupPose, closeShootPose)),
+                //actionFactory.makeFollowerAction(List.of(gateHitBackupPose, closeShootPose)),
+                actionFactory.makeFollowerAction(gateHitBackupPose),
+                actionFactory.makeFollowerAction(closeShootPose),
                 launch()
         );
     }
@@ -102,8 +107,7 @@ public class PidToPointAuto extends ThreadedOpMode {
                 actionFactory.makeFollowerAction(gatePickupLineupPose),
                 //new SleepAction(1),
                 actionFactory.makeFollowerAction(gatePickupPreTurnPose),
-                actionFactory.makeFollowerAction(gatePickupPose),
-                new WaitUntilAction(robotImpl::isFull, gateIntakeTimeout),
+                new DeadlineAction(new WaitUntilAction(robotImpl::isFull, gateIntakeTimeout), actionFactory.makeFollowerAction(gatePickupPose)),
                 new InstantAction(robotImpl::stopIntake),
                 actionFactory.makeFollowerAction(launchPose),
                 launch()
