@@ -90,6 +90,7 @@ public class BigDemo extends FastIterativeOpMode {
         for(VariableWatcher watcher : variablesWatched) {
             watcher.tick();
         }
+        telemetry.addLine("Telemetry to make battery voltage send");
         telemetry.update();
     }
 

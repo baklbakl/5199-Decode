@@ -1,10 +1,12 @@
 package org.ducktapeandaprayer.ftc.tele.threadedtele;
 
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.digitalchickenlabs.OctoQuad;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
+import com.qualcomm.robotcore.util.RobotLog;
 import org.ducktapeandaprayer.ftc.auto.pidtopoint.Follower;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
@@ -38,6 +40,7 @@ public class ControlHubThread extends ThreadEx {
     private final Follower follower;
 
     public final AtomicReference<Pose2d> robotPose = new AtomicReference<>(null);
+    private Pose2d robotPoseLocal = null;
 
     public enum FollowerStateRequestType {
         FOLLOW,
@@ -78,11 +81,19 @@ public class ControlHubThread extends ThreadEx {
 
 
     private void computeSetWheelSpeeds(double forward, double strafe, double turning) {
+        if(threadedTele.nehemiahMode && robotPoseLocal != null) {
+            Vector2d controller = new Vector2d(forward, strafe);
+            Rotation2d controllerRotation = Rotation2d.fromDouble(threadedTele.getAlliance() == Alliance.BLUE ? -1 : 1 * Math.PI/2);
+            Vector2d fieldDirection = controllerRotation.times(controller);
+            Vector2d rotated = robotPoseLocal.heading.inverse().times(fieldDirection);
+            forward = rotated.x;
+            strafe = rotated.y;
+        }
 
-        double leftFrontPower  = forward + strafe + turning;
-        double rightFrontPower = forward - strafe - turning;
-        double leftBackPower   = forward - strafe + turning;
-        double rightBackPower  = forward + strafe - turning;
+        double leftFrontPower  = forward - strafe + turning;
+        double rightFrontPower = forward + strafe - turning;
+        double leftBackPower   = forward + strafe + turning;
+        double rightBackPower  = forward - strafe - turning;
 
         // Normalize the values so no wheel power exceeds 100%
         // This ensures that the robot maintains the desired motion.
@@ -124,14 +135,14 @@ public class ControlHubThread extends ThreadEx {
 
         try {
             threadedTele.getOptionDriver().add(new BooleanOption("Follower Debug Info", "dpad_down", threadedTele.gamepad1, this.getClass().getField("followerDebugInfo"), this));
+
             //Movement
             super.variablesWatched.add(new TripleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
                     (Float left_stick_x_f, Float left_stick_y_f, Float right_stick_x) -> {
-                        if(follower.isCanceled()) {
-                            computeSetWheelSpeeds(-left_stick_y_f, left_stick_x_f, right_stick_x);
-                        }
-                    }
-            ));
+                if(follower.isCanceled()) {
+                    computeSetWheelSpeeds(-left_stick_y_f, -left_stick_x_f, right_stick_x);
+                }
+            }));
 
             super.variablesWatched.add(new SingleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getField("options"), Boolean::equals, (Boolean options) -> {
                 if(options) {
@@ -162,19 +173,19 @@ public class ControlHubThread extends ThreadEx {
 
     public void tick() {
         OctoQuad.LocalizerDataBlock block = container.readOctoQuadLocalizerData(threadedTele::isStopRequested);
-        Pose2d newPose = MainBotHardware.makeOctoQuadPose(block);
+        robotPoseLocal = MainBotHardware.makeOctoQuadPose(block);
 
         telemetry.append("Octoquad x: ");
-        telemetry.append(newPose.position.x);
+        telemetry.append(robotPoseLocal.position.x);
         telemetry.append("\nOctoquad y: ");
-        telemetry.append(newPose.position.y);
+        telemetry.append(robotPoseLocal.position.y);
         telemetry.append("\nOctoquad heading: ");
-        telemetry.append(newPose.heading.toDouble());
+        telemetry.append(robotPoseLocal.heading.toDouble());
         telemetry.append("\nOctoquad heading vel: ");
         telemetry.append(block.velHeading_radS);
         telemetry.append("\n");
 
-        robotPose.set(newPose);
+        robotPose.set(robotPoseLocal);
 
         FollowerStateRequest followerStateRequest = this.followerStateRequest.get();
         if(followerStateRequest != null) {
@@ -201,8 +212,6 @@ public class ControlHubThread extends ThreadEx {
         } else {
             follower.tick(block);
         }
-
-
 
         updateTelemetry();
         container.modules.parentModule.module.clearBulkCache();

@@ -33,10 +33,6 @@ public class UsbScanner {
             SerialNumber localLynxChildUsbSerialNumber = null;
             RobotLog.ii("UsbScanner", "Scanning!");
 
-//            if (Device.isRevControlHub()) {
-//                localLynxParentUsbSerialNumber = LynxConstants.SERIAL_NUMBER_EMBEDDED;
-//            }
-
             ScannedDevices devices = new HardwareDeviceManager(hardwareMap.appContext, getEventLoopManger().get()).scanForUsbDevices();
             for (SerialNumber sn : devices.keySet()) {
                 DeviceManager.UsbDeviceType deviceType = devices.get(sn);
@@ -44,7 +40,7 @@ public class UsbScanner {
                     if(sn.isEmbedded()) {
                         if(Device.isRevControlHub()) {
                             if (localLynxParentUsbSerialNumber != null) {
-                                throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
+                                throw new RuntimeException("Multiple Control Hubs (Internal Lynx devices) are connected at once. How did this happen?");
                             }
                         } else {
                             throw new RuntimeException("Embedded Lynx Device (Control Hub) found in not a control hub");
@@ -56,21 +52,21 @@ public class UsbScanner {
                             throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
                         }
                         localLynxChildUsbSerialNumber = sn;
+                        SerialNumber.noteSerialNumberType(localLynxChildUsbSerialNumber, "Expansion Hub");
 
                     } else {
                         if (localLynxParentUsbSerialNumber != null) {
                             throw new RuntimeException("Multiple Expansion Hubs (Lynx USB devices) are connected at once. Please disconnect the extra one(s)");
                         }
                         localLynxParentUsbSerialNumber = sn;
+                        SerialNumber.noteSerialNumberType(localLynxParentUsbSerialNumber, "Expansion Hub");
                     }
-
                 }
             }
 
             if (localLynxParentUsbSerialNumber == null) {
                 throw new RuntimeException("No Parent Lynx Module USB Device (Expansion / Control Hub) found. Please check that there is one connected");
             }
-
 
             lynxParentUsbSerialNumber = localLynxParentUsbSerialNumber;
             lynxChildUsbSerialNumber = localLynxChildUsbSerialNumber;

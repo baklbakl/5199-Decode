@@ -193,7 +193,7 @@ SensorReader extends FastIterativeOpMode {
      * Code to run ONCE after the driver hits STOP
      */
 
-    //FIX: Sensor reader opmode gets stuck in stop
+    //FIX: Sensor reader opmode gets stuck in stop sometimes
     protected void stop_internal() {
     }
 }

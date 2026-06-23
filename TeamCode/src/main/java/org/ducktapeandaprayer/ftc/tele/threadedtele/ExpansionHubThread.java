@@ -141,28 +141,6 @@ public class ExpansionHubThread extends ThreadEx {
         try {
             optionDriver.add(new BooleanOption("Auto ranging debug info", "dpad_right", gamepad1, this.getClass().getField("autoRangingDebugInfo"), this));
 
-            variablesWatched.add(new TripleVariableWatcher<>(
-                    gamepad1,
-                    Gamepad.class.getField("left_bumper"),
-                    Gamepad.class.getField("square"),
-                    Gamepad.class.getField("right_bumper"),
-                    Boolean::equals, (Boolean left_bumper, Boolean square, Boolean right_bumper) -> {
-                if(autoGateCycleState != AutoGateCycleState.DISABLED) {
-                    return;
-                }
-
-                if(TwoOfThree.twoOfThree(left_bumper, square, right_bumper) || (!left_bumper && !square && !right_bumper)) {
-                    toBallHandlingState(BallHandlingState.STOPPED);
-                } else if(square) {
-                    toBallHandlingState(BallHandlingState.OUTTAKE);
-                } else if(left_bumper) {
-                    toBallHandlingState(BallHandlingState.INTAKE);
-                } else if(right_bumper) {
-                    toBallHandlingState(BallHandlingState.SHOOTING);
-                } else {
-                    throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
-                }
-            }));
 
             variablesWatched.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right) -> {
                 if(TwoOfThree.twoOfThree(dpad_left, dpad_down, dpad_right)) {
@@ -202,22 +180,6 @@ public class ExpansionHubThread extends ThreadEx {
                 }
             }));
 
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
-                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
-                    if(container.launchDrive.getTargetVelocity() == 0) {
-                        startLauncher();
-                    } else {
-                        container.launchDrive.setVelocity(0);
-                    }
-                }
-            }));
-
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
-                if(circle) {
-                    this.autoRanging.setTurretTracking(!autoRanging.isTurretTracking());
-                }
-            }));
-
             variablesWatched.add(new DoubleVariableWatcher<>(gamepad1, Gamepad.class.getField("left_trigger"), Gamepad.class.getField("right_trigger"), Float::equals, (Float left_trigger, Float right_trigger) -> {
                 if(launcherControlMethod == LauncherControlMethod.MANUAL) {
                     float power = left_trigger - right_trigger;
@@ -242,6 +204,15 @@ public class ExpansionHubThread extends ThreadEx {
                 }
             }));
 
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
+                if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
+                    if(container.launchDrive.getTargetVelocity() == 0) {
+                        startLauncher();
+                    } else {
+                        container.launchDrive.setVelocity(0);
+                    }
+                }
+            }));
         } catch (NoSuchFieldException e) {
             throw new RuntimeException(e);
         }
@@ -249,6 +220,39 @@ public class ExpansionHubThread extends ThreadEx {
 
     @Override
     public void run() {
+        try {
+            variablesWatched.add(new TripleVariableWatcher<>(
+                    gamepad1,
+                    Gamepad.class.getField(threadedTele.nehemiahMode ? "left_trigger_pressed" : "left_bumper"),
+                    Gamepad.class.getField("square"),
+                    Gamepad.class.getField(threadedTele.nehemiahMode ? "right_trigger_pressed" : "right_bumper"),
+                    Boolean::equals, (Boolean left_bumper, Boolean square, Boolean right_bumper) -> {
+                if(autoGateCycleState != AutoGateCycleState.DISABLED) {
+                    return;
+                }
+
+                if(TwoOfThree.twoOfThree(left_bumper, square, right_bumper) || (!left_bumper && !square && !right_bumper)) {
+                    toBallHandlingState(BallHandlingState.STOPPED);
+                } else if(square) {
+                    toBallHandlingState(BallHandlingState.OUTTAKE);
+                } else if(left_bumper) {
+                    toBallHandlingState(BallHandlingState.INTAKE);
+                } else if(right_bumper) {
+                    toBallHandlingState(BallHandlingState.SHOOTING);
+                } else {
+                    throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
+                }
+            }));
+
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField(threadedTele.nehemiahMode ? "left_bumper" : "circle"), (Boolean circle) -> {
+                if(circle) {
+                    this.autoRanging.setTurretTracking(!autoRanging.isTurretTracking());
+                }
+            }));
+        } catch (NoSuchFieldException e) {
+            throw new RuntimeException(e);
+        }
+
         container = hardware.getContainer();
         container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         autoRanging.setEnableDebugInfo(autoRangingDebugInfo);

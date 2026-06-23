@@ -57,7 +57,16 @@ public class MeepMeepTesting {
         //Rotation2d robotPose = Rotation2d.fromDouble(Math.PI / 2);
         //System.out.println(Rotation2d.fromDouble(headingToTarget).times(robotPose.inverse()));
         //System.out.println(Rotation2d.fromDouble(Rotation2d.fromDouble(headingToTarget).minus(robotPose)));
-        //if(true) return;
+        Pose2d robotPose = new Pose2d(0, 0, Math.PI);
+        Vector2d controller = new Vector2d(1, 0);
+        Rotation2d controllerRotation = Rotation2d.fromDouble(Math.PI/2);
+        Vector2d fieldDirection = controllerRotation.times(controller);
+        System.out.println(fieldDirection);
+
+        //Forward, strafe
+        System.out.println(robotPose.heading.inverse().times(fieldDirection));
+
+        if(true) return;
 
         System.setProperty("sun.java2d.opengl", "true");
 

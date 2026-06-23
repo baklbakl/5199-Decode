@@ -11,7 +11,6 @@ import com.qualcomm.robotcore.hardware.*;
 import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 import com.qualcomm.robotcore.hardware.configuration.typecontainers.ServoConfigurationType;
-import com.qualcomm.robotcore.hardware.usb.RobotUsbDevice;
 import com.qualcomm.robotcore.util.Device;
 import com.qualcomm.robotcore.util.LastKnown;
 import com.qualcomm.robotcore.util.RobotLog;
@@ -197,8 +196,18 @@ public class LynxModuleInitializer {
                     );
                 }
             } else {
+                List<LynxUsbDevice> usbDevices = hardwareMap.getAll(LynxUsbDevice.class);
+                boolean hardwareMapContainsChildUSBDevice = false;
+                for(LynxUsbDevice usbDevice : usbDevices) {
+                    hardwareMapContainsChildUSBDevice = usbDevice.getDelegationTarget().equals(childUsbDevice.getDelegationTarget());
+                    if(hardwareMapContainsChildUSBDevice) {
+                        break;
+                    }
+                }
                 //Put the usb device in the hardware that disconnections and reconnections work right. This means that there will be issues if a new eh it installed without a power cycle.
-                hardwareMap.put("Expansion Hub Portal Created" + childUsbDevice.toString(), childUsbDevice);
+                if(!hardwareMapContainsChildUSBDevice) {
+                    hardwareMap.put("Expansion Hub Portal Created" + childUsbDevice.toString(), childUsbDevice);
+                }
             }
 
         } catch (RobotCoreException e) {
@@ -294,7 +303,28 @@ public class LynxModuleInitializer {
             }
 
             //Put the control hub back so that stopping when the opmode works right
-            hardwareMap.put("Control Hub " + parentModule.module, parentModule.module);
+            hardwareMap.put("LynxModuleInitalizer Lynx Module " + parentModule.module, parentModule.module);
+            List<LynxUsbDevice> usbDevices = hardwareMap.getAll(LynxUsbDevice.class);
+            boolean hardwareMapContainsParentUSBDevice = false;
+            for(LynxUsbDevice usbDevice : usbDevices) {
+                hardwareMapContainsParentUSBDevice = usbDevice.getDelegationTarget().equals(parentUsbDevice.getDelegationTarget());
+                if(hardwareMapContainsParentUSBDevice) {
+                    break;
+                }
+            }
+
+            if(usbDevices.size() > (hardwareMapContainsParentUSBDevice ? (Device.isRevControlHub() ? 2 : 1) : 0)) {
+                throw new RuntimeException("There should only be one Lynx USB device in the hardware map");
+            }
+
+            if(Device.isRevControlHub()) {
+                if(usbDevices.isEmpty()) {
+                    throw new RuntimeException("There should be a Lynx USB device already present by default in the hardware map on a control hub");
+                }
+            } else if(!hardwareMapContainsParentUSBDevice) {
+                hardwareMap.put("LynxModuleInitalizer Lynx USB Device", parentUsbDevice);
+            }
+
 
             TeamCodeWarningSource.getInstance().clearLynxModuleInitializerWarning();
 

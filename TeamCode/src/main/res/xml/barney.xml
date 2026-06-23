@@ -1,8 +1,0 @@
-<?xml version='1.0' encoding='UTF-8' standalone='yes' ?>
-<Robot type="FirstInspires-FTC">
-    <!--<Webcam name="WC1" serialNumber="8A0EC890"/>-->
-    <LynxUsbDevice name="Control Hub Portal" serialNumber="(embedded)" parentModuleAddress="173">
-    </LynxUsbDevice>
-    <LynxUsbDevice name="Expansion Hub Portal" serialNumber="DQ6KS5BM" parentModuleAddress="1">
-    </LynxUsbDevice>
-</Robot>
