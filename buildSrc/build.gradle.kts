@@ -29,6 +29,11 @@ gradlePlugin {
             id = name
             implementationClass = "org.ducktapeandaprayer.RepositoriesPlugin"
         }
+
+        create("cleanwebassets") {
+            id = name
+            implementationClass = "org.ducktapeandaprayer.CleanWebAssetsPlugin"
+        }
     }
 }
 

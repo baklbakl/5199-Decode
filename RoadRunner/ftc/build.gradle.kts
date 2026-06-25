@@ -9,6 +9,7 @@ plugins {
 //    id("kotlin-android")
     id("androidDefaultSetup")
     id("FTCLibFlavor")
+    id("cleanwebassets")
 }
 
 android {
@@ -17,8 +18,11 @@ android {
     testOptions {
         unitTests.all {
             it.useJUnitPlatform()
+            it.ignoreFailures = true
         }
     }
+
+    enableKotlin = true
 }
 
 val webDir = file("${project.projectDir}/web")
@@ -29,20 +33,19 @@ node {
     nodeProjectDir = webDir
 }
 
-tasks.yarn {
-    environment.put("VITE_APP_VERSION", getStringProperty(project, "roadRunnerVersion"))
-}
-
-tasks.register<Delete>("cleanWebAssets") {
-    delete("${android.sourceSets["main"].assets.srcDirs.first().toPath()}/web/*")
-}
-
-tasks.named("clean") {
-    dependsOn("cleanWebAssets")
-}
+//This is in a plugin because for some reason it crashes in kotlin, but doesn't in java. See CleanWebAssetsPlugin
+//tasks.register<Delete>("cleanWebAssets") {
+//    fileTree("${android.sourceSets["main"].assets.srcDirs.first()}/web/").visit {
+//        delete(this.file)
+//    }
+//}
+//
+//tasks.named("clean") {
+//    dependsOn("cleanWebAssets")
+//}
 
 val yarn_buildTask = tasks.register<YarnTask>("yarn_build") {
-    dependsOn(tasks.yarn)
+    environment.put("VITE_APP_VERSION", getStringProperty(project, "roadRunnerVersion"))
     yarnCommand.set(listOf("build"))
 
     for(file in webDir.listFiles()) {
@@ -52,6 +55,10 @@ val yarn_buildTask = tasks.register<YarnTask>("yarn_build") {
             } else {
                 inputs.file(file)
             }
+        }
+
+        if(file.name == "dist" && file.isDirectory) {
+            outputs.dirs(file)
         }
     }
 

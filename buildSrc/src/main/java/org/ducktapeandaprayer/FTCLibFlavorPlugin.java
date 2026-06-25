@@ -1,6 +1,8 @@
 package org.ducktapeandaprayer;
 
 import com.android.build.api.dsl.*;
+
+import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
 import org.gradle.api.Action;
@@ -15,27 +17,21 @@ public class FTCLibFlavorPlugin implements Plugin<Project> {
     public void apply(Project target) {
         PluginManager manager = target.getPluginManager();
         if(manager.hasPlugin("com.android.base")) {
-            Class<? extends CommonExtension> extensionClass = ReflectionHelper.getCommonExtensionClass(target);
-
-            //This big reflection mess is due to the fact that the ApplicationExtension and LibraryExtension types have
-            // different types for their flavor related methods (they don't inherit from each other), but they have the
-            // same method names that do the same things, so reflection can be used to do both with a smaller amount of code.
-            CommonExtension commExtension = target.getExtensions().findByType(extensionClass);
+            CommonExtension commExtension = target.getExtensions().findByType(CommonExtension.class);
 
             String dimensionName = "libSource";
-            ((List<String>) ReflectionHelper.invokeTried(ReflectionHelper.getMethodTried(extensionClass, "getFlavorDimensions"), commExtension)).add(dimensionName);
-
-            Object namedObjectContainer = ReflectionHelper.invokeTried(ReflectionHelper.getMethodTried(extensionClass, "getProductFlavors"), commExtension);
-            Method createMethod = ReflectionHelper.getMethodTried(namedObjectContainer.getClass(), "create",  String.class, Action.class);
-
-            ReflectionHelper.invokeTried(createMethod, namedObjectContainer, "aarLibs", (Action<?>) ((Object flavor) -> {
+            commExtension.getFlavorDimensions().add(dimensionName);
+            NamedDomainObjectContainer<? extends ProductFlavor> productFlavors = commExtension.getProductFlavors();
+            productFlavors.create("aarLibs", ((ProductFlavor flavor) -> {
+                //For some reason setDefault isn't a method of ProductFlavor, only
+                // LibraryProductFlavor and ApplicationProductFlavor, so we use reflection to avoid code duplication
                 ReflectionHelper.invokeTried(ReflectionHelper.getMethodTried(flavor.getClass(), "setDefault", boolean.class), flavor, true);
-                ReflectionHelper.invokeTried(ReflectionHelper.getMethodTried(flavor.getClass(), "setDimension", String.class), flavor, dimensionName);
+                flavor.setDimension(dimensionName);
             }));
 
-            ReflectionHelper.invokeTried(createMethod, namedObjectContainer, "extractedLibs", (Action<?>) ((Object flavor) -> {
-                ReflectionHelper.invokeTried(ReflectionHelper.getMethodTried(flavor.getClass(), "setDimension", String.class), flavor, dimensionName);
-            }));
+            productFlavors.create("extractedLibs", (ProductFlavor flavor) -> {
+                flavor.setDimension(dimensionName);
+            });
         } else {
             throw new RuntimeException("FTCLibFlavorPlugin applied, but com.android.base wasn't found for project \"" + target.getName() + "\"");
         }

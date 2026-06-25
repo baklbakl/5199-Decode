@@ -10,9 +10,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
 public class ReflectionHelper {
-
-
-    public static Class<? extends CommonExtension> getCommonExtensionClass (Project target) {
+    public static Class<? extends CommonExtension> getCommonExtensionClass(Project target) {
         Class<? extends CommonExtension> extensionClass;
 
         PluginManager manager = target.getPluginManager();

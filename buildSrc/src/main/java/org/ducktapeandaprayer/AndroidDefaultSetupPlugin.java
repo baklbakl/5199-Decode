@@ -20,8 +20,7 @@ public class AndroidDefaultSetupPlugin implements Plugin<Project> {
             manager.apply(RepositoriesPlugin.class);
             manager.apply(Java8Plugin.class);
 
-            Class<? extends CommonExtension> extensionClass = ReflectionHelper.getCommonExtensionClass(target);
-            CommonExtension extension = target.getExtensions().findByType(extensionClass);
+            CommonExtension extension = target.getExtensions().findByType(CommonExtension.class);
 
             int compileSDK = PropertiesHelper.getIntProperty(target, "androidsdk.compileVersion");
             extension.setCompileSdk(compileSDK);
