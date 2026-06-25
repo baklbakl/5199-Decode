@@ -38,6 +38,5 @@ repositories {
 }
 
 dependencies {
-    api("com.android.tools.build:gradle:8.12.3")
-    api("org.jetbrains.kotlin:kotlin-gradle-plugin:2.1.10")
+    api("com.android.tools.build:gradle:9.2.1")
 }

@@ -25,10 +25,10 @@ public class Java8Plugin implements Plugin<Project> {
             options.setTargetCompatibility(version);
             options.setSourceCompatibility(version);
 
-            if(manager.hasPlugin("org.jetbrains.kotlin.android")) {
-                KotlinAndroidExtension kotlinExtension = target.getExtensions().findByType(KotlinAndroidExtension.class);
-                kotlinExtension.getCompilerOptions().getJvmTarget().set(JvmTarget.JVM_1_8);
-            }
+            //if(manager.hasPlugin("org.jetbrains.kotlin.android")) {
+            //    KotlinAndroidExtension kotlinExtension = target.getExtensions().findByType(KotlinAndroidExtension.class);
+            //    kotlinExtension.getCompilerOptions().getJvmTarget().set(JvmTarget.JVM_1_8);
+            //}
         } else if(manager.hasPlugin("java")) {
             JavaPluginExtension extension = target.getExtensions().findByType(JavaPluginExtension.class);
             extension.setTargetCompatibility(version);

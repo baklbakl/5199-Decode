@@ -1,11 +1,12 @@
 import com.android.build.gradle.internal.packaging.defaultExcludes
+import com.android.build.gradle.internal.tasks.factory.dependsOn
 import com.github.gradle.node.yarn.task.YarnTask
 import org.ducktapeandaprayer.PropertiesHelper.getStringProperty
 
 plugins {
     id("com.github.node-gradle.node") version "7.1.0"
     id("com.android.library")
-    id("kotlin-android")
+//    id("kotlin-android")
     id("androidDefaultSetup")
     id("FTCLibFlavor")
 }
@@ -18,11 +19,8 @@ android {
             it.useJUnitPlatform()
         }
     }
-
-    libraryVariants.all {
-        preBuildProvider.get().dependsOn("yarn_build")
-    }
 }
+
 val webDir = file("${project.projectDir}/web")
 
 node {
@@ -43,7 +41,7 @@ tasks.named("clean") {
     dependsOn("cleanWebAssets")
 }
 
-tasks.register<YarnTask>("yarn_build") {
+val yarn_buildTask = tasks.register<YarnTask>("yarn_build") {
     dependsOn(tasks.yarn)
     yarnCommand.set(listOf("build"))
 
@@ -62,6 +60,7 @@ tasks.register<YarnTask>("yarn_build") {
         true
     }
 }
+tasks.preBuild.dependsOn(yarn_buildTask)
 
 dependencies {
     val implDeps = listOf("RobotCore", "Hardware", "FtcCommon", "RobotServer")

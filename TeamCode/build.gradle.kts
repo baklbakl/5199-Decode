@@ -2,7 +2,7 @@ import org.ducktapeandaprayer.PropertiesHelper.*
 
 plugins {
     id("com.android.application")
-    kotlin("android")
+//    kotlin("android")
     id("androidDefaultSetup")
     id("FTCLibFlavor")
 //    id("stubPlugin")

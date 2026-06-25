@@ -28,6 +28,8 @@ android {
             path("CMakeLists.txt")
         }
     }
+
+    ndkVersion = "21.3.6528147"
 }
 
 dependencies {

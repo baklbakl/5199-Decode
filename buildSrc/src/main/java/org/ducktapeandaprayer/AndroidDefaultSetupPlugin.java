@@ -4,7 +4,12 @@ import com.android.build.api.dsl.*;
 import org.gradle.api.NamedDomainObjectContainer;
 import org.gradle.api.Plugin;
 import org.gradle.api.Project;
+import org.gradle.api.plugins.ExtensionContainer;
 import org.gradle.api.plugins.PluginManager;
+import org.gradle.internal.extensibility.ExtensionsStorage;
+
+import java.lang.reflect.Field;
+import java.util.Map;
 
 public class AndroidDefaultSetupPlugin implements Plugin<Project> {
     @Override
@@ -42,6 +47,8 @@ public class AndroidDefaultSetupPlugin implements Plugin<Project> {
             ReflectionHelper.invokeTried(ReflectionHelper.getMethodTried(debugBuild.getClass(), "setDebuggable", boolean.class), debugBuild, true);
 
             buildTypes.getByName("debug").setMinifyEnabled(false);
+
+            extension.setEnableKotlin(false);
         } else {
             throw new RuntimeException("AndroidDefaultSetupPlugin applied, but com.android.base wasn't found for project \"" + target.getName() + "\"");
         }
