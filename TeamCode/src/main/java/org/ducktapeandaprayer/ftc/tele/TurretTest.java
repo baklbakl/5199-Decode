@@ -2,17 +2,13 @@ package org.ducktapeandaprayer.ftc.tele;
 
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import com.qualcomm.robotcore.hardware.configuration.LynxConstants;
-import com.qualcomm.robotcore.util.ElapsedTime;
+
 import org.ducktapeandaprayer.ftc.MainBotConfig;
-import org.ducktapeandaprayer.ftc.hardware.LynxModuleInitializer;
 import org.ducktapeandaprayer.ftc.hardware.MainBotHardware;
 import org.ducktapeandaprayer.ftc.lib.FastIterativeOpMode;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.EnumOption;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.IntOption;
-import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
+import org.ducktapeandaprayer.ftc.lib.TwoOfX;
+import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.VariableWatcher;
 
@@ -32,9 +28,19 @@ public class TurretTest extends FastIterativeOpMode {
         container.modules.enableBulkCaching(LynxModule.BulkCachingMode.MANUAL);
 
         try {
-            variableWatchers.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right) -> {
+            variableWatchers.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_up"), Boolean::equals, (Boolean dpad_up) -> {
+               if(dpad_up) {
+                   if(Math.abs(targetHeading - MainBotHardware.turretMaxHeading) < 0.01) {
+                       targetHeading = Math.PI / 2;
+                   } else {
+                       targetHeading = MainBotHardware.turretMaxHeading;
+                   }
+               }
+            }));
+
+            variableWatchers.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), Boolean::equals, (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right) -> {
                 //No three may be pressed at a time
-                if(dpad_down ? (dpad_left || dpad_right) : (dpad_left && dpad_right)) {
+                if(TwoOfX.twoOfThree(dpad_down, dpad_left, dpad_right)) {
                     return;
                 }
 
@@ -73,6 +79,9 @@ public class TurretTest extends FastIterativeOpMode {
         for(VariableWatcher watcher : variableWatchers) {
             watcher.tick();
         }
+
+        telemetry.addLine("Telem to make battery send");
+        telemetry.update();
 
         try {
             Thread.sleep(1);

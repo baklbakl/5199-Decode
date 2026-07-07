@@ -22,9 +22,8 @@ public class FollowerAction extends SetupAction {
     }
 
     @Override
-    public void preview(@NonNull Canvas fieldOverlay) {
-        //ADD: Dash preview for FollowerAction
-        super.preview(fieldOverlay);
+    public void preview(@NonNull Canvas c) {
+        super.preview(c);
     }
 
     @Override

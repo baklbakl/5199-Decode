@@ -1,19 +1,18 @@
 package org.ducktapeandaprayer.ftc.tele.threadedtele;
 
 import com.acmerobotics.roadrunner.Pose2d;
-import com.acmerobotics.roadrunner.Twist2d;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.Gamepad;
-import org.apache.commons.lang3.tuple.Pair;
+
 import org.ducktapeandaprayer.ftc.hardware.*;
 import org.ducktapeandaprayer.ftc.lib.Alliance;
-import org.ducktapeandaprayer.ftc.lib.TwoOfThree;
+import org.ducktapeandaprayer.ftc.lib.TwoOfX;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.BooleanOption;
 import org.ducktapeandaprayer.ftc.lib.optiondriver.OptionDriver;
 import org.ducktapeandaprayer.ftc.lib.ThreadEx;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.DoubleVariableWatcher;
+import org.ducktapeandaprayer.ftc.lib.variablewatcher.QuadVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.SingleVariableWatcher;
 import org.ducktapeandaprayer.ftc.lib.variablewatcher.TripleVariableWatcher;
 
@@ -50,7 +49,11 @@ public class ExpansionHubThread extends ThreadEx {
             null
     );
 
-    public static Pose2d gatePose = new Pose2d(9, 47, Math.PI / 2);
+    //public static Pose2d gatePose = new Pose2d(9, 47, Math.PI / 2);
+    private static final Pose2d gatePreTurnPose = new Pose2d(8, 52.5, Math.toRadians(90));
+    private static final Pose2d gatePose = new Pose2d(14, 59.5, Math.toRadians(118));
+
+
 
     //
     // Globals
@@ -141,23 +144,34 @@ public class ExpansionHubThread extends ThreadEx {
         try {
             optionDriver.add(new BooleanOption("Auto ranging debug info", "dpad_right", gamepad1, this.getClass().getField("autoRangingDebugInfo"), this));
 
-
-            variablesWatched.add(new TripleVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right) -> {
-                if(TwoOfThree.twoOfThree(dpad_left, dpad_down, dpad_right)) {
+            variablesWatched.add(new QuadVariableWatcher<>(gamepad1, Gamepad.class.getField("dpad_left"), Gamepad.class.getField("dpad_down"), Gamepad.class.getField("dpad_right"), Gamepad.class.getField("left_trigger_pressed"), Boolean::equals, (Boolean dpad_left, Boolean dpad_down, Boolean dpad_right, Boolean left_trigger_pressed) -> {
+                if(TwoOfX.twoOfFour(dpad_left, dpad_down, dpad_right, left_trigger_pressed)) {
                     return;
                 }
 
-                if(dpad_left || dpad_down || dpad_right) {
+                if(dpad_left || dpad_down || dpad_right || left_trigger_pressed) {
                     Alliance alliance = threadedTele.getAlliance();
+
+                    boolean leftTriggerGo = false;
+                    if(left_trigger_pressed) {
+                        leftTriggerGo = ballHandlingState == BallHandlingState.STOPPED && container.transferEndBB.getState() == BeamBreak.State.FULL && container.transferMiddleBB.getState() == BeamBreak.State.FULL && container.intakeBB.getState() == BeamBreak.State.FULL;
+                        if (!leftTriggerGo) {
+                            return;
+                        }
+                    }
+
                     if(dpad_left && alliance == RED || dpad_right && alliance == Alliance.BLUE) {
                         activeAutoGateCyclePosePair = nearAutoGateCyclePose;
-                    } else if(dpad_down) {
+                    } else if(dpad_down || leftTriggerGo) {
                         activeAutoGateCyclePosePair = midAutoGateCyclePose;
                     } else if (dpad_right && alliance == RED || dpad_left && alliance == Alliance.BLUE) {
                         activeAutoGateCyclePosePair = farAutoGateCyclePose;
                     }
 
                     if(container.transferEndBB.getState() == BeamBreak.State.EMPTY && container.transferMiddleBB.getState() == BeamBreak.State.EMPTY && container.intakeBB.getState() == BeamBreak.State.EMPTY) {
+                        toBallHandlingState(BallHandlingState.STOPPED);
+                        autoGateCycleState = AutoGateCycleState.TO_GATE;
+                        controlHubThread.requestFollowerFollow(List.of(gatePreTurnPose, gatePose));
                         return;
                     }
                     toBallHandlingState(BallHandlingState.STOPPED);
@@ -204,13 +218,43 @@ public class ExpansionHubThread extends ThreadEx {
                 }
             }));
 
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), (Boolean triangle) -> {
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("triangle"), Boolean::equals, (Boolean triangle) -> {
                 if(triangle && launcherControlMethod != LauncherControlMethod.MANUAL) {
                     if(container.launchDrive.getTargetVelocity() == 0) {
                         startLauncher();
                     } else {
                         container.launchDrive.setVelocity(0);
                     }
+                }
+            }));
+
+            variablesWatched.add(new QuadVariableWatcher<>(
+                    gamepad1,
+                    Gamepad.class.getField("left_bumper"),
+                    Gamepad.class.getField("square"),
+                    Gamepad.class.getField("right_bumper"),
+                    Gamepad.class.getField("left_trigger_pressed"),
+                    Boolean::equals, (Boolean left_bumper, Boolean square, Boolean right_bumper, Boolean left_trigger_pressed) -> {
+                if(autoGateCycleState != AutoGateCycleState.DISABLED) {
+                    return;
+                }
+
+                if(TwoOfX.twoOfFour(left_bumper, square, right_bumper, left_trigger_pressed) || (!left_bumper && !square && !right_bumper && !left_trigger_pressed)) {
+                    toBallHandlingState(BallHandlingState.STOPPED);
+                } else if(square) {
+                    toBallHandlingState(BallHandlingState.OUTTAKE);
+                } else if(left_bumper || left_trigger_pressed) {
+                    toBallHandlingState(BallHandlingState.INTAKE);
+                } else if(right_bumper) {
+                    toBallHandlingState(BallHandlingState.SHOOTING);
+                } else {
+                    throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
+                }
+            }));
+
+            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField("circle"), (Boolean circle) -> {
+                if(circle) {
+                    this.autoRanging.setTurretTracking(!autoRanging.isTurretTracking());
                 }
             }));
         } catch (NoSuchFieldException e) {
@@ -220,45 +264,16 @@ public class ExpansionHubThread extends ThreadEx {
 
     @Override
     public void run() {
-        try {
-            variablesWatched.add(new TripleVariableWatcher<>(
-                    gamepad1,
-                    Gamepad.class.getField(threadedTele.nehemiahMode ? "left_trigger_pressed" : "left_bumper"),
-                    Gamepad.class.getField("square"),
-                    Gamepad.class.getField(threadedTele.nehemiahMode ? "right_trigger_pressed" : "right_bumper"),
-                    Boolean::equals, (Boolean left_bumper, Boolean square, Boolean right_bumper) -> {
-                if(autoGateCycleState != AutoGateCycleState.DISABLED) {
-                    return;
-                }
-
-                if(TwoOfThree.twoOfThree(left_bumper, square, right_bumper) || (!left_bumper && !square && !right_bumper)) {
-                    toBallHandlingState(BallHandlingState.STOPPED);
-                } else if(square) {
-                    toBallHandlingState(BallHandlingState.OUTTAKE);
-                } else if(left_bumper) {
-                    toBallHandlingState(BallHandlingState.INTAKE);
-                } else if(right_bumper) {
-                    toBallHandlingState(BallHandlingState.SHOOTING);
-                } else {
-                    throw new RuntimeException("Oopsy. Something bad happened. Never should be here");
-                }
-            }));
-
-            variablesWatched.add(new SingleVariableWatcher<>(gamepad1, Gamepad.class.getField(threadedTele.nehemiahMode ? "left_bumper" : "circle"), (Boolean circle) -> {
-                if(circle) {
-                    this.autoRanging.setTurretTracking(!autoRanging.isTurretTracking());
-                }
-            }));
-        } catch (NoSuchFieldException e) {
-            throw new RuntimeException(e);
-        }
-
         container = hardware.getContainer();
         container.modules.childModule.module.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         autoRanging.setEnableDebugInfo(autoRangingDebugInfo);
         autoRanging.setLauncherRunning(true);
 
         super.run();
+    }
+
+    private boolean runFullAutoCycle() {
+        return gamepad1.left_trigger_pressed && !gamepad1.dpad_left &&  !gamepad1.dpad_down && !gamepad1.dpad_right;
     }
 
     public void tick() {
@@ -280,6 +295,12 @@ public class ExpansionHubThread extends ThreadEx {
                 if(autoIntake.tick()) {
                     gamepad1.rumble(200);
                     ballHandlingState = BallHandlingState.STOPPED;
+
+                    if(runFullAutoCycle()) {
+                        activeAutoGateCyclePosePair = midAutoGateCyclePose;
+                        autoGateCycleState = AutoGateCycleState.TO_SHOOT_POS;
+                        controlHubThread.requestFollowerFollow(List.of(activeAutoGateCyclePosePair.shootPose));
+                    }
                 }
                 break;
 
@@ -301,12 +322,15 @@ public class ExpansionHubThread extends ThreadEx {
                 if(Boolean.TRUE.equals(autoShootState)) {
                     toBallHandlingState(BallHandlingState.STOPPED);
                     autoGateCycleState = AutoGateCycleState.TO_GATE;
-                    controlHubThread.requestFollowerFollow(activeAutoGateCyclePosePair.gateLineupPose == null ? List.of(gatePose) : List.of(activeAutoGateCyclePosePair.gateLineupPose, gatePose));
+                    controlHubThread.requestFollowerFollow(activeAutoGateCyclePosePair.gateLineupPose == null ? List.of(gatePreTurnPose, gatePose) : List.of(activeAutoGateCyclePosePair.gateLineupPose, gatePreTurnPose, gatePose));
                 }
                 break;
             case TO_GATE:
                 if(!controlHubThread.isFollowerRunning() && !controlHubThread.isFollowerRequestPending()) {
                     autoGateCycleState = AutoGateCycleState.DISABLED;
+                    if(runFullAutoCycle() && (!gamepad1.left_bumper && !gamepad1.square && !gamepad1.right_bumper)) {
+                        toBallHandlingState(BallHandlingState.INTAKE);
+                    }
                 }
                 break;
         }

@@ -31,13 +31,13 @@ public class MainBotHardware {
     public static PIDFCoefficients launcherCoefficients = new PIDFCoefficients(60, 0, 0, 11);
     public static int motorVelocityTolerance = 30;
     public static double transferInPower = 1;
-    public static double rampShootPos = 0.47;
-    public static double rampLastBallPos = 0.40;
-    public static double rampDownPos = 0.545;
+    public static double rampShootPos = 0.49;
+    public static double rampLastBallPos = 0.55;
+    public static double rampDownPos = 0.425;
     public static double intakeInPower = 1;
-    public static double launcherPresetVelocity = 2120;
+    public static double launcherPresetVelocity = 2170;
     public static double resistorMultiplier = 3.38;
-    public static double turretMaxHeading = 2.3;
+    public static double turretMaxHeading = 2.2;
     public static double turretCenter = 0.495;
     //This number comes from the pinpoint driver
     public static float encoderTicksPerMM = 13.26291192f;
@@ -47,16 +47,15 @@ public class MainBotHardware {
     //MUST BE IN ORDER OF DISTANCE!!!!!
     //MAKE SURE TO SYNCHRONIZE WHEN USING!
     public static final List<MutablePair<Double, Double>> launchSpeedMapping = new ArrayList<>(Arrays.asList(
-            new MutablePair<>(47.0, 2100.0),
-            new MutablePair<>(54.0, 2100.0),
-            new MutablePair<>(64.0, 2150.0),
-            new MutablePair<>(73.0, 2230.0),
-            //new MutablePair<>(80.0, 2340.0),
-            new MutablePair<>(80.0, 2260.0),
-            new MutablePair<>(90.0, 2340.0),
-            new MutablePair<>(100.0, 2520.0),
-            new MutablePair<>(110.0, 2660.0),
-            new MutablePair<>(120.0, 2780.0)
+            new MutablePair<>(47.0, 2100.0 + 50.0),
+            new MutablePair<>(54.0, 2100.0 + 50.0),
+            new MutablePair<>(64.0, 2150.0 + 50.0),
+            new MutablePair<>(73.0, 2230.0 + 50.0),
+            new MutablePair<>(80.0, 2260.0 + 50.0),
+            new MutablePair<>(90.0, 2430.0),
+            new MutablePair<>(100.0, 2520.0 + 50.0),
+            new MutablePair<>(110.0, 2660.0 + 50.0),
+            new MutablePair<>(120.0, 2780.0 + 50.0)
             ));
 
     //

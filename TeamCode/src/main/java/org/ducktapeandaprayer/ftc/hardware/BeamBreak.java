@@ -3,7 +3,7 @@ package org.ducktapeandaprayer.ftc.hardware;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 
 public class BeamBreak {
-    public static int requiredSamples = 10;
+    public static int requiredSamples = 7;
 
     private final DigitalChannel in;
 

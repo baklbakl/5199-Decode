@@ -21,30 +21,30 @@ import java.util.concurrent.atomic.AtomicReference;
 @Autonomous(name = "PID To Point Auto")
 public class PidToPointAuto extends ThreadedOpMode {
     public static double gateIntakeTimeout = 1.5;
-    public static double gateWaitTime = 0.5;
+    public static double gateWaitTime = 0.3;
     public static double gateHitTimeout = 1;
 
     private static final Pose2d startPose = new Pose2d(-71 + 11, 71 - 31, Math.toRadians(0));
     private static final Pose2d closeShootPose = new Pose2d(-22, 22, Math.toRadians(45));
     private static final Pose2d lastShootPose = new Pose2d(-40, 18, Math.toRadians(45));
 
-    private static final double spikeOneX = -10;
+    private static final double spikeOneX = -8;
     private static final double spikeTwoX = 10;
     private static final double spikeStartY = 26;
     private static final double spikeEndY = 48;
 
-    private static final Pose2d spikeOneLineupPose = new Pose2d(spikeOneX - 5, spikeStartY, Math.toRadians(90));
-    private static final Pose2d spikeOneDonePose = new Pose2d(spikeOneX, spikeEndY + 5, Math.toRadians(90));
-    private static final Pose2d spikeTwoLineupPose = new Pose2d(spikeTwoX - 10, spikeStartY, Math.toRadians(90));
-    private static final Pose2d spikeTwoDonePose = new Pose2d(spikeTwoX, spikeEndY + 1, Math.toRadians(90));
+    private static final Pose2d spikeOneLineupPose = new Pose2d(spikeOneX - 3, spikeStartY, Math.toRadians(90));
+    private static final Pose2d spikeOneDonePose = new Pose2d(spikeOneX, spikeEndY + 3, Math.toRadians(90));
+    private static final Pose2d spikeTwoLineupPose = new Pose2d(spikeTwoX, spikeStartY, Math.toRadians(90));
+    private static final Pose2d spikeTwoDonePose = new Pose2d(spikeTwoX + 2, spikeEndY + 2, Math.toRadians(90));
 
-    private static final Pose2d gateHitPose = new Pose2d(6, 53, Math.toRadians(90));
+    private static final Pose2d gateHitLineupPose = new Pose2d(spikeTwoX, spikeEndY + 1, Math.toRadians(90));
+    private static final Pose2d gateHitPose = new Pose2d(7, 53, Math.toRadians(90));
     private static final Pose2d gateHitBackupPose = new Pose2d(3, spikeStartY + 8, Math.toRadians(90));
 
-    private static final Pose2d gatePickupLineupPose = new Pose2d(7, 45, Math.toRadians(90));
-    //private static final Pose2d gatePickupPreTurnPose = new Pose2d(7, 53.5, Math.toRadians(90));
-    private static final Pose2d gatePickupPreTurnPose = new Pose2d(7, 53.5, Math.toRadians(90));
-    private static final Pose2d gatePickupPose = new Pose2d(12, 59.5, Math.toRadians(118));
+    private static final Pose2d gatePickupLineupPose = new Pose2d(8, 45, Math.toRadians(90));
+    private static final Pose2d gatePickupPreTurnPose = new Pose2d(8, 52.5, Math.toRadians(90));
+    private static final Pose2d gatePickupPose = new Pose2d(14, 59.5, Math.toRadians(118));
 
     private final AtomicReference<Pose2d> lastPose = new AtomicReference<>(null);
     private OctoQuad.LocalizerDataBlock lastBlock = null;
@@ -91,12 +91,14 @@ public class PidToPointAuto extends ThreadedOpMode {
         return new SequentialAction(
                 new InstantAction(robotImpl::intake),
                 actionFactory.makeFollowerAction(List.of(spikeTwoLineupPose, spikeTwoDonePose)),
+                //actionFactory.makeFollowerAction(spikeTwoLineupPose),
+                //actionFactory.makeFollowerAction(spikeTwoDonePose),
                 new InstantAction(robotImpl::stopIntake),
-                new TimeoutAction(actionFactory.makeFollowerAction(gateHitPose), gateHitTimeout),
+                new TimeoutAction(actionFactory.makeFollowerAction(List.of(gateHitLineupPose, gateHitPose)), gateHitTimeout),
                 new SleepAction(gateWaitTime),
-                //actionFactory.makeFollowerAction(List.of(gateHitBackupPose, closeShootPose)),
-                actionFactory.makeFollowerAction(gateHitBackupPose),
-                actionFactory.makeFollowerAction(closeShootPose),
+                actionFactory.makeFollowerAction(List.of(gateHitBackupPose, closeShootPose)),
+                //actionFactory.makeFollowerAction(gateHitBackupPose),
+                //actionFactory.makeFollowerAction(closeShootPose),
                 launch()
         );
     }
@@ -104,9 +106,7 @@ public class PidToPointAuto extends ThreadedOpMode {
     private Action gateCycle(Pose2d launchPose) {
         return new SequentialAction(
                 new InstantAction(robotImpl::intake),
-                actionFactory.makeFollowerAction(gatePickupLineupPose),
-                //new SleepAction(1),
-                actionFactory.makeFollowerAction(gatePickupPreTurnPose),
+                actionFactory.makeFollowerAction(List.of(gatePickupLineupPose, gatePickupPreTurnPose)),
                 new DeadlineAction(new WaitUntilAction(robotImpl::isFull, gateIntakeTimeout), actionFactory.makeFollowerAction(gatePickupPose)),
                 new InstantAction(robotImpl::stopIntake),
                 actionFactory.makeFollowerAction(launchPose),
@@ -148,6 +148,7 @@ public class PidToPointAuto extends ThreadedOpMode {
                         launch(),
                         lineTwoCycle(),
                         lineOneCycle(),
+                        gateCycle(),
                         gateCycle(),
                         gateCycle(),
                         gateCycle(lastShootPose)

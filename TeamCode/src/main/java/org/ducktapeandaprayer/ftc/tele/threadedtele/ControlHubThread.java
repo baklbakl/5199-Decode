@@ -31,7 +31,8 @@ public class ControlHubThread extends ThreadEx {
     //
     // Global Variables
     //
-    public boolean followerDebugInfo = true;
+    public Boolean followerDebugInfo = true;
+    public Boolean fieldCentric = false;
 
     private final MainBotHardware hardware;
     private MainBotHardware.Container container;
@@ -81,7 +82,8 @@ public class ControlHubThread extends ThreadEx {
 
 
     private void computeSetWheelSpeeds(double forward, double strafe, double turning) {
-        if(threadedTele.nehemiahMode && robotPoseLocal != null) {
+        //Field centric
+        if(fieldCentric && robotPoseLocal != null) {
             Vector2d controller = new Vector2d(forward, strafe);
             Rotation2d controllerRotation = Rotation2d.fromDouble(threadedTele.getAlliance() == Alliance.BLUE ? -1 : 1 * Math.PI/2);
             Vector2d fieldDirection = controllerRotation.times(controller);
@@ -135,6 +137,7 @@ public class ControlHubThread extends ThreadEx {
 
         try {
             threadedTele.getOptionDriver().add(new BooleanOption("Follower Debug Info", "dpad_down", threadedTele.gamepad1, this.getClass().getField("followerDebugInfo"), this));
+            threadedTele.getOptionDriver().add(new BooleanOption("Field Centric", "dpad_up", threadedTele.gamepad1, this.getClass().getField("fieldCentric"), this));
 
             //Movement
             super.variablesWatched.add(new TripleVariableWatcher<>(threadedTele.gamepad1, Gamepad.class.getDeclaredField("left_stick_x"), Gamepad.class.getDeclaredField("left_stick_y"), Gamepad.class.getDeclaredField("right_stick_x"), Float::equals,
