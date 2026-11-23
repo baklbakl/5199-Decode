@@ -1,5 +1,7 @@
 package org.ducktapeandaprayer.ftc.tele;
 
+import com.qualcomm.hardware.bosch.BHI260IMU;
+import com.qualcomm.hardware.lynx.LynxEmbeddedIMU;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import org.ducktapeandaprayer.ftc.MainBotConfig;
@@ -14,12 +16,13 @@ public class Test extends FastIterativeOpMode {
     private ElapsedTime runtime = new ElapsedTime();
     private ArrayList<VariableWatcher> variableWatchers = new ArrayList<>();
     private MainBotHardware hardware;
+    private BHI260IMU imu;
     private MainBotHardware.Container container;
 
     public void init_internal() {
         //SPEEEEEEEED Mode. We put it in manual mode. https://github.com/first-tech-challenge/FtcRobotController/blob/master/FtcRobotController/src/main/java/org/firstinspires/ftc/robotcontroller/external/samples/ConceptMotorBulkRead.java
-        hardware = MainBotHardware.getOrCreate(hardwareMap);
-        container = hardware.getContainer();
+        //hardware = MainBotHardware.getOrCreate(hardwareMap);
+        //container = hardware.getContainer();
         //hardware.setOctoQuadPose(startPoint);
         //follower = new Follower(hardware);
         //follower.setPaused(true);
@@ -41,6 +44,8 @@ public class Test extends FastIterativeOpMode {
         //} catch (NoSuchFieldException e) {
         //    throw new RuntimeException(e);
         //}
+
+        imu = (BHI260IMU) hardwareMap.get("imu");
 
         // Tell the driver that initialization is complete.
         telemetry.addData("Status", "Initialized");
@@ -64,14 +69,16 @@ public class Test extends FastIterativeOpMode {
      * Code to run REPEATEDLY after the driver hits PLAY but before they hit STOP
      */
     public void loop_internal() {
-        container.modules.clearBulkCache();
+        //container.modules.clearBulkCache();
         //for(VariableWatcher watcher : variableWatchers) {
         //    watcher.tick();
         //}
         //
-        container.readOctoQuadLocalizerData(this::isStopRequested);
+        //container.readOctoQuadLocalizerData(this::isStopRequested);
         //telemetry.addLine(follower.tick(hardware.readOctoQuadLocalizerData()));
-        //telemetry.update();
+
+        telemetry.addData("Heading", imu.getRobotYawPitchRollAngles());
+        telemetry.update();
     }
 
     /*
