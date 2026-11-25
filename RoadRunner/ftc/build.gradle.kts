@@ -34,7 +34,11 @@ tasks.yarn {
 }
 
 tasks.register<Delete>("cleanWebAssets") {
-    delete("${android.sourceSets["main"].assets.srcDirs.first().toPath()}/web/*")
+    android.sourceSets({
+        delete(file("${this["main"].assets.directories.first()}/web").listFiles())
+    })
+
+    isFollowSymlinks = true
 }
 
 tasks.named("clean") {
