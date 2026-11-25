@@ -9,6 +9,7 @@ import org.gradle.api.file.FileTree;
 import org.gradle.api.tasks.Delete;
 import org.gradle.api.tasks.TaskProvider;
 
+import java.io.File;
 import java.util.Set;
 
 //Warning. This does mess up the configuration cache. To run it use the `--no-configuration-cache` option with gradle
@@ -24,10 +25,13 @@ public class CleanWebAssetsPlugin implements Plugin<Project> {
                 throw new RuntimeException("too many asset directories in sourceSet");
             }
 
-            FileTree fileTree = target.fileTree(directories.stream().findFirst().get() + "/web/");
-            fileTree.visit((f) -> {
-                t.delete(f.getFile());
-            });
+            for(File file : target.file(directories.stream().findFirst().get() + "/web/").listFiles()) {
+                t.delete(file);
+            }
+            //FileTree fileTree = target.fileTree(directories.stream().findFirst().get() + "/web/");
+            //fileTree.visit((f) -> {
+            //    t.delete(f.getFile());
+            //});
         });
 
         target.getTasks().getByName("clean").dependsOn(cleanWebAssetsTask);
